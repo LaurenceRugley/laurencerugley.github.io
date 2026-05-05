@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LGR Web Studio</title>
+<meta name="description" content="LGR Web Studio — A Digital Atelier in Pasadena. Custom websites for product brands and service businesses.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #2A2218;
+    --gold: #B89968;
+    --limestone: #FAF7F2;
+    --slate: #5A4F3E;
+    --line: #E5DDD0;
+    --serif: 'Cormorant Garamond', serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    background: var(--limestone);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 48px 28px 40px;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  .header { text-align: center; margin-bottom: 56px; }
+  .mark {
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-bottom: 6px;
+  }
+  .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--slate);
+  }
+  .rule {
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+    margin: 24px auto 0;
+  }
+
+  /* INTRO */
+  .intro {
+    font-family: var(--serif);
+    font-size: 22px;
+    line-height: 1.45;
+    text-align: center;
+    margin-bottom: 48px;
+    color: var(--ink);
+  }
+  .intro em { color: var(--gold); font-style: italic; }
+
+  /* WORK */
+  .work-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .work-list {
+    list-style: none;
+    margin-bottom: 56px;
+    border-top: 1px solid var(--line);
+  }
+  .work-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 18px 4px;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    color: var(--ink);
+    transition: padding 0.3s ease;
+  }
+  .work-item:hover { padding-left: 12px; }
+  .work-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+  }
+  .work-meta {
+    font-family: var(--sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--slate);
+  }
+
+  /* FORM */
+  .form-section {
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 36px 28px;
+    margin-bottom: 32px;
+  }
+  .form-title {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 500;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .form-sub {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--slate);
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--slate);
+    margin-bottom: 8px;
+  }
+  .field input,
+  .field textarea {
+    width: 100%;
+    background: var(--limestone);
+    border: 1px solid var(--line);
+    padding: 12px 14px;
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--ink);
+    border-radius: 0;
+    -webkit-appearance: none;
+    transition: border-color 0.2s ease;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: #fff;
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 90px;
+    font-family: var(--sans);
+  }
+  .submit-btn {
+    width: 100%;
+    background: var(--ink);
+    color: var(--limestone);
+    border: none;
+    padding: 16px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.25s ease;
+  }
+  .submit-btn:hover { background: var(--gold); }
+
+  .success {
+    display: none;
+    text-align: center;
+    padding: 32px 16px;
+    font-family: var(--serif);
+    font-size: 22px;
+    color: var(--ink);
+  }
+  .success em { color: var(--gold); font-style: italic; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 24px 28px 40px;
+    font-family: var(--sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    color: var(--slate);
+  }
+  footer a { color: var(--slate); text-decoration: none; }
+  footer .dot { color: var(--gold); margin: 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="header">
+    <div class="mark">LGR Web Studio</div>
+    <div class="tagline">A Digital Atelier</div>
+    <div class="rule"></div>
+  </header>
+
+  <p class="intro">
+    Custom websites for product brands and service businesses.
+    Designed and built in-house in <em>Pasadena, California</em>.
+  </p>
+
+  <div class="work-label">Recent Work</div>
+  <ul class="work-list">
+    <li>
+      <a class="work-item" href="https://alsoknownas.la" target="_blank" rel="noopener">
+        <span class="work-name">alsoknownas.la</span>
+        <span class="work-meta">Streetwear · Shopify</span>
+      </a>
+    </li>
+    <li>
+      <a class="work-item" href="https://savycolours.com" target="_blank" rel="noopener">
+        <span class="work-name">savycolours.com</span>
+        <span class="work-meta">Hair Studio · Cloudflare</span>
+      </a>
+    </li>
+  </ul>
+
+  <section class="form-section" id="formSection">
+    <h2 class="form-title">Start a project</h2>
+    <p class="form-sub">Tell me a bit about what you have in mind.</p>
+
+    <form id="contactForm" action="https://formspree.io/f/xvzlaaoo" method="POST">
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      <div class="field">
+        <label for="message">About your project</label>
+        <textarea id="message" name="message" placeholder="A few sentences is plenty"></textarea>
+      </div>
+      <input type="hidden" name="_subject" value="New project inquiry — LGR Web Studio">
+      <button type="submit" class="submit-btn">Send</button>
+    </form>
+
+    <div class="success" id="success">
+      Thank you. <em>I'll be in touch within 24 hours.</em>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  LGR Web Studio
+  <span class="dot">·</span>
+  Pasadena, CA
+  <span class="dot">·</span>
+  <a href="mailto:lrugley@gmail.com">lrugley@gmail.com</a>
+</footer>
+
+<script>
+  const form = document.getElementById('contactForm');
+  const success = document.getElementById('success');
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = new FormData(form);
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        form.style.display = 'none';
+        success.style.display = 'block';
+      } else {
+        alert('Something went wrong. Email lrugley@gmail.com directly.');
+      }
+    } catch (err) {
+      alert('Something went wrong. Email lrugley@gmail.com directly.');
+    }
+  });
+</script>
+
+</body>
+</html>
