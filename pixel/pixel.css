@@ -10,3 +10,7 @@ body[data-pixel="on"] .pixel-sprite {
   pointer-events: auto;
   transform: translateX(0);
 }
+
+body[data-pixel="on"] .pixel-sprite[data-facing="left"] {
+  transform: scaleX(-1);
+}

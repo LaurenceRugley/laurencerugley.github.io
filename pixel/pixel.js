@@ -68,6 +68,7 @@
     spriteEl.style.backgroundRepeat = 'no-repeat';
     setFrame('idle-0');
     document.body.appendChild(spriteEl);
+    startLoop();
     return spriteEl;
   }
 
@@ -80,6 +81,7 @@
   }
 
   function removeSprite() {
+    stopLoop();
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
     atlas = null;
@@ -98,6 +100,76 @@
     const btn = document.querySelector('.pixel-toggle');
     if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
+
+  // ---------- State machine ----------
+  // States that loop (animated): walk-right, walk-left, idle.
+  // Each state has a list of frame keys + per-frame ms.
+  const STATES = {
+    'idle': {
+      frames: ['idle-0', 'idle-1'],
+      durations: [600, 600],
+      facing: 'right'
+    },
+    'walk-right': {
+      frames: ['walk-right-0', 'walk-right-1', 'walk-right-2', 'walk-right-3'],
+      durations: [120, 120, 120, 120],
+      facing: 'right'
+    },
+    'walk-left': {
+      // Reuses walk-right frames, mirrored via CSS scaleX(-1) on the container.
+      frames: ['walk-right-0', 'walk-right-1', 'walk-right-2', 'walk-right-3'],
+      durations: [120, 120, 120, 120],
+      facing: 'left'
+    }
+  };
+
+  let currentState = 'idle';
+  let currentFrameIndex = 0;
+  let lastFrameSwitchAt = 0;
+
+  function setState(name) {
+    if (!STATES[name]) return;
+    if (currentState === name) return;
+    currentState = name;
+    currentFrameIndex = 0;
+    lastFrameSwitchAt = performance.now();
+    applyFacing();
+    setFrame(STATES[name].frames[0]);
+  }
+
+  function applyFacing() {
+    if (!spriteEl) return;
+    const facing = STATES[currentState].facing;
+    spriteEl.dataset.facing = facing;
+  }
+
+  function tickAnimation(now) {
+    if (!spriteEl) return;
+    const state = STATES[currentState];
+    const dur = state.durations[currentFrameIndex];
+    if (now - lastFrameSwitchAt >= dur) {
+      currentFrameIndex = (currentFrameIndex + 1) % state.frames.length;
+      setFrame(state.frames[currentFrameIndex]);
+      lastFrameSwitchAt = now;
+    }
+  }
+
+  let rafHandle = null;
+  function startLoop() {
+    if (rafHandle !== null) return;
+    function frame(now) {
+      tickAnimation(now);
+      rafHandle = requestAnimationFrame(frame);
+    }
+    rafHandle = requestAnimationFrame(frame);
+  }
+  function stopLoop() {
+    if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+    rafHandle = null;
+  }
+
+  // Expose for console debugging during development.
+  window.PixelEngine = { setState, getState: () => currentState };
 
   // ---------- Init ----------
   function init() {
