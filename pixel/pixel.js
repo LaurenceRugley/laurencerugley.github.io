@@ -93,6 +93,7 @@
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
     atlas = null;
+    overlayEl = null;
   }
 
   // ---------- Mode application ----------
@@ -126,6 +127,7 @@
   function applyTransform() {
     if (!spriteEl) return;
     const facing = STATES[currentState].facing;
+    spriteEl.dataset.facing = facing;
     const scaleX = facing === 'left' ? -1 : 1;
     // When mirroring, we also need to flip the x-anchor so it doesn't visually jump.
     const tx = facing === 'left' ? spriteX + FRAME_W * SCALE : spriteX;
