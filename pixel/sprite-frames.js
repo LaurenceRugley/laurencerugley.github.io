@@ -16,7 +16,7 @@
     'V': '#3A3326',      // tactical vest (dark olive-brown)
     'P': '#2D2920',      // pants
     'O': '#5A4F3E',      // boots / shadow accent
-    'W': '#FAF7F2',      // limestone / eye whites
+    'W': '#F4F1EA',      // limestone / eye whites
     'R': '#A45235',      // box (warm cardboard)
     'L': '#6B3A22',      // box shadow
     'X': '#E63946'       // MGS alert red
