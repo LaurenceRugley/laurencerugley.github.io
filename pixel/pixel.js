@@ -69,6 +69,8 @@
     setFrame('idle-0');
     document.body.appendChild(spriteEl);
     startLoop();
+    lastScrollY = window.scrollY;
+    window.addEventListener('scroll', onScroll, { passive: true });
     return spriteEl;
   }
 
@@ -81,6 +83,7 @@
   }
 
   function removeSprite() {
+    window.removeEventListener('scroll', onScroll);
     stopLoop();
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
@@ -159,6 +162,7 @@
     if (rafHandle !== null) return;
     function frame(now) {
       tickAnimation(now);
+      tickIdleTimeout(now);
       rafHandle = requestAnimationFrame(frame);
     }
     rafHandle = requestAnimationFrame(frame);
@@ -170,6 +174,33 @@
 
   // Expose for console debugging during development.
   window.PixelEngine = { setState, getState: () => currentState };
+
+  // ---------- Scroll-driven state ----------
+  let lastScrollY = 0;
+  let lastScrollAt = 0;
+  let scrollPending = false;
+  const IDLE_AFTER_MS = 200;
+
+  function onScroll() {
+    if (scrollPending) return;
+    scrollPending = true;
+    requestAnimationFrame(handleScroll);
+  }
+
+  function handleScroll() {
+    scrollPending = false;
+    const y = window.scrollY;
+    const delta = y - lastScrollY;
+    lastScrollY = y;
+    lastScrollAt = performance.now();
+    if (delta > 0) setState('walk-right');
+    else if (delta < 0) setState('walk-left');
+  }
+
+  function tickIdleTimeout(now) {
+    if (currentState !== 'walk-right' && currentState !== 'walk-left') return;
+    if (now - lastScrollAt >= IDLE_AFTER_MS) setState('idle');
+  }
 
   // ---------- Init ----------
   function init() {
