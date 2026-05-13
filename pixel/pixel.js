@@ -234,6 +234,12 @@
       facing: 'right',
       oneShot: true,
       maxDurationMs: 800
+    },
+    'jump': {
+      frames: ['jump-0', 'jump-1', 'jump-2'],
+      durations: [200, 400, 200],
+      facing: 'right',
+      oneShot: true
     }
   };
 
@@ -440,7 +446,11 @@
   }
 
   // Expose for console debugging during development.
-  window.PixelEngine = { setState, getState: () => currentState };
+  window.PixelEngine = {
+    setState,
+    getState: () => currentState,
+    celebrate: () => { if (spriteEl) setState('jump'); }
+  };
 
   // ---------- Scroll-driven state ----------
   let lastScrollY = 0;

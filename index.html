@@ -330,6 +330,9 @@
       if (res.ok) {
         form.style.display = 'none';
         success.style.display = 'block';
+        if (window.PixelEngine && typeof window.PixelEngine.celebrate === 'function') {
+          window.PixelEngine.celebrate();
+        }
       } else {
         alert('Something went wrong. Email lrugley@gmail.com directly.');
       }
