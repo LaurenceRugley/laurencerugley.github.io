@@ -3,14 +3,12 @@
 body[data-pixel="on"] .pixel-sprite {
   position: fixed;
   bottom: 24px;
-  left: 24px;
+  left: 0;
   z-index: 100;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   pointer-events: auto;
-  transform: translateX(0);
+  will-change: transform;
 }
 
-body[data-pixel="on"] .pixel-sprite[data-facing="left"] {
-  transform: scaleX(-1);
-}
+/* facing is applied in JS via the transform property */

@@ -71,6 +71,8 @@
     startLoop();
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updatePosition);
+    updatePosition();
     return spriteEl;
   }
 
@@ -84,6 +86,7 @@
 
   function removeSprite() {
     window.removeEventListener('scroll', onScroll);
+    window.removeEventListener('resize', updatePosition);
     stopLoop();
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
@@ -102,6 +105,29 @@
     document.documentElement.removeAttribute('data-pixel-pending');
     const btn = document.querySelector('.pixel-toggle');
     if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+
+  // ---------- Horizontal position ----------
+  let spriteX = 0;
+
+  function computeMaxX() {
+    return Math.max(0, window.innerWidth - FRAME_W * SCALE - MARGIN * 2);
+  }
+
+  function updatePosition() {
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? Math.min(1, Math.max(0, window.scrollY / docHeight)) : 0;
+    spriteX = MARGIN + pct * computeMaxX();
+    applyTransform();
+  }
+
+  function applyTransform() {
+    if (!spriteEl) return;
+    const facing = STATES[currentState].facing;
+    const scaleX = facing === 'left' ? -1 : 1;
+    // When mirroring, we also need to flip the x-anchor so it doesn't visually jump.
+    const tx = facing === 'left' ? spriteX + FRAME_W * SCALE : spriteX;
+    spriteEl.style.transform = `translateX(${tx}px) scaleX(${scaleX})`;
   }
 
   // ---------- State machine ----------
@@ -136,14 +162,8 @@
     currentState = name;
     currentFrameIndex = 0;
     lastFrameSwitchAt = performance.now();
-    applyFacing();
+    applyTransform();
     setFrame(STATES[name].frames[0]);
-  }
-
-  function applyFacing() {
-    if (!spriteEl) return;
-    const facing = STATES[currentState].facing;
-    spriteEl.dataset.facing = facing;
   }
 
   function tickAnimation(now) {
@@ -193,6 +213,7 @@
     const delta = y - lastScrollY;
     lastScrollY = y;
     lastScrollAt = performance.now();
+    updatePosition();
     if (delta > 0) setState('walk-right');
     else if (delta < 0) setState('walk-left');
   }
