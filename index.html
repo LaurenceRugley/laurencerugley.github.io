@@ -234,6 +234,29 @@
   .pixel-toggle:hover,
   .pixel-toggle:focus { color: var(--gold); outline: none; }
   .pixel-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+
+@keyframes pixelToggleWave {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(6deg); }
+}
+
+body[data-pixel="on"] .pixel-toggle {
+  color: var(--gold);
+}
+
+body[data-pixel="on"] .pixel-toggle svg {
+  animation: pixelToggleWave 2.4s ease-in-out infinite;
+  transform-origin: 50% 60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-pixel="on"] .pixel-toggle svg {
+    animation: none;
+  }
+}
 </style>
 </head>
 <body>
