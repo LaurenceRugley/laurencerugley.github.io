@@ -76,23 +76,24 @@ body[data-pixel="on"] .pixel-dust {
 
 body[data-pixel="on"] .pixel-z {
   position: absolute;
-  top: -6px;
-  right: 6px;
-  color: #B89968;
+  top: -14px;
+  right: 0px;
+  color: #2A2218;
   font-family: 'Cormorant Garamond', serif;
-  font-size: 16px;
+  font-size: 28px;
   font-style: italic;
-  font-weight: 500;
+  font-weight: 700;
+  line-height: 1;
   pointer-events: none;
   opacity: 0;
   animation: pixelZ 2400ms ease-in-out infinite;
 }
 
 @keyframes pixelZ {
-  0%   { opacity: 0; transform: translate(0, 4px) scale(0.7); }
-  15%  { opacity: 0.95; }
-  70%  { opacity: 0.95; }
-  100% { opacity: 0; transform: translate(10px, -28px) scale(1.2); }
+  0%   { opacity: 0; transform: translate(0, 6px) scale(0.55); }
+  15%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(14px, -36px) scale(1.25); }
 }
 
 @keyframes pixelHeart {

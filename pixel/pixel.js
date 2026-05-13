@@ -162,7 +162,12 @@
     const scaleX = facing === 'left' ? -1 : 1;
     // When mirroring, we also need to flip the x-anchor so it doesn't visually jump.
     const tx = facing === 'left' ? spriteX + FRAME_W * SCALE : spriteX;
-    spriteEl.style.transform = `translateX(${tx}px) scaleX(${scaleX})`;
+    let rotateDeg = 0;
+    if (currentState === 'roll-right' || currentState === 'roll-left') {
+      const t = Math.min(1, (performance.now() - dashStartedAt) / DASH_DURATION_MS);
+      rotateDeg = (currentState === 'roll-left' ? -1 : 1) * t * 720; // two full tumbles
+    }
+    spriteEl.style.transform = `translateX(${tx}px) scaleX(${scaleX}) rotate(${rotateDeg}deg)`;
   }
 
   // ---------- State machine ----------
@@ -230,6 +235,20 @@
       durations: [400],
       facing: 'right',
       oneShot: true
+    },
+    'roll-right': {
+      frames: ['dash-alert'],
+      durations: [500],
+      facing: 'right',
+      oneShot: false,
+      maxDurationMs: 500
+    },
+    'roll-left': {
+      frames: ['dash-alert'],
+      durations: [500],
+      facing: 'left',
+      oneShot: false,
+      maxDurationMs: 500
     },
     'point-up': {
       frames: ['point-up-0', 'point-up-1'],
@@ -343,6 +362,7 @@
   function onWorkEnter() {
     if (currentState === 'box-hide') return;
     if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
+    if (currentState === 'roll-right' || currentState === 'roll-left') return;
     if (currentState === 'point-up') return;
     preHoverState = currentState;
     setState('point-up');
@@ -394,6 +414,7 @@
     if (currentState === 'box-hide' || currentState === 'box-flip' ||
         currentState === 'caught' || currentState === 'happy-wave') return;
     if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
+    if (currentState === 'roll-right' || currentState === 'roll-left') return;
     if (now - lastDashAt < DASH_COOLDOWN_MS) return;
     const c = spriteCenter();
     if (!c) return;
@@ -414,7 +435,13 @@
     dashTargetFacing = (dashTargetX >= dashFromX) ? 'right' : 'left';
     dashStartedAt = now;
     lastDashAt = now;
-    setState(dashTargetFacing === 'right' ? 'dash-right' : 'dash-left');
+    // ~35% chance to roll instead of sprint — unless reduced motion (no spin).
+    const useRoll = !prefersReducedMotion && Math.random() < 0.35;
+    if (useRoll) {
+      setState(dashTargetFacing === 'right' ? 'roll-right' : 'roll-left');
+    } else {
+      setState(dashTargetFacing === 'right' ? 'dash-right' : 'dash-left');
+    }
     showOverlay('overlay-bang', 250);
     spawnDust(dashFromX, -dir);
   }
@@ -431,7 +458,9 @@
   }
 
   function tickDashPosition(now) {
-    if (currentState !== 'dash-right' && currentState !== 'dash-left') return;
+    const isDashing = currentState === 'dash-right' || currentState === 'dash-left' ||
+                      currentState === 'roll-right' || currentState === 'roll-left';
+    if (!isDashing) return;
     const t = Math.min(1, (now - dashStartedAt) / DASH_DURATION_MS);
     const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
     spriteX = dashFromX + (dashTargetX - dashFromX) * eased;
