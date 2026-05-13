@@ -9,6 +9,7 @@ body[data-pixel="on"] .pixel-sprite {
   image-rendering: crisp-edges;
   pointer-events: auto;
   will-change: transform;
+  transform-origin: 50% 65%;
 }
 
 /* facing is applied in JS via the transform property */

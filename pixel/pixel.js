@@ -165,7 +165,7 @@
     let rotateDeg = 0;
     if (currentState === 'roll-right' || currentState === 'roll-left') {
       const t = Math.min(1, (performance.now() - dashStartedAt) / DASH_DURATION_MS);
-      rotateDeg = (currentState === 'roll-left' ? -1 : 1) * t * 720; // two full tumbles
+      rotateDeg = (currentState === 'roll-left' ? -1 : 1) * t * 540; // 1.5 tumbles
     }
     spriteEl.style.transform = `translateX(${tx}px) scaleX(${scaleX}) rotate(${rotateDeg}deg)`;
   }
@@ -192,26 +192,26 @@
     },
     'yawn': {
       frames: ['yawn-0', 'yawn-1', 'yawn-2'],
-      durations: [200, 800, 200],
+      durations: [400, 1600, 400],
       facing: 'right',
       oneShot: true
     },
     'look': {
       frames: ['look-0', 'look-1', 'look-2', 'look-1'],
-      durations: [400, 400, 400, 400],
+      durations: [800, 800, 800, 800],
       facing: 'right',
       oneShot: true
     },
     'sit': {
       frames: ['sit-0', 'sit-1'],
-      durations: [1200, 1200],
+      durations: [2400, 2400],
       facing: 'right',
       oneShot: false, // sit loops gently
-      maxDurationMs: 2400
+      maxDurationMs: 4800
     },
     'box-hide': {
       frames: ['box-hide-0', 'box-hide-1', 'box-hide-1', 'box-hide-2', 'box-hide-1', 'box-hide-3', 'box-hide-1', 'box-hide-1'],
-      durations: [300, 700, 700, 400, 700, 350, 400, 450],
+      durations: [600, 1400, 1400, 800, 1400, 700, 800, 900],
       facing: 'right',
       oneShot: true
     },
@@ -237,14 +237,14 @@
       oneShot: true
     },
     'roll-right': {
-      frames: ['dash-alert'],
+      frames: ['roll-ball'],
       durations: [500],
       facing: 'right',
       oneShot: false,
       maxDurationMs: 500
     },
     'roll-left': {
-      frames: ['dash-alert'],
+      frames: ['roll-ball'],
       durations: [500],
       facing: 'left',
       oneShot: false,
@@ -302,13 +302,23 @@
     stateStartedAt = lastFrameSwitchAt;
     applyTransform();
     setFrame(STATES[name].frames[0]);
-    if (prevState === 'sit' && zEl) { zEl.remove(); zEl = null; }
+    if (prevState === 'sit' && zEl) {
+      zEl.forEach(z => z.remove());
+      zEl = null;
+    }
     if (name === 'sit' && spriteEl && !zEl && !prefersReducedMotion) {
-      zEl = document.createElement('div');
-      zEl.className = 'pixel-z';
-      zEl.setAttribute('aria-hidden', 'true');
-      zEl.textContent = 'z';
-      spriteEl.appendChild(zEl);
+      zEl = [];
+      const sizes = [28, 22, 18];
+      for (let i = 0; i < sizes.length; i++) {
+        const z = document.createElement('div');
+        z.className = 'pixel-z';
+        z.setAttribute('aria-hidden', 'true');
+        z.textContent = 'z';
+        z.style.fontSize = sizes[i] + 'px';
+        z.style.animationDelay = (i * 800) + 'ms';
+        spriteEl.appendChild(z);
+        zEl.push(z);
+      }
     }
   }
 
