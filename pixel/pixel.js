@@ -73,6 +73,10 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', updatePosition);
     window.addEventListener('mousemove', onMouseMove, { passive: true });
+    document.querySelectorAll('.work-item').forEach(el => {
+      el.addEventListener('mouseenter', onWorkEnter);
+      el.addEventListener('mouseleave', onWorkLeave);
+    });
     updatePosition();
     return spriteEl;
   }
@@ -89,6 +93,10 @@
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', updatePosition);
     window.removeEventListener('mousemove', onMouseMove);
+    document.querySelectorAll('.work-item').forEach(el => {
+      el.removeEventListener('mouseenter', onWorkEnter);
+      el.removeEventListener('mouseleave', onWorkLeave);
+    });
     stopLoop();
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
@@ -199,6 +207,12 @@
       durations: [400],
       facing: 'right',
       oneShot: true
+    },
+    'point-up': {
+      frames: ['point-up-0', 'point-up-1'],
+      durations: [500, 500],
+      facing: 'right',
+      oneShot: false
     }
   };
 
@@ -206,6 +220,7 @@
   let currentFrameIndex = 0;
   let lastFrameSwitchAt = 0;
   let stateStartedAt = 0;
+  let preHoverState = null;
 
   function setState(name) {
     if (!STATES[name]) return;
@@ -259,6 +274,20 @@
   function handleMouseMove() {
     mouseMovePending = false;
     maybeStartDash(performance.now());
+  }
+
+  function onWorkEnter() {
+    if (currentState === 'box-hide') return;
+    if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
+    if (currentState === 'point-up') return;
+    preHoverState = currentState;
+    setState('point-up');
+  }
+
+  function onWorkLeave() {
+    if (currentState !== 'point-up') return;
+    setState(preHoverState || 'idle');
+    preHoverState = null;
   }
 
   function spriteCenter() {
