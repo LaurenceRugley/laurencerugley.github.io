@@ -168,6 +168,12 @@
       facing: 'right',
       oneShot: false, // sit loops gently
       maxDurationMs: 2400
+    },
+    'box-hide': {
+      frames: ['box-hide-0', 'box-hide-1', 'box-hide-1', 'box-hide-2', 'box-hide-1', 'box-hide-3', 'box-hide-1', 'box-hide-1'],
+      durations: [300, 700, 700, 400, 700, 350, 400, 450],
+      facing: 'right',
+      oneShot: true
     }
   };
 
@@ -232,7 +238,7 @@
   let scrollPending = false;
   const IDLE_AFTER_MS = 200;
   const IDLE_QUIRK_AFTER_MS = 10000;
-  const QUIRK_POOL = ['yawn', 'look', 'sit'];
+  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide'];
 
   function onScroll() {
     if (scrollPending) return;
