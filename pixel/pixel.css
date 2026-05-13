@@ -1,1 +1,12 @@
 /* pixel/pixel.css — pixel mode styles. Scoped under body[data-pixel="on"]. */
+
+body[data-pixel="on"] .pixel-sprite {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 100;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: auto;
+  transform: translateX(0);
+}
