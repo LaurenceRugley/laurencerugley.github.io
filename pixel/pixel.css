@@ -53,20 +53,25 @@ body[data-pixel="on"] .pixel-heart {
 body[data-pixel="on"] .pixel-dust {
   position: fixed;
   bottom: 24px;
-  width: 38px;
-  height: 16px;
+  width: 56px;
+  height: 26px;
   pointer-events: none;
   z-index: 99;
-  background: radial-gradient(ellipse at center, rgba(60, 48, 36, 0.85), rgba(60, 48, 36, 0.5) 40%, transparent 75%);
+  background:
+    radial-gradient(ellipse 13px 10px at 22% 65%, rgba(110, 110, 110, 0.95), transparent 65%),
+    radial-gradient(ellipse 17px 13px at 50% 50%, rgba(95, 95, 95, 0.95), transparent 65%),
+    radial-gradient(ellipse 14px 11px at 78% 65%, rgba(115, 115, 115, 0.95), transparent 65%),
+    radial-gradient(ellipse 10px 8px at 33% 28%, rgba(150, 150, 150, 0.9), transparent 70%),
+    radial-gradient(ellipse 9px 7px at 67% 28%, rgba(150, 150, 150, 0.9), transparent 70%);
   opacity: 0;
-  animation: pixelDust 650ms ease-out forwards;
-  filter: blur(0.5px);
+  animation: pixelDust 750ms ease-out forwards;
+  filter: drop-shadow(0 1px 0 rgba(42, 34, 24, 0.35));
 }
 
 @keyframes pixelDust {
-  0%   { opacity: 0; transform: translateX(0) scale(0.35); }
-  15%  { opacity: 0.95; }
-  100% { opacity: 0; transform: translateX(calc(var(--dir, 1) * 44px)) scale(2.1); }
+  0%   { opacity: 0; transform: translateX(0) scale(0.3); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(calc(var(--dir, 1) * 52px)) scale(2.2); }
 }
 
 body[data-pixel="on"] .pixel-z {
