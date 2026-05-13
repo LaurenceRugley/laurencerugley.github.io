@@ -13,6 +13,18 @@ body[data-pixel="on"] .pixel-sprite {
 
 /* facing is applied in JS via the transform property */
 
+body[data-pixel="on"] .pixel-shadow {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 30px;
+  height: 5px;
+  background: radial-gradient(ellipse at center, rgba(42, 34, 24, 0.4) 0%, rgba(42, 34, 24, 0.15) 50%, transparent 75%);
+  pointer-events: none;
+  transform: translateX(-50%);
+  z-index: -1;
+}
+
 body[data-pixel="on"] .pixel-overlay {
   position: absolute;
   top: -36px; /* float the ! above the sprite head */

@@ -67,6 +67,10 @@
     spriteEl.style.backgroundImage = `url(${atlas.dataUrl})`;
     spriteEl.style.backgroundRepeat = 'no-repeat';
     setFrame('idle-0');
+    const shadowEl = document.createElement('div');
+    shadowEl.className = 'pixel-shadow';
+    shadowEl.setAttribute('aria-hidden', 'true');
+    spriteEl.appendChild(shadowEl);
     document.body.appendChild(spriteEl);
     spriteEl.addEventListener('click', triggerCatch);
 
