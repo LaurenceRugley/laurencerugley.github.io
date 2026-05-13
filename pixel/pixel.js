@@ -118,6 +118,7 @@
     spriteEl = null;
     atlas = null;
     overlayEl = null;
+    zEl = null;
     queuedNextState = null;
     if (catchTimeout !== null) { clearTimeout(catchTimeout); catchTimeout = null; }
     preHoverState = null;
@@ -269,17 +270,27 @@
   let stateStartedAt = 0;
   let preHoverState = null;
   let queuedNextState = null;
+  let zEl = null;
   function queueNextState(name) { queuedNextState = name; }
 
   function setState(name) {
     if (!STATES[name]) return;
     if (currentState === name) return;
+    const prevState = currentState;
     currentState = name;
     currentFrameIndex = 0;
     lastFrameSwitchAt = performance.now();
     stateStartedAt = lastFrameSwitchAt;
     applyTransform();
     setFrame(STATES[name].frames[0]);
+    if (prevState === 'sit' && zEl) { zEl.remove(); zEl = null; }
+    if (name === 'sit' && spriteEl && !zEl && !prefersReducedMotion) {
+      zEl = document.createElement('div');
+      zEl.className = 'pixel-z';
+      zEl.setAttribute('aria-hidden', 'true');
+      zEl.textContent = 'z';
+      spriteEl.appendChild(zEl);
+    }
   }
 
   function tickAnimation(now) {
@@ -405,6 +416,18 @@
     lastDashAt = now;
     setState(dashTargetFacing === 'right' ? 'dash-right' : 'dash-left');
     showOverlay('overlay-bang', 250);
+    spawnDust(dashFromX, -dir);
+  }
+
+  function spawnDust(fromX, driftDir) {
+    if (prefersReducedMotion) return;
+    const dust = document.createElement('div');
+    dust.className = 'pixel-dust';
+    dust.setAttribute('aria-hidden', 'true');
+    dust.style.left = (fromX + (FRAME_W * SCALE) / 2 - 12) + 'px';
+    dust.style.setProperty('--dir', String(driftDir));
+    document.body.appendChild(dust);
+    setTimeout(() => dust.remove(), 600);
   }
 
   function tickDashPosition(now) {
@@ -485,7 +508,7 @@
   let scrollPending = false;
   const IDLE_AFTER_MS = 200;
   const IDLE_QUIRK_AFTER_MS = 10000;
-  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide'];
+  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide', 'box-hide'];
   const DASH_PROXIMITY_PX = 60;
   const DASH_DISTANCE_PX = 140;
   const DASH_DURATION_MS = 400;
