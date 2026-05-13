@@ -54,7 +54,6 @@
   // ---------- Sprite container ----------
   let spriteEl = null;
   let atlas = null;
-  let currentFrameKey = 'idle-0';
 
   function ensureSprite() {
     if (spriteEl) return spriteEl;
@@ -93,7 +92,6 @@
     if (!spriteEl || !atlas) return;
     const x = atlas.frameMap[key];
     if (x === undefined) return;
-    currentFrameKey = key;
     spriteEl.style.backgroundPosition = `-${x}px 0px`;
   }
 
@@ -112,6 +110,7 @@
     spriteEl = null;
     atlas = null;
     overlayEl = null;
+    queuedNextState = null;
   }
 
   // ---------- Mode application ----------
@@ -332,6 +331,7 @@
   }
 
   function triggerCatch() {
+    if (prefersReducedMotion) return;
     if (currentState !== 'box-hide') return;
     setState('box-flip');
     queueNextState('caught');
