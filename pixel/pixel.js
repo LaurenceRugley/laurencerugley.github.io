@@ -68,6 +68,7 @@
     spriteEl.style.backgroundRepeat = 'no-repeat';
     setFrame('idle-0');
     document.body.appendChild(spriteEl);
+    spriteEl.addEventListener('click', triggerCatch);
     startLoop();
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -98,6 +99,7 @@
       el.removeEventListener('mouseleave', onWorkLeave);
     });
     stopLoop();
+    if (spriteEl) spriteEl.removeEventListener('click', triggerCatch);
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
     atlas = null;
@@ -213,6 +215,25 @@
       durations: [500, 500],
       facing: 'right',
       oneShot: false
+    },
+    'caught': {
+      frames: ['caught'],
+      durations: [500],
+      facing: 'right',
+      oneShot: true
+    },
+    'box-flip': {
+      frames: ['box-flip'],
+      durations: [250],
+      facing: 'right',
+      oneShot: true
+    },
+    'happy-wave': {
+      frames: ['happy-wave', 'caught'],
+      durations: [300, 300],
+      facing: 'right',
+      oneShot: true,
+      maxDurationMs: 800
     }
   };
 
@@ -221,6 +242,8 @@
   let lastFrameSwitchAt = 0;
   let stateStartedAt = 0;
   let preHoverState = null;
+  let queuedNextState = null;
+  function queueNextState(name) { queuedNextState = name; }
 
   function setState(name) {
     if (!STATES[name]) return;
@@ -240,11 +263,15 @@
     if (now - lastFrameSwitchAt >= dur) {
       const isLast = currentFrameIndex === state.frames.length - 1;
       if (isLast && state.oneShot) {
-        setState('idle');
+        const next = queuedNextState || 'idle';
+        queuedNextState = null;
+        setState(next);
         return;
       }
       if (state.maxDurationMs && now - stateStartedAt >= state.maxDurationMs) {
-        setState('idle');
+        const next = queuedNextState || 'idle';
+        queuedNextState = null;
+        setState(next);
         return;
       }
       currentFrameIndex = (currentFrameIndex + 1) % state.frames.length;
@@ -290,6 +317,31 @@
     preHoverState = null;
   }
 
+  function triggerCatch() {
+    if (currentState !== 'box-hide') return;
+    setState('box-flip');
+    queueNextState('caught');
+    setTimeout(() => {
+      if (currentState === 'caught') {
+        setState('happy-wave');
+        spawnHearts();
+      }
+    }, 500);
+  }
+
+  function spawnHearts() {
+    if (!spriteEl) return;
+    for (let i = 0; i < 3; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'pixel-heart';
+      heart.textContent = '♥';
+      heart.style.setProperty('--dx', (Math.random() * 30 - 15) + 'px');
+      heart.style.setProperty('--delay', (i * 120) + 'ms');
+      spriteEl.appendChild(heart);
+      setTimeout(() => heart.remove(), 1200);
+    }
+  }
+
   function spriteCenter() {
     const rect = spriteEl ? spriteEl.getBoundingClientRect() : null;
     if (!rect) return null;
@@ -298,7 +350,8 @@
 
   function maybeStartDash(now) {
     if (!spriteEl) return;
-    if (currentState === 'box-hide') return;
+    if (currentState === 'box-hide' || currentState === 'box-flip' ||
+        currentState === 'caught' || currentState === 'happy-wave') return;
     if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
     if (now - lastDashAt < DASH_COOLDOWN_MS) return;
     const c = spriteCenter();

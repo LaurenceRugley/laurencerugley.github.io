@@ -24,3 +24,22 @@ body[data-pixel="on"] .pixel-overlay {
 body[data-pixel="on"] .pixel-sprite[data-facing="left"] .pixel-overlay {
   transform: scaleX(-1); /* counter-rotate so the ! reads correctly */
 }
+
+body[data-pixel="on"] .pixel-heart {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  color: #B89968;
+  font-size: 14px;
+  pointer-events: none;
+  animation: pixelHeart 1100ms ease-out forwards;
+  animation-delay: var(--delay, 0ms);
+  transform: translateX(calc(var(--dx, 0px) - 50%));
+  opacity: 0;
+}
+
+@keyframes pixelHeart {
+  0%   { opacity: 0; transform: translate(calc(var(--dx) - 50%), 0px) scale(0.8); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), -60px) scale(1.1); }
+}
