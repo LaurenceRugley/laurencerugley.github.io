@@ -149,12 +149,32 @@
       frames: ['walk-right-0', 'walk-right-1', 'walk-right-2', 'walk-right-3'],
       durations: [120, 120, 120, 120],
       facing: 'left'
+    },
+    'yawn': {
+      frames: ['yawn-0', 'yawn-1', 'yawn-2'],
+      durations: [200, 800, 200],
+      facing: 'right',
+      oneShot: true
+    },
+    'look': {
+      frames: ['look-0', 'look-1', 'look-2', 'look-1'],
+      durations: [400, 400, 400, 400],
+      facing: 'right',
+      oneShot: true
+    },
+    'sit': {
+      frames: ['sit-0', 'sit-1'],
+      durations: [1200, 1200],
+      facing: 'right',
+      oneShot: false, // sit loops gently
+      maxDurationMs: 2400
     }
   };
 
   let currentState = 'idle';
   let currentFrameIndex = 0;
   let lastFrameSwitchAt = 0;
+  let stateStartedAt = 0;
 
   function setState(name) {
     if (!STATES[name]) return;
@@ -162,6 +182,7 @@
     currentState = name;
     currentFrameIndex = 0;
     lastFrameSwitchAt = performance.now();
+    stateStartedAt = lastFrameSwitchAt;
     applyTransform();
     setFrame(STATES[name].frames[0]);
   }
@@ -171,6 +192,15 @@
     const state = STATES[currentState];
     const dur = state.durations[currentFrameIndex];
     if (now - lastFrameSwitchAt >= dur) {
+      const isLast = currentFrameIndex === state.frames.length - 1;
+      if (isLast && state.oneShot) {
+        setState('idle');
+        return;
+      }
+      if (state.maxDurationMs && now - stateStartedAt >= state.maxDurationMs) {
+        setState('idle');
+        return;
+      }
       currentFrameIndex = (currentFrameIndex + 1) % state.frames.length;
       setFrame(state.frames[currentFrameIndex]);
       lastFrameSwitchAt = now;
@@ -183,6 +213,7 @@
     function frame(now) {
       tickAnimation(now);
       tickIdleTimeout(now);
+      tickIdleQuirk(now);
       rafHandle = requestAnimationFrame(frame);
     }
     rafHandle = requestAnimationFrame(frame);
@@ -200,6 +231,8 @@
   let lastScrollAt = 0;
   let scrollPending = false;
   const IDLE_AFTER_MS = 200;
+  const IDLE_QUIRK_AFTER_MS = 10000;
+  const QUIRK_POOL = ['yawn', 'look', 'sit'];
 
   function onScroll() {
     if (scrollPending) return;
@@ -221,6 +254,19 @@
   function tickIdleTimeout(now) {
     if (currentState !== 'walk-right' && currentState !== 'walk-left') return;
     if (now - lastScrollAt >= IDLE_AFTER_MS) setState('idle');
+  }
+
+  let idleSince = 0;
+  function tickIdleQuirk(now) {
+    if (currentState !== 'idle') {
+      idleSince = now;
+      return;
+    }
+    if (now - idleSince >= IDLE_QUIRK_AFTER_MS) {
+      const pick = QUIRK_POOL[Math.floor(Math.random() * QUIRK_POOL.length)];
+      setState(pick);
+      idleSince = now; // reset; will resume tracking once back in idle
+    }
   }
 
   // ---------- Init ----------
