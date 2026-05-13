@@ -12,3 +12,15 @@ body[data-pixel="on"] .pixel-sprite {
 }
 
 /* facing is applied in JS via the transform property */
+
+body[data-pixel="on"] .pixel-overlay {
+  position: absolute;
+  top: -36px; /* float the ! above the sprite head */
+  left: 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+body[data-pixel="on"] .pixel-sprite[data-facing="left"] .pixel-overlay {
+  transform: scaleX(-1); /* counter-rotate so the ! reads correctly */
+}

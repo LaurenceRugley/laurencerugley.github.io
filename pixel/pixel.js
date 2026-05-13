@@ -72,6 +72,7 @@
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', updatePosition);
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
     updatePosition();
     return spriteEl;
   }
@@ -87,6 +88,7 @@
   function removeSprite() {
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', updatePosition);
+    window.removeEventListener('mousemove', onMouseMove);
     stopLoop();
     if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
@@ -174,6 +176,27 @@
       durations: [300, 700, 700, 400, 700, 350, 400, 450],
       facing: 'right',
       oneShot: true
+    },
+    'dash-right': {
+      frames: ['dash-sprint-0', 'dash-sprint-1'],
+      durations: [60, 60],
+      facing: 'right',
+      oneShot: false,
+      maxDurationMs: 400
+    },
+    'dash-left': {
+      // Reuses dash-sprint frames, mirrored via CSS scaleX(-1) on the container.
+      frames: ['dash-sprint-0', 'dash-sprint-1'],
+      durations: [60, 60],
+      facing: 'left',
+      oneShot: false,
+      maxDurationMs: 400
+    },
+    'dash-recover': {
+      frames: ['dash-alert'],
+      durations: [400],
+      facing: 'right',
+      oneShot: true
     }
   };
 
@@ -213,6 +236,107 @@
     }
   }
 
+  // ---------- Cursor proximity + dash ----------
+  let cursorX = -9999;
+  let cursorY = -9999;
+  let mouseMovePending = false;
+  let lastDashAt = 0;
+  let dashStartedAt = 0;
+  let dashFromX = 0;
+  let dashTargetX = 0;
+  let dashTargetFacing = 'right';
+
+  function onMouseMove(e) {
+    cursorX = e.clientX;
+    cursorY = e.clientY;
+    if (mouseMovePending) return;
+    mouseMovePending = true;
+    requestAnimationFrame(handleMouseMove);
+  }
+
+  function handleMouseMove() {
+    mouseMovePending = false;
+    maybeStartDash(performance.now());
+  }
+
+  function spriteCenter() {
+    const rect = spriteEl ? spriteEl.getBoundingClientRect() : null;
+    if (!rect) return null;
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  function maybeStartDash(now) {
+    if (!spriteEl) return;
+    if (currentState === 'box-hide') return;
+    if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
+    if (now - lastDashAt < DASH_COOLDOWN_MS) return;
+    const c = spriteCenter();
+    if (!c) return;
+    const dx = cursorX - c.x;
+    const dy = cursorY - c.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > DASH_PROXIMITY_PX) return;
+
+    // Dash away from cursor.
+    const dir = dx >= 0 ? -1 : 1; // cursor right of sprite -> dash left
+    dashFromX = spriteX;
+    dashTargetX = Math.max(MARGIN, Math.min(MARGIN + computeMaxX(), spriteX + dir * DASH_DISTANCE_PX));
+    // If would clip against viewport edge, dash the other way instead.
+    if (dashTargetX === spriteX) {
+      dashTargetX = spriteX - dir * DASH_DISTANCE_PX;
+      dashTargetX = Math.max(MARGIN, Math.min(MARGIN + computeMaxX(), dashTargetX));
+    }
+    dashTargetFacing = (dashTargetX >= dashFromX) ? 'right' : 'left';
+    dashStartedAt = now;
+    lastDashAt = now;
+    setState(dashTargetFacing === 'right' ? 'dash-right' : 'dash-left');
+    showOverlay('overlay-bang', 250);
+  }
+
+  function tickDashPosition(now) {
+    if (currentState !== 'dash-right' && currentState !== 'dash-left') return;
+    const t = Math.min(1, (now - dashStartedAt) / DASH_DURATION_MS);
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    spriteX = dashFromX + (dashTargetX - dashFromX) * eased;
+    applyTransform();
+    if (t >= 1) setState('dash-recover');
+  }
+
+  // ---------- Overlay element (! badge) ----------
+  let overlayEl = null;
+  let overlayHideAt = 0;
+
+  function ensureOverlay() {
+    if (overlayEl || !spriteEl) return overlayEl;
+    overlayEl = document.createElement('div');
+    overlayEl.className = 'pixel-overlay';
+    overlayEl.setAttribute('aria-hidden', 'true');
+    overlayEl.style.width = (FRAME_W * SCALE) + 'px';
+    overlayEl.style.height = (FRAME_H * SCALE) + 'px';
+    overlayEl.style.backgroundImage = spriteEl.style.backgroundImage;
+    overlayEl.style.backgroundRepeat = 'no-repeat';
+    overlayEl.style.display = 'none';
+    spriteEl.appendChild(overlayEl);
+    return overlayEl;
+  }
+
+  function showOverlay(frameKey, durationMs) {
+    ensureOverlay();
+    if (!overlayEl || !atlas) return;
+    const x = atlas.frameMap[frameKey];
+    if (x === undefined) return;
+    overlayEl.style.backgroundPosition = `-${x}px 0px`;
+    overlayEl.style.display = 'block';
+    overlayHideAt = performance.now() + durationMs;
+  }
+
+  function tickOverlay(now) {
+    if (overlayEl && overlayHideAt > 0 && now >= overlayHideAt) {
+      overlayEl.style.display = 'none';
+      overlayHideAt = 0;
+    }
+  }
+
   let rafHandle = null;
   function startLoop() {
     if (rafHandle !== null) return;
@@ -220,6 +344,8 @@
       tickAnimation(now);
       tickIdleTimeout(now);
       tickIdleQuirk(now);
+      tickDashPosition(now);
+      tickOverlay(now);
       rafHandle = requestAnimationFrame(frame);
     }
     rafHandle = requestAnimationFrame(frame);
@@ -239,6 +365,10 @@
   const IDLE_AFTER_MS = 200;
   const IDLE_QUIRK_AFTER_MS = 10000;
   const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide'];
+  const DASH_PROXIMITY_PX = 60;
+  const DASH_DISTANCE_PX = 140;
+  const DASH_DURATION_MS = 400;
+  const DASH_COOLDOWN_MS = 1000;
 
   function onScroll() {
     if (scrollPending) return;
