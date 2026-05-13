@@ -75,6 +75,10 @@
       return spriteEl;
     }
 
+    currentState = 'idle';
+    currentFrameIndex = 0;
+    idleSince = performance.now();
+    lastScrollAt = performance.now();
     startLoop();
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -111,6 +115,11 @@
     atlas = null;
     overlayEl = null;
     queuedNextState = null;
+    if (catchTimeout !== null) { clearTimeout(catchTimeout); catchTimeout = null; }
+    preHoverState = null;
+    lastDashAt = 0;
+    cursorX = -9999;
+    cursorY = -9999;
   }
 
   // ---------- Mode application ----------
@@ -330,12 +339,15 @@
     preHoverState = null;
   }
 
+  let catchTimeout = null;
   function triggerCatch() {
     if (prefersReducedMotion) return;
     if (currentState !== 'box-hide') return;
     setState('box-flip');
     queueNextState('caught');
-    setTimeout(() => {
+    if (catchTimeout !== null) clearTimeout(catchTimeout);
+    catchTimeout = setTimeout(() => {
+      catchTimeout = null;
       if (currentState === 'caught') {
         setState('happy-wave');
         spawnHearts();
