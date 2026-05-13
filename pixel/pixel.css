@@ -43,3 +43,8 @@ body[data-pixel="on"] .pixel-heart {
   20%  { opacity: 1; }
   100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), -60px) scale(1.1); }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-pixel="on"] .pixel-heart { display: none; }
+  body[data-pixel="on"] .pixel-overlay { display: none !important; }
+}

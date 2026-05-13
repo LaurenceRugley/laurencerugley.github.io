@@ -6,6 +6,7 @@
   const FRAME_H = 24;
   const SCALE = 3;
   const MARGIN = 24;
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- Persistence ----------
   function readMode() {
@@ -69,6 +70,12 @@
     setFrame('idle-0');
     document.body.appendChild(spriteEl);
     spriteEl.addEventListener('click', triggerCatch);
+
+    if (prefersReducedMotion) {
+      spriteEl.style.transform = `translateX(${MARGIN}px)`;
+      return spriteEl;
+    }
+
     startLoop();
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -91,6 +98,8 @@
   }
 
   function removeSprite() {
+    if (!spriteEl) return;
+    stopLoop();
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', updatePosition);
     window.removeEventListener('mousemove', onMouseMove);
@@ -98,9 +107,8 @@
       el.removeEventListener('mouseenter', onWorkEnter);
       el.removeEventListener('mouseleave', onWorkLeave);
     });
-    stopLoop();
-    if (spriteEl) spriteEl.removeEventListener('click', triggerCatch);
-    if (spriteEl && spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
+    spriteEl.removeEventListener('click', triggerCatch);
+    if (spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
     atlas = null;
     overlayEl = null;
@@ -449,7 +457,10 @@
   window.PixelEngine = {
     setState,
     getState: () => currentState,
-    celebrate: () => { if (spriteEl) setState('jump'); }
+    celebrate: () => {
+      if (prefersReducedMotion) return;
+      if (spriteEl) setState('jump');
+    }
   };
 
   // ---------- Scroll-driven state ----------
