@@ -52,20 +52,21 @@ body[data-pixel="on"] .pixel-heart {
 
 body[data-pixel="on"] .pixel-dust {
   position: fixed;
-  bottom: 26px;
-  width: 24px;
-  height: 8px;
+  bottom: 24px;
+  width: 38px;
+  height: 16px;
   pointer-events: none;
   z-index: 99;
-  background: radial-gradient(ellipse at center, rgba(120, 100, 80, 0.55), rgba(120, 100, 80, 0.2) 50%, transparent 75%);
+  background: radial-gradient(ellipse at center, rgba(60, 48, 36, 0.85), rgba(60, 48, 36, 0.5) 40%, transparent 75%);
   opacity: 0;
-  animation: pixelDust 550ms ease-out forwards;
+  animation: pixelDust 650ms ease-out forwards;
+  filter: blur(0.5px);
 }
 
 @keyframes pixelDust {
-  0%   { opacity: 0; transform: translateX(0) scale(0.45); }
-  20%  { opacity: 0.7; }
-  100% { opacity: 0; transform: translateX(calc(var(--dir, 1) * 30px)) scale(1.7); }
+  0%   { opacity: 0; transform: translateX(0) scale(0.35); }
+  15%  { opacity: 0.95; }
+  100% { opacity: 0; transform: translateX(calc(var(--dir, 1) * 44px)) scale(2.1); }
 }
 
 body[data-pixel="on"] .pixel-z {
