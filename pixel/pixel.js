@@ -262,13 +262,6 @@
       oneShot: false,
       maxDurationMs: 500
     },
-    'salute': {
-      frames: ['salute'],
-      durations: [2000],
-      facing: 'right',
-      oneShot: false,
-      maxDurationMs: 2000
-    },
     'smoke': {
       // Reuses idle frames — cigar + smoke puffs are layered on top via CSS
       // (data-state="smoke" reveals the .pixel-cigar element and gates
