@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stylist Companion — Prototype</title>
+<!--
+  PROTOTYPE — not wired into the live site. Standalone preview of a second
+  pixel companion concept: a hair stylist. Open this file directly in a
+  browser to see her cycle through idle behaviours.
+
+  Mechanics shown:
+    - idle (standing, gentle breathing bob)
+    - quirk: drink coffee
+    - quirk: a client appears in a chair (gender randomised) and she
+      styles their hair — randomly cutting, combing, or blow-drying
+
+  Sprite art is rough placeholder, same as the main pixel companion.
+  Laurence does the real art; this is just to show how it moves.
+-->
+<style>
+  :root {
+    --bg: #EDE7D9;
+    --ink: #2A2218;
+    --gold: #B89968;
+    --slate: #5A4F3E;
+    --line: #E5DDD0;
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 40px 20px;
+  }
+  .title {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 500;
+    text-align: center;
+  }
+  .subtitle {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--slate);
+    text-align: center;
+    max-width: 420px;
+    line-height: 1.5;
+  }
+  /* The "stage" the companion + client live on. */
+  .stage {
+    position: relative;
+    width: 360px;
+    height: 280px;
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 36px rgba(42, 34, 24, 0.08);
+    overflow: hidden;
+  }
+  /* A subtle floor line. */
+  .stage::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 48px;
+    height: 1px;
+    background: var(--line);
+  }
+  .sprite {
+    position: absolute;
+    bottom: 30px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background-repeat: no-repeat;
+  }
+  .stylist { left: 96px; z-index: 2; }
+  .client {
+    left: 188px;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .client.visible { opacity: 1; }
+  /* Soft ground shadow under each sprite. */
+  .shadow {
+    position: absolute;
+    bottom: 26px;
+    width: 56px;
+    height: 8px;
+    background: radial-gradient(ellipse at center, rgba(42,34,24,0.30), transparent 72%);
+    pointer-events: none;
+  }
+  .shadow.stylist-shadow { left: 88px; }
+  .shadow.client-shadow {
+    left: 180px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .shadow.client-shadow.visible { opacity: 1; }
+  .caption {
+    font-family: var(--sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    color: var(--gold);
+    text-align: center;
+    min-height: 14px;
+  }
+  .note {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--slate);
+    text-align: center;
+    max-width: 440px;
+    line-height: 1.6;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .controls button {
+    font-family: var(--sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--slate);
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .controls button:hover { border-color: var(--gold); color: var(--gold); }
+</style>
+</head>
+<body>
+
+  <div class="title">Stylist Companion — Prototype</div>
+  <p class="subtitle">
+    A second companion concept for the future "artsy" page. She stands idle,
+    sometimes drinks coffee, and sometimes a client drops into the chair so she
+    can cut, comb, or blow-dry their hair.
+  </p>
+
+  <div class="stage" id="stage">
+    <div class="shadow stylist-shadow"></div>
+    <div class="shadow client-shadow" id="clientShadow"></div>
+    <div class="sprite stylist" id="stylist" aria-hidden="true"></div>
+    <div class="sprite client" id="client" aria-hidden="true"></div>
+  </div>
+
+  <div class="caption" id="caption">idle</div>
+
+  <div class="controls">
+    <button data-act="coffee">Force: Coffee</button>
+    <button data-act="cut">Force: Cut</button>
+    <button data-act="comb">Force: Comb</button>
+    <button data-act="blowdry">Force: Blow-dry</button>
+    <button data-act="idle">Back to Idle</button>
+  </div>
+
+  <p class="note">
+    Placeholder pixel art &mdash; same rough-draft quality as the main companion.
+    Real art comes later. This page is standalone and is <strong>not</strong> wired
+    into the live site.
+  </p>
+
+<script>
+(function () {
+  // ---------------------------------------------------------------------------
+  // Palette
+  // ---------------------------------------------------------------------------
+  var PALETTE = {
+    '.': null,
+    'I': '#1A1A1A',   // outline
+    'K': '#E8C4A0',   // fair skin (stylist)
+    'H': '#6B4423',   // brown hair
+    'Y': '#D9B978',   // blonde streak
+    'D': '#2D2D2D',   // stylist's stylish dark outfit
+    'W': '#F4F1EA',   // whites — eye whites, coffee rim
+    'E': '#3A2A1A',   // dark detail — eye pupil
+    'C': '#7A5A3A',   // chair wood
+    'M': '#B0B0B0',   // metal tools (scissors, comb, dryer barrel)
+    'R': '#C99070',   // client skin
+    'P': '#46506E',   // client salon cape
+    'T': '#9A8A7A',   // client hair (neutral — the thing being styled)
+    'F': '#E0533B',   // warm pop — coffee mug, hair-dryer body
+    'G': '#7FB0D8'    // blow-dry air puff
+  };
+
+  // ---------------------------------------------------------------------------
+  // Frames — 16 wide x 24 tall, one row per string.
+  // ---------------------------------------------------------------------------
+  var FRAMES = {
+    'stylist-idle-0': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.....',
+      '....IKKKKI......',
+      '...IHHDDDHHI....',
+      '..IHHDDDDDHHI...',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-idle-1': [
+      '................',
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.....',
+      '...IHHDDDHHI....',
+      '..IHHDDDDDHHI...',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-coffee-0': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.....',
+      '....IKKKKI......',
+      '...IHHDDDHHI....',
+      '..IHHDDDDDHHI...',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHKI..',
+      '...IIDDDDDIIKI..',
+      '....IDDDDDI.WI..',
+      '....IDDDDDI.FI..',
+      '....IDDDDDI.II..',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-coffee-1': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKWFI.....',
+      '....IKKKFII.....',
+      '....IKKKKI......',
+      '...IHHDDDKHI....',
+      '..IHHDDDDKHHI...',
+      '..IHIDDDDKIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-cut-0': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI..MM.',
+      '....IKKKKI..IMI.',
+      '...IHHDDDHKKMI..',
+      '..IHHDDDDDKII...',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-cut-1': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.....',
+      '....IKKKKI...MM.',
+      '...IHHDDDHI.IMI.',
+      '..IHHDDDDDKKMI..',
+      '..IHIDDDDDKII...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-comb-0': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.MMM.',
+      '....IKKKKI..III.',
+      '...IHHDDDHKKMI..',
+      '..IHHDDDDDKII...',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-comb-1': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.....',
+      '....IKKKKI..MMM.',
+      '...IHHDDDHI.III.',
+      '..IHHDDDDDKKMI..',
+      '..IHIDDDDDKII...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-blowdry-0': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKHI....',
+      '....IKKKKKI.....',
+      '....IKKKKI.IFFI.',
+      '...IHHDDDHKKFGG.',
+      '..IHHDDDDDKIIG..',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'stylist-blowdry-1': [
+      '................',
+      '....IHHHHHI.....',
+      '...IHHHHHHHI....',
+      '...IHHYHHHHI....',
+      '...IHKKKKKHI....',
+      '...IHKEKEKHI....',
+      '...IHKKKKKIIFFI.',
+      '....IKKKKIKKFGG.',
+      '...IHHDDDHKIIGG.',
+      '..IHHDDDDDIHIG..',
+      '..IHIDDDDDIHI...',
+      '..IHIDDDDDIHI...',
+      '...IIDDDDDII....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....IDDDDDI.....',
+      '....ID.IDI......',
+      '....ID..IDI.....',
+      '....ID..IDI.....',
+      '...IDDI.IDDI....',
+      '...IDDI.IDDI....',
+      '................',
+      '................'
+    ],
+    'client-female': [
+      '................',
+      '................',
+      '.....TTTT.......',
+      '....TTTTTT......',
+      '....TRRRRT......',
+      '....TRERRT......',
+      '....TRRRRT......',
+      '.....RRRR.......',
+      '....IPPPPI......',
+      '..ICIPPPPICI....',
+      '..ICIPPPPICI....',
+      '..ICIPPPPICI....',
+      '..ICIPPPPICI....',
+      '..ICCCCCCCCI....',
+      '...IC....CI.....',
+      '...IC....CI.....',
+      '...IC....CI.....',
+      '...II....II.....',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................'
+    ],
+    'client-male': [
+      '................',
+      '................',
+      '................',
+      '.....TTTT.......',
+      '....TTTTTT......',
+      '....TRRRRT......',
+      '....TRERRT......',
+      '.....RRRR.......',
+      '....IPPPPI......',
+      '..ICIPPPPICI....',
+      '..ICIPPPPICI....',
+      '..ICIPPPPICI....',
+      '..ICIPPPPICI....',
+      '..ICCCCCCCCI....',
+      '...IC....CI.....',
+      '...IC....CI.....',
+      '...IC....CI.....',
+      '...II....II.....',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................'
+    ]
+  };
+
+  // ---------------------------------------------------------------------------
+  // Canvas atlas — render every frame onto one offscreen canvas, use as a
+  // background-image and shift background-position to pick a frame.
+  // ---------------------------------------------------------------------------
+  var FRAME_W = 16, FRAME_H = 24, SCALE = 5;
+
+  function buildAtlas() {
+    var keys = Object.keys(FRAMES);
+    var canvas = document.createElement('canvas');
+    canvas.width = FRAME_W * SCALE * keys.length;
+    canvas.height = FRAME_H * SCALE;
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    var map = {};
+    keys.forEach(function (key, idx) {
+      var rows = FRAMES[key];
+      var baseX = idx * FRAME_W * SCALE;
+      map[key] = baseX;
+      for (var y = 0; y < FRAME_H; y++) {
+        var row = rows[y] || '';
+        for (var x = 0; x < FRAME_W; x++) {
+          var color = PALETTE[row[x] || '.'];
+          if (!color) continue;
+          ctx.fillStyle = color;
+          ctx.fillRect(baseX + x * SCALE, y * SCALE, SCALE, SCALE);
+        }
+      }
+    });
+    return { dataUrl: canvas.toDataURL('image/png'), map: map };
+  }
+
+  var atlas = buildAtlas();
+
+  function makeSprite(el) {
+    el.style.width = (FRAME_W * SCALE) + 'px';
+    el.style.height = (FRAME_H * SCALE) + 'px';
+    el.style.backgroundImage = 'url(' + atlas.dataUrl + ')';
+    return {
+      el: el,
+      setFrame: function (key) {
+        var x = atlas.map[key];
+        if (x === undefined) return;
+        el.style.backgroundPosition = '-' + x + 'px 0px';
+      }
+    };
+  }
+
+  var stylist = makeSprite(document.getElementById('stylist'));
+  var client = makeSprite(document.getElementById('client'));
+  var clientEl = document.getElementById('client');
+  var clientShadow = document.getElementById('clientShadow');
+  var caption = document.getElementById('caption');
+
+  // ---------------------------------------------------------------------------
+  // Stylist state machine — just the stylist's own states. The client showing
+  // up is handled separately as part of the styling quirks.
+  // ---------------------------------------------------------------------------
+  var STATES = {
+    'idle':    { frames: ['stylist-idle-0', 'stylist-idle-1'], durations: [620, 620], loop: true },
+    'coffee':  { frames: ['stylist-coffee-0', 'stylist-coffee-1', 'stylist-coffee-1', 'stylist-coffee-0'],
+                 durations: [500, 900, 900, 500], loop: true, maxMs: 4200, caption: 'coffee break' },
+    'cut':     { frames: ['stylist-cut-0', 'stylist-cut-1'], durations: [260, 260], loop: true, maxMs: 5200, caption: 'cutting' },
+    'comb':    { frames: ['stylist-comb-0', 'stylist-comb-1'], durations: [340, 340], loop: true, maxMs: 5200, caption: 'combing' },
+    'blowdry': { frames: ['stylist-blowdry-0', 'stylist-blowdry-1'], durations: [180, 180], loop: true, maxMs: 5200, caption: 'blow-drying' }
+  };
+  var STYLING = ['cut', 'comb', 'blowdry'];
+  var QUIRK_POOL = ['coffee', 'cut', 'comb', 'blowdry'];
+
+  var prefersReducedMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var state = 'idle';
+  var frameIdx = 0;
+  var lastSwitch = 0;
+  var stateStarted = 0;
+  var idleSince = 0;
+  var nextQuirkAfter = 3500 + Math.random() * 3000;
+  var forced = false; // a control-button override pauses the auto-rotation
+
+  function clientFrameForState(s) {
+    return s; // not used directly — kept for clarity
+  }
+
+  function showClient() {
+    var key = Math.random() < 0.5 ? 'client-female' : 'client-male';
+    client.setFrame(key);
+    clientEl.classList.add('visible');
+    clientShadow.classList.add('visible');
+  }
+  function hideClient() {
+    clientEl.classList.remove('visible');
+    clientShadow.classList.remove('visible');
+  }
+
+  function setState(name, isForced) {
+    if (!STATES[name]) return;
+    state = name;
+    frameIdx = 0;
+    lastSwitch = performance.now();
+    stateStarted = lastSwitch;
+    forced = !!isForced;
+    stylist.setFrame(STATES[name].frames[0]);
+    caption.textContent = STATES[name].caption || 'idle';
+    // A client is present only while she is actively styling someone.
+    if (name === 'cut' || name === 'comb' || name === 'blowdry') {
+      showClient();
+    } else {
+      hideClient();
+    }
+  }
+
+  function tick(now) {
+    var st = STATES[state];
+
+    // Advance the current animation.
+    var dur = st.durations[frameIdx];
+    if (now - lastSwitch >= dur) {
+      frameIdx = (frameIdx + 1) % st.frames.length;
+      stylist.setFrame(st.frames[frameIdx]);
+      lastSwitch = now;
+    }
+
+    // A quirk with a max duration returns to idle when it elapses.
+    if (st.maxMs && now - stateStarted >= st.maxMs) {
+      setState('idle');
+      idleSince = now;
+      nextQuirkAfter = 3500 + Math.random() * 3000;
+    }
+
+    // From idle, after a randomised gap, pick the next quirk — unless a
+    // control button has forced a state (then auto-rotation waits).
+    if (state === 'idle') {
+      if (!idleSince) idleSince = now;
+      if (!forced && !prefersReducedMotion && now - idleSince >= nextQuirkAfter) {
+        setState(QUIRK_POOL[Math.floor(Math.random() * QUIRK_POOL.length)]);
+      }
+    } else {
+      idleSince = 0;
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // Control buttons — force a state for inspection.
+  document.querySelectorAll('.controls button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var act = btn.getAttribute('data-act');
+      if (act === 'idle') {
+        forced = false;
+        setState('idle');
+        idleSince = performance.now();
+        nextQuirkAfter = 3500 + Math.random() * 3000;
+      } else {
+        setState(act, true);
+      }
+    });
+  });
+
+  // Boot.
+  setState('idle');
+  idleSince = performance.now();
+  if (prefersReducedMotion) {
+    // Static preview — show the idle frame, no animation loop.
+    stylist.setFrame('stylist-idle-0');
+    caption.textContent = 'idle (reduced motion)';
+  } else {
+    requestAnimationFrame(tick);
+  }
+})();
+</script>
+
+</body>
+</html>
