@@ -9,14 +9,12 @@
   pixel companion concept: a hair stylist. Open this file directly in a
   browser to see her cycle through idle behaviours.
 
-  Mechanics shown:
-    - idle (standing, gentle breathing bob)
-    - quirk: drink coffee
-    - quirk: a client appears in a chair (gender randomised) and she
-      styles their hair — randomly cutting, combing, or blow-drying
+  This iteration: frames widened to 24px for room, props (scissors, comb,
+  blow-dryer, coffee mug) drawn big and cartoonish, the salon chair made
+  prominent, stylist + client positioned closer, and gentle steam wafting
+  off the coffee.
 
-  Sprite art is rough placeholder, same as the main pixel companion.
-  Laurence does the real art; this is just to show how it moves.
+  Sprite art is still rough placeholder. Laurence does the real art.
 -->
 <style>
   :root {
@@ -38,107 +36,81 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 28px;
+    gap: 26px;
     padding: 40px 20px;
   }
-  .title {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 500;
-    text-align: center;
-  }
+  .title { font-family: var(--serif); font-size: 28px; font-weight: 500; text-align: center; }
   .subtitle {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 15px;
-    color: var(--slate);
-    text-align: center;
-    max-width: 420px;
-    line-height: 1.5;
+    font-family: var(--serif); font-style: italic; font-size: 15px;
+    color: var(--slate); text-align: center; max-width: 440px; line-height: 1.5;
   }
-  /* The "stage" the companion + client live on. */
   .stage {
     position: relative;
-    width: 360px;
-    height: 280px;
+    width: 420px;
+    height: 300px;
     background: #fff;
     border: 1px solid var(--line);
     box-shadow: 0 12px 36px rgba(42, 34, 24, 0.08);
     overflow: hidden;
   }
-  /* A subtle floor line. */
   .stage::after {
     content: '';
-    position: absolute;
-    left: 0; right: 0;
-    bottom: 48px;
-    height: 1px;
-    background: var(--line);
+    position: absolute; left: 0; right: 0; bottom: 44px;
+    height: 1px; background: var(--line);
   }
   .sprite {
     position: absolute;
-    bottom: 30px;
+    bottom: 26px;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     background-repeat: no-repeat;
   }
+  /* 24px frames at 5x = 120px wide. Positioned to sit close together. */
   .stylist { left: 96px; z-index: 2; }
-  .client {
-    left: 188px;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
+  .client  { left: 188px; z-index: 1; opacity: 0; transition: opacity 0.4s ease; }
   .client.visible { opacity: 1; }
-  /* Soft ground shadow under each sprite. */
+
   .shadow {
-    position: absolute;
-    bottom: 26px;
-    width: 56px;
-    height: 8px;
-    background: radial-gradient(ellipse at center, rgba(42,34,24,0.30), transparent 72%);
+    position: absolute; bottom: 22px;
+    width: 70px; height: 9px;
+    background: radial-gradient(ellipse at center, rgba(42,34,24,0.28), transparent 72%);
     pointer-events: none;
   }
-  .shadow.stylist-shadow { left: 88px; }
-  .shadow.client-shadow {
-    left: 180px;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
+  .shadow.stylist-shadow { left: 121px; }
+  .shadow.client-shadow  { left: 213px; opacity: 0; transition: opacity 0.4s ease; }
   .shadow.client-shadow.visible { opacity: 1; }
+
+  /* Gentle coffee steam — soft, slow, wavy. Not the cigar puff. */
+  .steam-wisp {
+    position: absolute;
+    width: 8px; height: 12px;
+    background: radial-gradient(ellipse at center, rgba(252,252,252,0.95), rgba(228,228,228,0.45) 55%, transparent 80%);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 3;
+    animation: steamRise 2600ms ease-in-out forwards;
+  }
+  @keyframes steamRise {
+    0%   { opacity: 0; transform: translate(0, 0) scale(0.45); }
+    22%  { opacity: 0.7; }
+    55%  { transform: translate(var(--sway, 7px), -18px) scale(1.05); }
+    100% { opacity: 0; transform: translate(calc(var(--sway, 7px) * -0.7), -38px) scale(1.5); }
+  }
+
   .caption {
-    font-family: var(--sans);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.28em;
-    color: var(--gold);
-    text-align: center;
-    min-height: 14px;
+    font-family: var(--sans); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.28em; color: var(--gold); text-align: center; min-height: 14px;
   }
   .note {
-    font-family: var(--sans);
-    font-size: 11px;
-    color: var(--slate);
-    text-align: center;
-    max-width: 440px;
-    line-height: 1.6;
+    font-family: var(--sans); font-size: 11px; color: var(--slate);
+    text-align: center; max-width: 460px; line-height: 1.6;
   }
-  .controls {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .controls button {
-    font-family: var(--sans);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    background: #fff;
-    border: 1px solid var(--line);
-    color: var(--slate);
-    padding: 8px 12px;
-    cursor: pointer;
+    font-family: var(--sans); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.18em; background: #fff; border: 1px solid var(--line);
+    color: var(--slate); padding: 8px 12px; cursor: pointer;
     transition: border-color 0.2s ease, color 0.2s ease;
   }
   .controls button:hover { border-color: var(--gold); color: var(--gold); }
@@ -148,9 +120,9 @@
 
   <div class="title">Stylist Companion — Prototype</div>
   <p class="subtitle">
-    A second companion concept for the future "artsy" page. She stands idle,
-    sometimes drinks coffee, and sometimes a client drops into the chair so she
-    can cut, comb, or blow-dry their hair.
+    Second companion concept for the future "artsy" page. Bigger, cartoonish
+    props this round — scissors, comb, blow-dryer, and a steaming coffee — plus
+    a more prominent salon chair and the client pulled in closer.
   </p>
 
   <div class="stage" id="stage">
@@ -171,9 +143,8 @@
   </div>
 
   <p class="note">
-    Placeholder pixel art &mdash; same rough-draft quality as the main companion.
-    Real art comes later. This page is standalone and is <strong>not</strong> wired
-    into the live site.
+    Placeholder pixel art — rough-draft quality. This page is standalone and is
+    <strong>not</strong> wired into the live site.
   </p>
 
 <script>
@@ -188,340 +159,341 @@
     'H': '#6B4423',   // brown hair
     'Y': '#D9B978',   // blonde streak
     'D': '#2D2D2D',   // stylist's stylish dark outfit
-    'W': '#F4F1EA',   // whites — eye whites, coffee rim
+    'W': '#F4F1EA',   // white ceramic / highlights
     'E': '#3A2A1A',   // dark detail — eye pupil
-    'C': '#7A5A3A',   // chair wood
-    'M': '#B0B0B0',   // metal tools (scissors, comb, dryer barrel)
+    'C': '#9A7348',   // salon chair (warm wood/leather)
+    'M': '#C4C4C4',   // metal — scissor + comb + dryer barrel
     'R': '#C99070',   // client skin
     'P': '#46506E',   // client salon cape
-    'T': '#9A8A7A',   // client hair (neutral — the thing being styled)
-    'F': '#E0533B',   // warm pop — coffee mug, hair-dryer body
-    'G': '#7FB0D8'    // blow-dry air puff
+    'T': '#9A8A7A',   // client hair (being styled)
+    'F': '#E0533B',   // warm pop — coffee mug body, hair-dryer body
+    'G': '#9FC8E8',   // blow-dry air puff
+    'S': '#7E5AA8',   // tool handles (purple pop)
+    'O': '#4A2F1A'    // coffee liquid
   };
 
   // ---------------------------------------------------------------------------
-  // Frames — 16 wide x 24 tall, one row per string.
+  // Frames — 24 wide x 24 tall, one row per string.
   // ---------------------------------------------------------------------------
   var FRAMES = {
     'stylist-idle-0': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.....',
-      '....IKKKKI......',
-      '...IHHDDDHHI....',
-      '..IHHDDDDDHHI...',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.........',
+      '......IHHYHHHHI.........',
+      '......IHKKKKKHI.........',
+      '......IHKEKEKHI.........',
+      '......IHKKKKKHI.........',
+      '.......IKKKKKI..........',
+      '.......IKKKKI...........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHI........',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-idle-1': [
-      '................',
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.....',
-      '...IHHDDDHHI....',
-      '..IHHDDDDDHHI...',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.........',
+      '......IHHYHHHHI.........',
+      '......IHKKKKKHI.........',
+      '......IHKEKEKHI.........',
+      '......IHKKKKKHI.........',
+      '.......IKKKKKI..........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHI........',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-coffee-0': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.....',
-      '....IKKKKI......',
-      '...IHHDDDHHI....',
-      '..IHHDDDDDHHI...',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHKI..',
-      '...IIDDDDDIIKI..',
-      '....IDDDDDI.WI..',
-      '....IDDDDDI.FI..',
-      '....IDDDDDI.II..',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.........',
+      '......IHHYHHHHI.........',
+      '......IHKKKKKHI.........',
+      '......IHKEKEKHI.........',
+      '......IHKKKKKHI.........',
+      '.......IKKKKKI..........',
+      '.......IKKKKI...........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHKKI......',
+      '.....IHIDDDDDIKKII......',
+      '.....IHIDDDDDII.IWWWWI..',
+      '......IIDDDDDI..IOOOOI..',
+      '.......IDDDDDI..IFFFFIWI',
+      '.......IDDDDDI..IFFFFI.I',
+      '.......IDDDDDI..IFFFFIWI',
+      '.......ID.IDI...IIIIII..',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-coffee-1': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKWFI.....',
-      '....IKKKFII.....',
-      '....IKKKKI......',
-      '...IHHDDDKHI....',
-      '..IHHDDDDKHHI...',
-      '..IHIDDDDKIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.........',
+      '......IHHYHHHHI.........',
+      '......IHKKKKKHI.........',
+      '......IHKEKEKHI.........',
+      '......IHKKKIWWWWI.......',
+      '.......IKKKIOOOOI.......',
+      '.......IKKKIFFFFIWI.....',
+      '......IHHDDDKFFFFI.I....',
+      '.....IHHDDDDKFFFFIWI....',
+      '.....IHIDDDDKIIIIII.....',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-cut-0': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI..MM.',
-      '....IKKKKI..IMI.',
-      '...IHHDDDHKKMI..',
-      '..IHHDDDDDKII...',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI.M....M...',
+      '......IHHHHHHHIM..M.....',
+      '......IHHYHHHHI.MM......',
+      '......IHKKKKKHISIIS.....',
+      '......IHKEKEKHISI.IS....',
+      '......IHKKKKKHKSI.IS....',
+      '.......IKKKKKKKSIIS.....',
+      '.......IKKKKI...........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHI........',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-cut-1': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.....',
-      '....IKKKKI...MM.',
-      '...IHHDDDHI.IMI.',
-      '..IHHDDDDDKKMI..',
-      '..IHIDDDDDKII...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI...MM.....',
+      '......IHHHHHHHI..MM.....',
+      '......IHHYHHHHI..MM.....',
+      '......IHKKKKKHI.SMMS....',
+      '......IHKEKEKHISI.IS....',
+      '......IHKKKKKHKSI.IS....',
+      '.......IKKKKKKKSIIS.....',
+      '.......IKKKKI...........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHI........',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-comb-0': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.MMM.',
-      '....IKKKKI..III.',
-      '...IHHDDDHKKMI..',
-      '..IHHDDDDDKII...',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.SSSSSSI.',
+      '......IHHYHHHHISSSSSSSI.',
+      '......IHKKKKKHISI.I.I.I.',
+      '......IHKEKEKHISI.I.I.I.',
+      '......IHKKKKKHKKI.......',
+      '.......IKKKKKKKI........',
+      '.......IKKKKI...........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHI........',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-comb-1': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.....',
-      '....IKKKKI..MMM.',
-      '...IHHDDDHI.III.',
-      '..IHHDDDDDKKMI..',
-      '..IHIDDDDDKII...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.........',
+      '......IHHYHHHHI.SSSSSSI.',
+      '......IHKKKKKHISSSSSSSI.',
+      '......IHKEKEKHISI.I.I.I.',
+      '......IHKKKKKHKSI.I.I.I.',
+      '.......IKKKKKKKKI.......',
+      '.......IKKKKI...........',
+      '......IHHDDDHHI.........',
+      '.....IHHDDDDDHHI........',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-blowdry-0': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKHI....',
-      '....IKKKKKI.....',
-      '....IKKKKI.IFFI.',
-      '...IHHDDDHKKFGG.',
-      '..IHHDDDDDKIIG..',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.........',
+      '......IHHYHHHHI.IFFFFI..',
+      '......IHKKKKKHIIFFFFFI..',
+      '......IHKEKEKHKIFFFFFIGG',
+      '......IHKKKKKHKIFFFFFIGG',
+      '.......IKKKKKKKIFFFFI.GG',
+      '.......IKKKKI..IFFI.....',
+      '......IHHDDDHHI.IFFI....',
+      '.....IHHDDDDDHHIIIII....',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'stylist-blowdry-1': [
-      '................',
-      '....IHHHHHI.....',
-      '...IHHHHHHHI....',
-      '...IHHYHHHHI....',
-      '...IHKKKKKHI....',
-      '...IHKEKEKHI....',
-      '...IHKKKKKIIFFI.',
-      '....IKKKKIKKFGG.',
-      '...IHHDDDHKIIGG.',
-      '..IHHDDDDDIHIG..',
-      '..IHIDDDDDIHI...',
-      '..IHIDDDDDIHI...',
-      '...IIDDDDDII....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....IDDDDDI.....',
-      '....ID.IDI......',
-      '....ID..IDI.....',
-      '....ID..IDI.....',
-      '...IDDI.IDDI....',
-      '...IDDI.IDDI....',
-      '................',
-      '................'
+      '........................',
+      '.......IHHHHHI..........',
+      '......IHHHHHHHI.IFFFFI..',
+      '......IHHYHHHHIIFFFFFI..',
+      '......IHKKKKKHKIFFFFIGGG',
+      '......IHKEKEKHKIFFFFIGGG',
+      '......IHKKKKKHKIFFFFIGGG',
+      '.......IKKKKKKKIFFFFIGG.',
+      '.......IKKKKI..IFFI..G..',
+      '......IHHDDDHHI.IFFI....',
+      '.....IHHDDDDDHHIIIII....',
+      '.....IHIDDDDDIHI........',
+      '.....IHIDDDDDIHI........',
+      '......IIDDDDDII.........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......IDDDDDI..........',
+      '.......ID.IDI...........',
+      '.......ID..IDI..........',
+      '.......ID..IDI..........',
+      '......IDDI.IDDI.........',
+      '......IDDI.IDDI.........',
+      '........................',
+      '........................'
     ],
     'client-female': [
-      '................',
-      '................',
-      '.....TTTT.......',
-      '....TTTTTT......',
-      '....TRRRRT......',
-      '....TRERRT......',
-      '....TRRRRT......',
-      '.....RRRR.......',
-      '....IPPPPI......',
-      '..ICIPPPPICI....',
-      '..ICIPPPPICI....',
-      '..ICIPPPPICI....',
-      '..ICIPPPPICI....',
-      '..ICCCCCCCCI....',
-      '...IC....CI.....',
-      '...IC....CI.....',
-      '...IC....CI.....',
-      '...II....II.....',
-      '................',
-      '................',
-      '................',
-      '................',
-      '................',
-      '................'
+      '........................',
+      '........................',
+      '......CCCCCCCCCC........',
+      '......CIIIIIIIIC........',
+      '......CITTTTTTIC........',
+      '......CITTTTTTIC........',
+      '......CITRRRRTIC........',
+      '......CITRERRTIC........',
+      '......CITRRRRTIC........',
+      '......CIIRRRRIIC........',
+      '.....CCIPPPPPPICC.......',
+      '.....CIIPPPPPPIIC.......',
+      '.....CIIPPPPPPIIC.......',
+      '.....CIIPPPPPPIIC.......',
+      '....CCCCCCCCCCCCCC......',
+      '.........CIIIC..........',
+      '.........CIIIC..........',
+      '.......CCCCIIICCCC......',
+      '......CCCCCCCCCCCC......',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................'
     ],
     'client-male': [
-      '................',
-      '................',
-      '................',
-      '.....TTTT.......',
-      '....TTTTTT......',
-      '....TRRRRT......',
-      '....TRERRT......',
-      '.....RRRR.......',
-      '....IPPPPI......',
-      '..ICIPPPPICI....',
-      '..ICIPPPPICI....',
-      '..ICIPPPPICI....',
-      '..ICIPPPPICI....',
-      '..ICCCCCCCCI....',
-      '...IC....CI.....',
-      '...IC....CI.....',
-      '...IC....CI.....',
-      '...II....II.....',
-      '................',
-      '................',
-      '................',
-      '................',
-      '................',
-      '................'
+      '........................',
+      '........................',
+      '......CCCCCCCCCC........',
+      '......CIIIIIIIIC........',
+      '......CITTTTTTIC........',
+      '......CITRRRRTIC........',
+      '......CITRERRTIC........',
+      '......CIIRRRRIIC........',
+      '......CIIRRRRIIC........',
+      '......CIIRRRRIIC........',
+      '.....CCIPPPPPPICC.......',
+      '.....CIIPPPPPPIIC.......',
+      '.....CIIPPPPPPIIC.......',
+      '.....CIIPPPPPPIIC.......',
+      '....CCCCCCCCCCCCCC......',
+      '.........CIIIC..........',
+      '.........CIIIC..........',
+      '.......CCCCIIICCCC......',
+      '......CCCCCCCCCCCC......',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................'
     ]
   };
 
   // ---------------------------------------------------------------------------
-  // Canvas atlas — render every frame onto one offscreen canvas, use as a
-  // background-image and shift background-position to pick a frame.
+  // Canvas atlas
   // ---------------------------------------------------------------------------
-  var FRAME_W = 16, FRAME_H = 24, SCALE = 5;
+  var FRAME_W = 24, FRAME_H = 24, SCALE = 5;
 
   function buildAtlas() {
     var keys = Object.keys(FRAMES);
@@ -564,25 +536,25 @@
     };
   }
 
-  var stylist = makeSprite(document.getElementById('stylist'));
-  var client = makeSprite(document.getElementById('client'));
+  var stage = document.getElementById('stage');
+  var stylistEl = document.getElementById('stylist');
   var clientEl = document.getElementById('client');
   var clientShadow = document.getElementById('clientShadow');
   var caption = document.getElementById('caption');
+  var stylist = makeSprite(stylistEl);
+  var client = makeSprite(clientEl);
 
   // ---------------------------------------------------------------------------
-  // Stylist state machine — just the stylist's own states. The client showing
-  // up is handled separately as part of the styling quirks.
+  // State machine
   // ---------------------------------------------------------------------------
   var STATES = {
     'idle':    { frames: ['stylist-idle-0', 'stylist-idle-1'], durations: [620, 620], loop: true },
     'coffee':  { frames: ['stylist-coffee-0', 'stylist-coffee-1', 'stylist-coffee-1', 'stylist-coffee-0'],
-                 durations: [500, 900, 900, 500], loop: true, maxMs: 4200, caption: 'coffee break' },
-    'cut':     { frames: ['stylist-cut-0', 'stylist-cut-1'], durations: [260, 260], loop: true, maxMs: 5200, caption: 'cutting' },
-    'comb':    { frames: ['stylist-comb-0', 'stylist-comb-1'], durations: [340, 340], loop: true, maxMs: 5200, caption: 'combing' },
-    'blowdry': { frames: ['stylist-blowdry-0', 'stylist-blowdry-1'], durations: [180, 180], loop: true, maxMs: 5200, caption: 'blow-drying' }
+                 durations: [600, 1100, 1100, 600], loop: true, maxMs: 5200, caption: 'coffee break' },
+    'cut':     { frames: ['stylist-cut-0', 'stylist-cut-1'], durations: [280, 280], loop: true, maxMs: 5400, caption: 'cutting' },
+    'comb':    { frames: ['stylist-comb-0', 'stylist-comb-1'], durations: [360, 360], loop: true, maxMs: 5400, caption: 'combing' },
+    'blowdry': { frames: ['stylist-blowdry-0', 'stylist-blowdry-1'], durations: [190, 190], loop: true, maxMs: 5400, caption: 'blow-drying' }
   };
-  var STYLING = ['cut', 'comb', 'blowdry'];
   var QUIRK_POOL = ['coffee', 'cut', 'comb', 'blowdry'];
 
   var prefersReducedMotion = window.matchMedia &&
@@ -594,21 +566,38 @@
   var stateStarted = 0;
   var idleSince = 0;
   var nextQuirkAfter = 3500 + Math.random() * 3000;
-  var forced = false; // a control-button override pauses the auto-rotation
-
-  function clientFrameForState(s) {
-    return s; // not used directly — kept for clarity
-  }
+  var forced = false;
+  var nextSteamAt = 0;
 
   function showClient() {
-    var key = Math.random() < 0.5 ? 'client-female' : 'client-male';
-    client.setFrame(key);
+    client.setFrame(Math.random() < 0.5 ? 'client-female' : 'client-male');
     clientEl.classList.add('visible');
     clientShadow.classList.add('visible');
   }
   function hideClient() {
     clientEl.classList.remove('visible');
     clientShadow.classList.remove('visible');
+  }
+
+  // Gentle steam off the coffee mug while she's on a coffee break.
+  function spawnSteam() {
+    var wisp = document.createElement('div');
+    wisp.className = 'steam-wisp';
+    // Positioned near the mug — upper-right of the stylist sprite.
+    var baseLeft = stylistEl.offsetLeft + 78 + (Math.random() * 8 - 4);
+    wisp.style.left = baseLeft + 'px';
+    wisp.style.bottom = (stylistEl.offsetParent ? 0 : 0) + 0 + 'px';
+    wisp.style.bottom = '150px';
+    wisp.style.setProperty('--sway', (Math.random() * 8 + 4) + 'px');
+    stage.appendChild(wisp);
+    setTimeout(function () { wisp.remove(); }, 2700);
+  }
+  function tickSteam(now) {
+    if (prefersReducedMotion) return;
+    if (state !== 'coffee') return;
+    if (now < nextSteamAt) return;
+    nextSteamAt = now + 650 + Math.random() * 450;
+    spawnSteam();
   }
 
   function setState(name, isForced) {
@@ -620,18 +609,14 @@
     forced = !!isForced;
     stylist.setFrame(STATES[name].frames[0]);
     caption.textContent = STATES[name].caption || 'idle';
-    // A client is present only while she is actively styling someone.
-    if (name === 'cut' || name === 'comb' || name === 'blowdry') {
-      showClient();
-    } else {
-      hideClient();
-    }
+    if (name === 'cut' || name === 'comb' || name === 'blowdry') showClient();
+    else hideClient();
+    if (name === 'coffee') nextSteamAt = performance.now();
   }
 
   function tick(now) {
     var st = STATES[state];
 
-    // Advance the current animation.
     var dur = st.durations[frameIdx];
     if (now - lastSwitch >= dur) {
       frameIdx = (frameIdx + 1) % st.frames.length;
@@ -639,15 +624,12 @@
       lastSwitch = now;
     }
 
-    // A quirk with a max duration returns to idle when it elapses.
     if (st.maxMs && now - stateStarted >= st.maxMs) {
       setState('idle');
       idleSince = now;
       nextQuirkAfter = 3500 + Math.random() * 3000;
     }
 
-    // From idle, after a randomised gap, pick the next quirk — unless a
-    // control button has forced a state (then auto-rotation waits).
     if (state === 'idle') {
       if (!idleSince) idleSince = now;
       if (!forced && !prefersReducedMotion && now - idleSince >= nextQuirkAfter) {
@@ -657,10 +639,10 @@
       idleSince = 0;
     }
 
+    tickSteam(now);
     requestAnimationFrame(tick);
   }
 
-  // Control buttons — force a state for inspection.
   document.querySelectorAll('.controls button').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var act = btn.getAttribute('data-act');
@@ -675,11 +657,9 @@
     });
   });
 
-  // Boot.
   setState('idle');
   idleSince = performance.now();
   if (prefersReducedMotion) {
-    // Static preview — show the idle frame, no animation loop.
     stylist.setFrame('stylist-idle-0');
     caption.textContent = 'idle (reduced motion)';
   } else {
