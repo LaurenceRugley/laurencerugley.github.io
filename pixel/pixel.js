@@ -71,6 +71,11 @@
     shadowEl.className = 'pixel-shadow';
     shadowEl.setAttribute('aria-hidden', 'true');
     spriteEl.appendChild(shadowEl);
+    const cigarEl = document.createElement('div');
+    cigarEl.className = 'pixel-cigar';
+    cigarEl.setAttribute('aria-hidden', 'true');
+    cigarEl.innerHTML = '<span class="pixel-cigar-tip"></span>';
+    spriteEl.appendChild(cigarEl);
     document.body.appendChild(spriteEl);
     spriteEl.addEventListener('click', triggerCatch);
 
@@ -315,6 +320,7 @@
     stateStartedAt = lastFrameSwitchAt;
     applyTransform();
     setFrame(STATES[name].frames[0]);
+    if (spriteEl) spriteEl.dataset.state = name;
     if (prevState === 'sit' && zEl) {
       zEl.forEach(z => z.remove());
       zEl = null;
@@ -532,20 +538,29 @@
 
   function tickCigarPuff(now) {
     if (prefersReducedMotion) return;
-    if (currentState !== 'idle') return;
+    // Smoke from the cigar while standing still or walking.
+    if (currentState !== 'idle' && currentState !== 'walk-right' && currentState !== 'walk-left') return;
     if (now < nextCigarAt) return;
-    nextCigarAt = now + 2000 + Math.random() * 2000; // 2-4s
+    nextCigarAt = now + 1300 + Math.random() * 900; // 1.3-2.2s — continuous feel
     spawnCigarPuff();
   }
 
   function spawnCigarPuff() {
     if (!spriteEl) return;
-    const puff = document.createElement('div');
-    puff.className = 'pixel-cigar-puff';
-    puff.setAttribute('aria-hidden', 'true');
-    puff.style.setProperty('--drift', (Math.random() * 12 - 6) + 'px');
-    spriteEl.appendChild(puff);
-    setTimeout(() => puff.remove(), 1800);
+    // Three staggered puffs per spawn, like the Z trail — reads as a rolling
+    // column of smoke instead of one isolated wisp.
+    const sizes = [20, 16, 12];
+    for (let i = 0; i < sizes.length; i++) {
+      const puff = document.createElement('div');
+      puff.className = 'pixel-cigar-puff';
+      puff.setAttribute('aria-hidden', 'true');
+      puff.style.width = sizes[i] + 'px';
+      puff.style.height = (sizes[i] * 0.7) + 'px';
+      puff.style.setProperty('--drift', (Math.random() * 14 - 7) + 'px');
+      puff.style.animationDelay = (i * 250) + 'ms';
+      spriteEl.appendChild(puff);
+      setTimeout(() => puff.remove(), 2000 + i * 250);
+    }
   }
 
   function tickCodec(now) {
