@@ -103,24 +103,59 @@ body[data-pixel="on"] .pixel-z {
   100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), -60px) scale(1.1); }
 }
 
+body[data-pixel="on"] .pixel-cigar {
+  position: absolute;
+  bottom: 30px;
+  left: 33px;
+  width: 9px;
+  height: 3px;
+  background: #4A2E1A;
+  border-top: 1px solid #6B4429;
+  pointer-events: none;
+  display: none;
+  z-index: 2;
+}
+
+body[data-pixel="on"] .pixel-cigar .pixel-cigar-tip {
+  position: absolute;
+  right: -2px;
+  top: -1px;
+  width: 3px;
+  height: 5px;
+  background: #FF6B35;
+  box-shadow: 0 0 5px #FF8A4C, 0 0 9px rgba(255, 120, 60, 0.6);
+  animation: pixelCigarTip 1100ms ease-in-out infinite;
+}
+
+@keyframes pixelCigarTip {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+
+/* Cigar visible only when standing or walking — hide during quirks, dash, roll, catch sequence. */
+body[data-pixel="on"] .pixel-sprite[data-state="idle"] .pixel-cigar,
+body[data-pixel="on"] .pixel-sprite[data-state="walk-right"] .pixel-cigar,
+body[data-pixel="on"] .pixel-sprite[data-state="walk-left"] .pixel-cigar {
+  display: block;
+}
+
 body[data-pixel="on"] .pixel-cigar-puff {
   position: absolute;
-  top: 4px;
-  left: 32px;
-  width: 12px;
-  height: 8px;
+  bottom: 36px;
+  left: 38px;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(200, 200, 200, 0.7), rgba(200, 200, 200, 0.35) 50%, transparent 78%);
+  background: radial-gradient(ellipse at center, rgba(220, 220, 220, 0.95), rgba(190, 190, 190, 0.6) 45%, transparent 78%);
   opacity: 0;
   border-radius: 50%;
-  animation: pixelCigarPuff 1700ms ease-out forwards;
-  filter: blur(0.5px);
+  animation: pixelCigarPuff 2000ms ease-out forwards;
+  animation-delay: var(--delay, 0ms);
+  filter: blur(0.6px);
 }
 
 @keyframes pixelCigarPuff {
-  0%   { opacity: 0; transform: translate(0, 0) scale(0.4); }
-  20%  { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(var(--drift, 0px), -34px) scale(1.6); }
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.35); }
+  18%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--drift, 0px), -42px) scale(1.9); }
 }
 
 body[data-pixel="on"] .pixel-codec-dot {
