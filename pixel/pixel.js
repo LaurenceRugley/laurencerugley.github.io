@@ -121,6 +121,7 @@
     document.querySelectorAll('.work-item').forEach(el => {
       el.removeEventListener('mouseenter', onWorkEnter);
       el.removeEventListener('mouseleave', onWorkLeave);
+      el.classList.remove('pixel-spotlight');
     });
     spriteEl.removeEventListener('click', triggerCatch);
     if (spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
@@ -268,6 +269,16 @@
       oneShot: false,
       maxDurationMs: 2000
     },
+    'smoke': {
+      // Reuses idle frames — cigar + smoke puffs are layered on top via CSS
+      // (data-state="smoke" reveals the .pixel-cigar element and gates
+      // tickCigarPuff). Lasts ~4s before returning to idle.
+      frames: ['idle-0', 'idle-1'],
+      durations: [600, 600],
+      facing: 'right',
+      oneShot: false,
+      maxDurationMs: 4000
+    },
     'point-up': {
       frames: ['point-up-0', 'point-up-1'],
       durations: [500, 500],
@@ -321,6 +332,8 @@
     applyTransform();
     setFrame(STATES[name].frames[0]);
     if (spriteEl) spriteEl.dataset.state = name;
+    // First puff fires near-immediately when entering the smoke quirk.
+    if (name === 'smoke') nextCigarAt = performance.now();
     if (prevState === 'sit' && zEl) {
       zEl.forEach(z => z.remove());
       zEl = null;
@@ -388,16 +401,18 @@
     maybeStartDash(performance.now());
   }
 
-  function onWorkEnter() {
+  function onWorkEnter(e) {
     if (currentState === 'box-hide') return;
     if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
     if (currentState === 'roll-right' || currentState === 'roll-left') return;
     if (currentState === 'point-up') return;
     preHoverState = currentState;
+    if (e && e.currentTarget) e.currentTarget.classList.add('pixel-spotlight');
     setState('point-up');
   }
 
-  function onWorkLeave() {
+  function onWorkLeave(e) {
+    if (e && e.currentTarget) e.currentTarget.classList.remove('pixel-spotlight');
     if (currentState !== 'point-up') return;
     setState(preHoverState || 'idle');
     preHoverState = null;
@@ -538,10 +553,11 @@
 
   function tickCigarPuff(now) {
     if (prefersReducedMotion) return;
-    // Smoke from the cigar while standing still or walking.
-    if (currentState !== 'idle' && currentState !== 'walk-right' && currentState !== 'walk-left') return;
+    // Smoke only fires during the smoke quirk now (cigar appears, puffs
+    // emit, then he goes back to idle).
+    if (currentState !== 'smoke') return;
     if (now < nextCigarAt) return;
-    nextCigarAt = now + 1300 + Math.random() * 900; // 1.3-2.2s — continuous feel
+    nextCigarAt = now + 1300 + Math.random() * 900;
     spawnCigarPuff();
   }
 
@@ -618,7 +634,7 @@
   const QUIRK_MIN_MS = 3000;
   const QUIRK_MAX_MS = 5000;
   let nextQuirkAfterMs = QUIRK_MIN_MS + Math.random() * (QUIRK_MAX_MS - QUIRK_MIN_MS);
-  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide', 'box-hide', 'salute'];
+  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide', 'box-hide', 'smoke'];
   const DASH_PROXIMITY_PX = 60;
   const DASH_DISTANCE_PX = 140;
   const DASH_DURATION_MS = 400;

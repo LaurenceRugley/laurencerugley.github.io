@@ -132,11 +132,19 @@ body[data-pixel="on"] .pixel-cigar .pixel-cigar-tip {
   50%      { opacity: 1; }
 }
 
-/* Cigar visible only when standing or walking — hide during quirks, dash, roll, catch sequence. */
-body[data-pixel="on"] .pixel-sprite[data-state="idle"] .pixel-cigar,
-body[data-pixel="on"] .pixel-sprite[data-state="walk-right"] .pixel-cigar,
-body[data-pixel="on"] .pixel-sprite[data-state="walk-left"] .pixel-cigar {
+/* Cigar visible only during the smoke quirk. */
+body[data-pixel="on"] .pixel-sprite[data-state="smoke"] .pixel-cigar {
   display: block;
+}
+
+/* Spotlight on the work-item the cursor is hovering — only in pixel mode. */
+body[data-pixel="on"] .work-item.pixel-spotlight {
+  background: rgba(184, 153, 104, 0.10);
+  padding-left: 16px !important;
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+body[data-pixel="on"] .work-item.pixel-spotlight .work-name {
+  color: var(--gold);
 }
 
 body[data-pixel="on"] .pixel-cigar-puff {
