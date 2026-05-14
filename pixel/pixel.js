@@ -86,17 +86,28 @@
 
     currentState = 'idle';
     currentFrameIndex = 0;
-    idleSince = performance.now();
+    const startNow = performance.now();
+    idleSince = startNow;
     nextQuirkAfterMs = QUIRK_MIN_MS + Math.random() * (QUIRK_MAX_MS - QUIRK_MIN_MS);
-    lastScrollAt = performance.now();
+    lastScrollAt = startNow;
+    lastInteractionAt = startNow; // mechanic 3: wander clock starts now
+    // Reset dash/tired/wander tracking on each (re)mount.
+    recentDashCount = 0;
+    dashWindowStart = startNow;
+    tiredUntil = 0;
+    isWandering = false;
+    wanderNextActionAt = startNow + WANDER_AFTER_MS;
+    konamiBuffer = [];
     // Schedule first ambient effects.
-    nextCigarAt = performance.now() + 2000 + Math.random() * 2000;
-    nextCodecAt = performance.now() + 10000 + Math.random() * 20000;
+    nextCigarAt = startNow + 2000 + Math.random() * 2000;
+    nextCodecAt = startNow + 10000 + Math.random() * 20000;
     startLoop();
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', updatePosition);
     window.addEventListener('mousemove', onMouseMove, { passive: true });
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('keydown', onKonamiKey);
     document.querySelectorAll('.work-item').forEach(el => {
       el.addEventListener('mouseenter', onWorkEnter);
       el.addEventListener('mouseleave', onWorkLeave);
@@ -118,6 +129,8 @@
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', updatePosition);
     window.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.removeEventListener('keydown', onKonamiKey);
     document.querySelectorAll('.work-item').forEach(el => {
       el.removeEventListener('mouseenter', onWorkEnter);
       el.removeEventListener('mouseleave', onWorkLeave);
@@ -137,6 +150,11 @@
     cursorY = -9999;
     nextCigarAt = 0;
     nextCodecAt = 0;
+    recentDashCount = 0;
+    tiredUntil = 0;
+    isWandering = false;
+    dashHitEdge = false;
+    konamiBuffer = [];
   }
 
   // ---------- Mode application ----------
@@ -302,6 +320,25 @@
       durations: [200, 400, 200],
       facing: 'right',
       oneShot: true
+    },
+    'tired': {
+      // Slow breathing — reuses idle frames at half speed. Catchable here.
+      frames: ['idle-0', 'idle-1'],
+      durations: [1100, 1100],
+      facing: 'right'
+    },
+    'sleep': {
+      // Tab is hidden — reuses sit frames very slow, Z-trail layered on top.
+      frames: ['sit-0', 'sit-1'],
+      durations: [2000, 2000],
+      facing: 'right'
+    },
+    'dash-bonk': {
+      // Brief wall-impact squash when a dash hits the viewport edge.
+      frames: ['roll-ball-squashed'],
+      durations: [160],
+      facing: 'right',
+      oneShot: true
     }
   };
 
@@ -313,6 +350,23 @@
   let queuedNextState = null;
   let zEl = null;
   function queueNextState(name) { queuedNextState = name; }
+
+  // --- Mechanic 1: tired state after repeated dashes ---
+  let recentDashCount = 0;
+  let dashWindowStart = 0;
+  let tiredUntil = 0;
+  const DASH_TIRE_THRESHOLD = 3;     // dashes within the window to get tired
+  const DASH_TIRE_WINDOW_MS = 10000; // rolling window for counting dashes
+  const TIRED_DURATION_MS = 5000;    // how long the catchable tired state lasts
+  // --- Mechanic 3: autonomous wander after long idle ---
+  let lastInteractionAt = 0;
+  let isWandering = false;
+  let wanderTargetX = 0;
+  let wanderNextActionAt = 0;
+  const WANDER_AFTER_MS = 90000;     // user-idle time before he wanders on his own
+  const WANDER_SPEED_PXMS = 0.018;   // autonomous walk speed
+  // --- Mechanic 4: edge bonk ---
+  let dashHitEdge = false;
 
   function setState(name) {
     if (!STATES[name]) return;
@@ -327,11 +381,14 @@
     if (spriteEl) spriteEl.dataset.state = name;
     // First puff fires near-immediately when entering the smoke quirk.
     if (name === 'smoke') nextCigarAt = performance.now();
-    if (prevState === 'sit' && zEl) {
+    // Z-trail shows during 'sit' (quirk) and 'sleep' (tab hidden).
+    const zPrev = prevState === 'sit' || prevState === 'sleep';
+    const zNext = name === 'sit' || name === 'sleep';
+    if (zPrev && zEl) {
       zEl.forEach(z => z.remove());
       zEl = null;
     }
-    if (name === 'sit' && spriteEl && !zEl && !prefersReducedMotion) {
+    if (zNext && spriteEl && !zEl && !prefersReducedMotion) {
       zEl = [];
       const sizes = [28, 22, 18];
       for (let i = 0; i < sizes.length; i++) {
@@ -384,6 +441,7 @@
   function onMouseMove(e) {
     cursorX = e.clientX;
     cursorY = e.clientY;
+    lastInteractionAt = performance.now(); // mechanic 3: cursor movement cancels wander
     if (mouseMovePending) return;
     mouseMovePending = true;
     requestAnimationFrame(handleMouseMove);
@@ -414,9 +472,18 @@
   let catchTimeout = null;
   function triggerCatch() {
     if (prefersReducedMotion) return;
-    if (currentState !== 'box-hide') return;
-    setState('box-flip');
-    queueNextState('caught');
+    // Catchable two ways: hiding under the box, or worn-out after too many dashes.
+    if (currentState === 'box-hide') {
+      setState('box-flip');
+      queueNextState('caught');
+    } else if (currentState === 'tired') {
+      // No box to flip — caught directly because he's too tired to flee.
+      tiredUntil = 0;
+      recentDashCount = 0;
+      setState('caught');
+    } else {
+      return;
+    }
     if (catchTimeout !== null) clearTimeout(catchTimeout);
     catchTimeout = setTimeout(() => {
       catchTimeout = null;
@@ -450,8 +517,11 @@
     if (!spriteEl) return;
     if (currentState === 'box-hide' || currentState === 'box-flip' ||
         currentState === 'caught' || currentState === 'happy-wave') return;
-    if (currentState === 'dash-right' || currentState === 'dash-left' || currentState === 'dash-recover') return;
+    if (currentState === 'dash-right' || currentState === 'dash-left' ||
+        currentState === 'dash-recover' || currentState === 'dash-bonk') return;
     if (currentState === 'roll-right' || currentState === 'roll-left') return;
+    if (currentState === 'tired' || currentState === 'sleep') return;
+    if (now < tiredUntil) return; // too tired to dash
     if (now - lastDashAt < DASH_COOLDOWN_MS) return;
     const c = spriteCenter();
     if (!c) return;
@@ -462,16 +532,30 @@
 
     // Dash away from cursor.
     const dir = dx >= 0 ? -1 : 1; // cursor right of sprite -> dash left
+    const maxX = MARGIN + computeMaxX();
     dashFromX = spriteX;
-    dashTargetX = Math.max(MARGIN, Math.min(MARGIN + computeMaxX(), spriteX + dir * DASH_DISTANCE_PX));
+    dashTargetX = Math.max(MARGIN, Math.min(maxX, spriteX + dir * DASH_DISTANCE_PX));
     // If would clip against viewport edge, dash the other way instead.
     if (dashTargetX === spriteX) {
       dashTargetX = spriteX - dir * DASH_DISTANCE_PX;
-      dashTargetX = Math.max(MARGIN, Math.min(MARGIN + computeMaxX(), dashTargetX));
+      dashTargetX = Math.max(MARGIN, Math.min(maxX, dashTargetX));
     }
+    // Mechanic 4: did this dash land hard against an edge?
+    dashHitEdge = dashTargetX <= MARGIN + 1 || dashTargetX >= maxX - 1;
     dashTargetFacing = (dashTargetX >= dashFromX) ? 'right' : 'left';
     dashStartedAt = now;
     lastDashAt = now;
+
+    // Mechanic 1: count dashes in a rolling window; get tired after the threshold.
+    if (now - dashWindowStart > DASH_TIRE_WINDOW_MS) {
+      dashWindowStart = now;
+      recentDashCount = 0;
+    }
+    recentDashCount++;
+    if (recentDashCount >= DASH_TIRE_THRESHOLD) {
+      tiredUntil = now + TIRED_DURATION_MS;
+    }
+
     // ~35% chance to roll instead of sprint — unless reduced motion (no spin).
     const useRoll = !prefersReducedMotion && Math.random() < 0.35;
     if (useRoll) {
@@ -502,7 +586,11 @@
     const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
     spriteX = dashFromX + (dashTargetX - dashFromX) * eased;
     applyTransform();
-    if (t >= 1) setState('dash-recover');
+    if (t >= 1) {
+      // Mechanic 4: a dash that ended hard against an edge gets a squash bonk.
+      setState(dashHitEdge ? 'dash-bonk' : 'dash-recover');
+      dashHitEdge = false;
+    }
   }
 
   // ---------- Overlay element (! badge) ----------
@@ -589,6 +677,96 @@
     setTimeout(() => dot.remove(), 1500);
   }
 
+  // ---------- Mechanic 1: tired state ----------
+  function tickTired(now) {
+    if (currentState === 'idle' && now < tiredUntil) {
+      setState('tired');
+    } else if (currentState === 'tired' && now >= tiredUntil) {
+      recentDashCount = 0;
+      setState('idle');
+    }
+  }
+
+  // ---------- Mechanic 3: autonomous wander after long idle ----------
+  let lastWanderMoveAt = 0;
+  function tickWander(now) {
+    // Any recent interaction cancels wandering and hands control back to scroll.
+    if (now - lastInteractionAt < WANDER_AFTER_MS) {
+      if (isWandering) {
+        isWandering = false;
+        if (currentState === 'walk-right' || currentState === 'walk-left') setState('idle');
+      }
+      return;
+    }
+    // Don't interrupt reactions/quirks — only wander out of plain idle/walk.
+    const canWander = currentState === 'idle' || currentState === 'walk-right' || currentState === 'walk-left';
+    if (!canWander) { isWandering = false; return; }
+
+    if (!isWandering) {
+      // Begin a wander leg: pick a fresh target and start walking toward it.
+      if (currentState !== 'idle') return;
+      if (now < wanderNextActionAt) return;
+      const maxX = MARGIN + computeMaxX();
+      wanderTargetX = MARGIN + Math.random() * Math.max(1, maxX - MARGIN);
+      isWandering = true;
+      lastWanderMoveAt = now;
+      setState(wanderTargetX >= spriteX ? 'walk-right' : 'walk-left');
+      return;
+    }
+
+    // Advancing toward the wander target.
+    const dt = Math.min(64, now - lastWanderMoveAt);
+    lastWanderMoveAt = now;
+    const dir = wanderTargetX >= spriteX ? 1 : -1;
+    spriteX += dir * WANDER_SPEED_PXMS * dt;
+    if ((dir === 1 && spriteX >= wanderTargetX) || (dir === -1 && spriteX <= wanderTargetX)) {
+      spriteX = wanderTargetX;
+      isWandering = false;
+      wanderNextActionAt = now + 1500 + Math.random() * 3000; // pause before next leg
+      setState('idle');
+    }
+    applyTransform();
+  }
+
+  // ---------- Mechanic 2: sleep when the tab is hidden ----------
+  function onVisibilityChange() {
+    if (!spriteEl) return;
+    if (document.hidden) {
+      setState('sleep');
+    } else if (currentState === 'sleep') {
+      setState('yawn'); // wake with a yawn — oneShot, returns to idle
+    }
+  }
+
+  // ---------- Mechanic 5: Konami code celebration ----------
+  const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown',
+                  'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
+  let konamiBuffer = [];
+  function onKonamiKey(e) {
+    if (!spriteEl) return;
+    konamiBuffer.push((e.key || '').toLowerCase());
+    if (konamiBuffer.length > KONAMI.length) konamiBuffer.shift();
+    if (konamiBuffer.length === KONAMI.length &&
+        konamiBuffer.every(function (k, i) { return k === KONAMI[i]; })) {
+      konamiBuffer = [];
+      if (prefersReducedMotion) return;
+      setState('jump');
+      spawnHeartBurst();
+    }
+  }
+  function spawnHeartBurst() {
+    if (!spriteEl) return;
+    for (let i = 0; i < 12; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'pixel-heart';
+      heart.textContent = (i % 3 === 0) ? '★' : '♥';
+      heart.style.setProperty('--dx', (Math.random() * 84 - 42) + 'px');
+      heart.style.setProperty('--delay', (i * 55) + 'ms');
+      spriteEl.appendChild(heart);
+      setTimeout(function () { heart.remove(); }, 1400);
+    }
+  }
+
   let rafHandle = null;
   function startLoop() {
     if (rafHandle !== null) return;
@@ -600,6 +778,8 @@
       tickOverlay(now);
       tickCigarPuff(now);
       tickCodec(now);
+      tickTired(now);
+      tickWander(now);
       rafHandle = requestAnimationFrame(frame);
     }
     rafHandle = requestAnimationFrame(frame);
@@ -645,12 +825,14 @@
     const delta = y - lastScrollY;
     lastScrollY = y;
     lastScrollAt = performance.now();
+    lastInteractionAt = lastScrollAt; // mechanic 3: scrolling cancels autonomous wander
     updatePosition();
     if (delta > 0) setState('walk-right');
     else if (delta < 0) setState('walk-left');
   }
 
   function tickIdleTimeout(now) {
+    if (isWandering) return; // wander owns the walk state; don't cancel it
     if (currentState !== 'walk-right' && currentState !== 'walk-left') return;
     if (now - lastScrollAt >= IDLE_AFTER_MS) setState('idle');
   }
