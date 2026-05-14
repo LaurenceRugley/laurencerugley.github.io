@@ -81,10 +81,8 @@
 
     currentState = 'idle';
     currentFrameIndex = 0;
-    // 50% chance to give the idle clock a head-start so the first quirk fires
-    // anywhere from ~3s to 10s after page load instead of always exactly 10s.
-    const idleHeadStart = Math.random() < 0.5 ? Math.random() * 7000 : 0;
-    idleSince = performance.now() - idleHeadStart;
+    idleSince = performance.now();
+    nextQuirkAfterMs = QUIRK_MIN_MS + Math.random() * (QUIRK_MAX_MS - QUIRK_MIN_MS);
     lastScrollAt = performance.now();
     // Schedule first ambient effects.
     nextCigarAt = performance.now() + 2000 + Math.random() * 2000;
@@ -602,7 +600,9 @@
   let lastScrollAt = 0;
   let scrollPending = false;
   const IDLE_AFTER_MS = 200;
-  const IDLE_QUIRK_AFTER_MS = 10000;
+  const QUIRK_MIN_MS = 3000;
+  const QUIRK_MAX_MS = 5000;
+  let nextQuirkAfterMs = QUIRK_MIN_MS + Math.random() * (QUIRK_MAX_MS - QUIRK_MIN_MS);
   const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide', 'box-hide', 'salute'];
   const DASH_PROXIMITY_PX = 60;
   const DASH_DISTANCE_PX = 140;
@@ -637,10 +637,12 @@
       idleSince = now;
       return;
     }
-    if (now - idleSince >= IDLE_QUIRK_AFTER_MS) {
+    if (now - idleSince >= nextQuirkAfterMs) {
       const pick = QUIRK_POOL[Math.floor(Math.random() * QUIRK_POOL.length)];
       setState(pick);
-      idleSince = now; // reset; will resume tracking once back in idle
+      idleSince = now;
+      // Re-randomize the next idle window so cadence feels organic.
+      nextQuirkAfterMs = QUIRK_MIN_MS + Math.random() * (QUIRK_MAX_MS - QUIRK_MIN_MS);
     }
   }
 
