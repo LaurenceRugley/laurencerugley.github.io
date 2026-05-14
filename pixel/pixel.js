@@ -81,8 +81,14 @@
 
     currentState = 'idle';
     currentFrameIndex = 0;
-    idleSince = performance.now();
+    // 50% chance to give the idle clock a head-start so the first quirk fires
+    // anywhere from ~3s to 10s after page load instead of always exactly 10s.
+    const idleHeadStart = Math.random() < 0.5 ? Math.random() * 7000 : 0;
+    idleSince = performance.now() - idleHeadStart;
     lastScrollAt = performance.now();
+    // Schedule first ambient effects.
+    nextCigarAt = performance.now() + 2000 + Math.random() * 2000;
+    nextCodecAt = performance.now() + 10000 + Math.random() * 20000;
     startLoop();
     lastScrollY = window.scrollY;
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -125,6 +131,8 @@
     lastDashAt = 0;
     cursorX = -9999;
     cursorY = -9999;
+    nextCigarAt = 0;
+    nextCodecAt = 0;
   }
 
   // ---------- Mode application ----------
@@ -237,18 +245,25 @@
       oneShot: true
     },
     'roll-right': {
-      frames: ['roll-ball'],
-      durations: [500],
+      frames: ['roll-ball', 'roll-ball-squashed'],
+      durations: [120, 80],
       facing: 'right',
       oneShot: false,
       maxDurationMs: 500
     },
     'roll-left': {
-      frames: ['roll-ball'],
-      durations: [500],
+      frames: ['roll-ball', 'roll-ball-squashed'],
+      durations: [120, 80],
       facing: 'left',
       oneShot: false,
       maxDurationMs: 500
+    },
+    'salute': {
+      frames: ['salute'],
+      durations: [2000],
+      facing: 'right',
+      oneShot: false,
+      maxDurationMs: 2000
     },
     'point-up': {
       frames: ['point-up-0', 'point-up-1'],
@@ -513,6 +528,45 @@
     }
   }
 
+  // ---------- Ambient flavour: cigar smoke + codec blink ----------
+  let nextCigarAt = 0;
+  let nextCodecAt = 0;
+
+  function tickCigarPuff(now) {
+    if (prefersReducedMotion) return;
+    if (currentState !== 'idle') return;
+    if (now < nextCigarAt) return;
+    nextCigarAt = now + 2000 + Math.random() * 2000; // 2-4s
+    spawnCigarPuff();
+  }
+
+  function spawnCigarPuff() {
+    if (!spriteEl) return;
+    const puff = document.createElement('div');
+    puff.className = 'pixel-cigar-puff';
+    puff.setAttribute('aria-hidden', 'true');
+    puff.style.setProperty('--drift', (Math.random() * 12 - 6) + 'px');
+    spriteEl.appendChild(puff);
+    setTimeout(() => puff.remove(), 1800);
+  }
+
+  function tickCodec(now) {
+    if (prefersReducedMotion) return;
+    if (currentState !== 'idle') return;
+    if (now < nextCodecAt) return;
+    nextCodecAt = now + 30000 + Math.random() * 30000; // 30-60s
+    spawnCodec();
+  }
+
+  function spawnCodec() {
+    if (!spriteEl) return;
+    const dot = document.createElement('div');
+    dot.className = 'pixel-codec-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    spriteEl.appendChild(dot);
+    setTimeout(() => dot.remove(), 1500);
+  }
+
   let rafHandle = null;
   function startLoop() {
     if (rafHandle !== null) return;
@@ -522,6 +576,8 @@
       tickIdleQuirk(now);
       tickDashPosition(now);
       tickOverlay(now);
+      tickCigarPuff(now);
+      tickCodec(now);
       rafHandle = requestAnimationFrame(frame);
     }
     rafHandle = requestAnimationFrame(frame);
@@ -547,7 +603,7 @@
   let scrollPending = false;
   const IDLE_AFTER_MS = 200;
   const IDLE_QUIRK_AFTER_MS = 10000;
-  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide', 'box-hide'];
+  const QUIRK_POOL = ['yawn', 'look', 'sit', 'box-hide', 'box-hide', 'salute'];
   const DASH_PROXIMITY_PX = 60;
   const DASH_DISTANCE_PX = 140;
   const DASH_DURATION_MS = 400;

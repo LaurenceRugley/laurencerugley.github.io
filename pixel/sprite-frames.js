@@ -15,6 +15,15 @@
   ];
   const BANDANA = BANDANA_OPTIONS[Math.floor(Math.random() * BANDANA_OPTIONS.length)];
 
+  // Vest color also randomized — four MGS-tactical grays/darks.
+  const VEST_OPTIONS = [
+    '#4A4A4A', // medium gray (default MGS1 look)
+    '#3A3F36', // olive drab
+    '#3A4555', // midnight blue
+    '#444038'  // warm charcoal
+  ];
+  const VEST = VEST_OPTIONS[Math.floor(Math.random() * VEST_OPTIONS.length)];
+
   // Palette: index → CSS color string.
   // 0 reserved for transparent (use '.' in frame strings).
   // Snake-inspired Black character on a warm neutral palette that ties to the brand.
@@ -24,7 +33,7 @@
     'S': '#8E5C36',      // skin — slightly lightened medium-dark complexion
     'H': '#1A140A',      // hair (near-black)
     'B': BANDANA,        // bandana / belt — randomized per page load
-    'V': '#4A4A4A',      // sneaking suit / vest — medium gray (MGS1 vibe)
+    'V': VEST,           // sneaking suit / vest — randomized per page load
     'P': '#1F1F1F',      // pants — near black
     'O': '#2D2D2D',      // boots — dark gray (just-distinguishable from pants)
     'W': '#EDE7D9',      // limestone / eye whites
@@ -605,6 +614,58 @@
       '.....IOOOOI.....',
       '......IIII......',
       '................',
+      '................',
+      '................'
+    ],
+    'roll-ball-squashed': [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '.....IIIIII.....',
+      '....IPPPPPPI....',
+      '...IBBBBBBBBI...',
+      '..IBSWHHHHWSBI..',
+      '..IVSSSSSSSSVI..',
+      '..IVVVPPPPVVVI..',
+      '...IPPPPPPPPI...',
+      '....IOOOOOOI....',
+      '.....IIIIII.....',
+      '................',
+      '................',
+      '................',
+      '................'
+    ],
+    'salute': [
+      '................',
+      '.............II.',
+      '.....IIIII..SI..',
+      '....IBBBBBI.SI..',
+      '....IBBBBBI.SI..',
+      '....ISSHSSI.SI..',
+      '....ISWHWSII....',
+      '....ISSSSSIS....',
+      '.....IHSHI.S....',
+      '...SIVVVVVIS....',
+      '..SIVBBBBBVIS...',
+      '..SIVVVVVVVIS...',
+      '..SIVVVVVVVIS...',
+      '...SIVVVVVIS....',
+      '....IPPPPPI.....',
+      '....IPPPPPI.....',
+      '....IPPPPPI.....',
+      '....IP.IPI......',
+      '....IP..IPI.....',
+      '....IP..IPI.....',
+      '...IOOI.IOOI....',
+      '...IOOI.IOOI....',
       '................',
       '................'
     ],
