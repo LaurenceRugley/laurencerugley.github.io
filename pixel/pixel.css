@@ -1,0 +1,157 @@
+/* pixel/pixel.css — pixel mode styles. Scoped under body[data-pixel="on"]. */
+
+body[data-pixel="on"] .pixel-sprite {
+  position: fixed;
+  bottom: 24px;
+  left: 0;
+  z-index: 100;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: auto;
+  will-change: transform;
+  transform-origin: 50% 65%;
+}
+
+/* facing is applied in JS via the transform property */
+
+body[data-pixel="on"] .pixel-shadow {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 30px;
+  height: 5px;
+  background: radial-gradient(ellipse at center, rgba(42, 34, 24, 0.4) 0%, rgba(42, 34, 24, 0.15) 50%, transparent 75%);
+  pointer-events: none;
+  transform: translateX(-50%);
+  z-index: -1;
+}
+
+body[data-pixel="on"] .pixel-overlay {
+  position: absolute;
+  top: -36px; /* float the ! above the sprite head */
+  left: 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+body[data-pixel="on"] .pixel-sprite[data-facing="left"] .pixel-overlay {
+  transform: scaleX(-1); /* counter-rotate so the ! reads correctly */
+}
+
+body[data-pixel="on"] .pixel-heart {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  color: #B89968;
+  font-size: 14px;
+  pointer-events: none;
+  animation: pixelHeart 1100ms ease-out forwards;
+  animation-delay: var(--delay, 0ms);
+  transform: translateX(calc(var(--dx, 0px) - 50%));
+  opacity: 0;
+}
+
+body[data-pixel="on"] .pixel-dust {
+  position: fixed;
+  bottom: 24px;
+  width: 56px;
+  height: 26px;
+  pointer-events: none;
+  z-index: 99;
+  background:
+    radial-gradient(ellipse 13px 10px at 22% 65%, rgba(110, 110, 110, 0.95), transparent 65%),
+    radial-gradient(ellipse 17px 13px at 50% 50%, rgba(95, 95, 95, 0.95), transparent 65%),
+    radial-gradient(ellipse 14px 11px at 78% 65%, rgba(115, 115, 115, 0.95), transparent 65%),
+    radial-gradient(ellipse 10px 8px at 33% 28%, rgba(150, 150, 150, 0.9), transparent 70%),
+    radial-gradient(ellipse 9px 7px at 67% 28%, rgba(150, 150, 150, 0.9), transparent 70%);
+  opacity: 0;
+  animation: pixelDust 750ms ease-out forwards;
+  filter: drop-shadow(0 1px 0 rgba(42, 34, 24, 0.35));
+}
+
+@keyframes pixelDust {
+  0%   { opacity: 0; transform: translateX(0) scale(0.3); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(calc(var(--dir, 1) * 52px)) scale(2.2); }
+}
+
+body[data-pixel="on"] .pixel-z {
+  position: absolute;
+  top: -14px;
+  right: 0px;
+  color: #2A2218;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0;
+  animation: pixelZ 2400ms ease-in-out infinite;
+}
+
+@keyframes pixelZ {
+  0%   { opacity: 0; transform: translate(0, 6px) scale(0.55); }
+  15%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(14px, -36px) scale(1.25); }
+}
+
+@keyframes pixelHeart {
+  0%   { opacity: 0; transform: translate(calc(var(--dx) - 50%), 0px) scale(0.8); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), -60px) scale(1.1); }
+}
+
+body[data-pixel="on"] .pixel-cigar-puff {
+  position: absolute;
+  top: 4px;
+  left: 32px;
+  width: 12px;
+  height: 8px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(200, 200, 200, 0.7), rgba(200, 200, 200, 0.35) 50%, transparent 78%);
+  opacity: 0;
+  border-radius: 50%;
+  animation: pixelCigarPuff 1700ms ease-out forwards;
+  filter: blur(0.5px);
+}
+
+@keyframes pixelCigarPuff {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  20%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(var(--drift, 0px), -34px) scale(1.6); }
+}
+
+body[data-pixel="on"] .pixel-codec-dot {
+  position: absolute;
+  top: -2px;
+  left: 20px;
+  width: 5px;
+  height: 5px;
+  background: #4AFF7A;
+  box-shadow: 0 0 4px rgba(74, 255, 122, 0.85);
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 1px;
+  animation: pixelCodec 1400ms ease-in-out forwards;
+}
+
+@keyframes pixelCodec {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  25%  { opacity: 0.2; }
+  40%  { opacity: 1; }
+  55%  { opacity: 0.2; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-pixel="on"] .pixel-heart { display: none; }
+  body[data-pixel="on"] .pixel-overlay { display: none !important; }
+  body[data-pixel="on"] .pixel-dust { display: none; }
+  body[data-pixel="on"] .pixel-z { display: none; }
+  body[data-pixel="on"] .pixel-cigar-puff { display: none; }
+  body[data-pixel="on"] .pixel-codec-dot { display: none; }
+}

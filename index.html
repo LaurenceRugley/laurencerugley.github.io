@@ -3,16 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // Set pixel mode attribute before paint to prevent flash.
+  try {
+    if (localStorage.getItem('lgr-pixel-mode') === 'on') {
+      document.documentElement.setAttribute('data-pixel-pending', 'on');
+    }
+  } catch (e) { /* localStorage may be unavailable */ }
+</script>
 <title>LGR Web Studio</title>
 <meta name="description" content="LGR Web Studio — A Digital Atelier in Pasadena. Custom websites for product brands and service businesses.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pixel/pixel.css">
 <style>
   :root {
     --ink: #2A2218;
     --gold: #B89968;
-    --limestone: #FAF7F2;
+    --limestone: #EDE7D9;
     --slate: #5A4F3E;
     --line: #E5DDD0;
     --serif: 'Cormorant Garamond', serif;
@@ -209,6 +218,45 @@
   }
   footer a { color: var(--slate); text-decoration: none; }
   footer .dot { color: var(--gold); margin: 0 8px; }
+  .pixel-toggle {
+    background: none;
+    border: none;
+    padding: 4px 6px;
+    margin: 0;
+    cursor: pointer;
+    color: var(--slate);
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pixel-toggle:hover,
+  .pixel-toggle:focus { color: var(--gold); outline: none; }
+  .pixel-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+
+@keyframes pixelToggleWave {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(6deg); }
+}
+
+body[data-pixel="on"] .pixel-toggle {
+  color: var(--gold);
+}
+
+body[data-pixel="on"] .pixel-toggle svg {
+  animation: pixelToggleWave 2.4s ease-in-out infinite;
+  transform-origin: 50% 60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-pixel="on"] .pixel-toggle svg {
+    animation: none;
+  }
+}
 </style>
 </head>
 <body>
@@ -274,6 +322,19 @@
   <span class="dot">·</span>
   Pasadena, CA
   <span class="dot">·</span>
+  <button type="button" class="pixel-toggle" aria-pressed="false" aria-label="Toggle pixel companion mode" title="Toggle pixel companion">
+    <svg viewBox="0 0 8 8" width="14" height="14" aria-hidden="true">
+      <rect x="2" y="1" width="4" height="1" fill="currentColor"/>
+      <rect x="1" y="2" width="6" height="1" fill="currentColor"/>
+      <rect x="1" y="3" width="2" height="1" fill="currentColor"/>
+      <rect x="5" y="3" width="2" height="1" fill="currentColor"/>
+      <rect x="1" y="4" width="6" height="1" fill="currentColor"/>
+      <rect x="2" y="5" width="4" height="1" fill="currentColor"/>
+      <rect x="2" y="6" width="1" height="1" fill="currentColor"/>
+      <rect x="5" y="6" width="1" height="1" fill="currentColor"/>
+    </svg>
+  </button>
+  <span class="dot">·</span>
   <a href="mailto:lrugley@gmail.com">lrugley@gmail.com</a>
 </footer>
 
@@ -292,6 +353,9 @@
       if (res.ok) {
         form.style.display = 'none';
         success.style.display = 'block';
+        if (window.PixelEngine && typeof window.PixelEngine.celebrate === 'function') {
+          window.PixelEngine.celebrate();
+        }
       } else {
         alert('Something went wrong. Email lrugley@gmail.com directly.');
       }
@@ -300,6 +364,9 @@
     }
   });
 </script>
+
+<script defer src="pixel/sprite-frames.js"></script>
+<script defer src="pixel/pixel.js"></script>
 
 </body>
 </html>
