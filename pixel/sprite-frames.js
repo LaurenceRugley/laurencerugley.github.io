@@ -20,13 +20,13 @@
   // Snake-inspired Black character on a warm neutral palette that ties to the brand.
   const PALETTE = {
     '.': null,           // transparent
-    'I': '#2A2218',      // ink (outline)
-    'S': '#7A4E2E',      // skin (medium-dark brown)
+    'I': '#1A1A1A',      // ink outline (shifted from warm-dark to cool-near-black)
+    'S': '#8E5C36',      // skin — slightly lightened medium-dark complexion
     'H': '#1A140A',      // hair (near-black)
     'B': BANDANA,        // bandana / belt — randomized per page load
-    'V': '#3A3326',      // tactical vest (dark olive-brown)
-    'P': '#2D2920',      // pants
-    'O': '#5A4F3E',      // boots / shadow accent
+    'V': '#4A4A4A',      // sneaking suit / vest — medium gray (MGS1 vibe)
+    'P': '#1F1F1F',      // pants — near black
+    'O': '#2D2D2D',      // boots — dark gray (just-distinguishable from pants)
     'W': '#EDE7D9',      // limestone / eye whites
     'R': '#A45235',      // box (warm cardboard)
     'L': '#6B3A22',      // box shadow
