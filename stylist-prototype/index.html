@@ -67,7 +67,11 @@
   }
   /* 24px frames at 5x = 120px wide. Positioned to sit close together. */
   .stylist { left: 96px; z-index: 2; }
-  .client  { left: 188px; z-index: 1; opacity: 0; transition: opacity 0.4s ease; }
+  /* Client pulled in close so the stylist's tool meets the client's hair.
+     z-index 1 keeps the client behind the stylist, so her tool (part of the
+     stylist frame) renders in front of the client's head — combing/cutting
+     from the front reads correctly. */
+  .client  { left: 150px; z-index: 1; opacity: 0; transition: opacity 0.4s ease; }
   .client.visible { opacity: 1; }
 
   .shadow {
@@ -77,7 +81,7 @@
     pointer-events: none;
   }
   .shadow.stylist-shadow { left: 121px; }
-  .shadow.client-shadow  { left: 213px; opacity: 0; transition: opacity 0.4s ease; }
+  .shadow.client-shadow  { left: 175px; opacity: 0; transition: opacity 0.4s ease; }
   .shadow.client-shadow.visible { opacity: 1; }
 
   /* Gentle coffee steam — soft, slow, wavy. Not the cigar puff. */
