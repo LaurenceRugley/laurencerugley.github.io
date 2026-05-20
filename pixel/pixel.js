@@ -98,6 +98,8 @@
     isWandering = false;
     wanderNextActionAt = startNow + WANDER_AFTER_MS;
     konamiBuffer = [];
+    wordBuffer = '';
+    formGreeted = false;
     // Schedule first ambient effects.
     nextCigarAt = startNow + 2000 + Math.random() * 2000;
     nextCodecAt = startNow + 10000 + Math.random() * 20000;
@@ -112,6 +114,7 @@
       el.addEventListener('mouseenter', onWorkEnter);
       el.addEventListener('mouseleave', onWorkLeave);
     });
+    setupFormObserver();
     updatePosition();
     return spriteEl;
   }
@@ -137,6 +140,7 @@
       el.classList.remove('pixel-spotlight');
     });
     spriteEl.removeEventListener('click', triggerCatch);
+    if (formObserver) { formObserver.disconnect(); formObserver = null; }
     if (spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
     atlas = null;
@@ -155,6 +159,7 @@
     isWandering = false;
     dashHitEdge = false;
     konamiBuffer = [];
+    wordBuffer = '';
   }
 
   // ---------- Mode application ----------
@@ -489,7 +494,14 @@
       catchTimeout = null;
       if (currentState === 'caught') {
         setState('happy-wave');
-        spawnHearts();
+        // Easter egg: persistent catch counter — every 5th catch is a big burst.
+        let catches = 0;
+        try {
+          catches = (parseInt(localStorage.getItem('lgr-pixel-catches') || '0', 10) || 0) + 1;
+          localStorage.setItem('lgr-pixel-catches', String(catches));
+        } catch (e) {}
+        if (catches > 0 && catches % 5 === 0) spawnHeartBurst();
+        else spawnHearts();
       }
     }, 500);
   }
@@ -738,20 +750,51 @@
     }
   }
 
-  // ---------- Mechanic 5: Konami code celebration ----------
+  // ---------- Easter egg: point at the contact form when it scrolls in ----------
+  let formObserver = null;
+  let formGreeted = false;
+  function setupFormObserver() {
+    if (formObserver || !('IntersectionObserver' in window)) return;
+    const form = document.querySelector('.form-section') || document.getElementById('start');
+    if (!form) return;
+    formObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting || formGreeted || !spriteEl || prefersReducedMotion) return;
+        // Only react from a calm state; don't interrupt a dash/quirk/catch.
+        if (currentState !== 'idle' && currentState !== 'walk-right' && currentState !== 'walk-left') return;
+        formGreeted = true; // once per visit
+        preHoverState = 'idle';
+        setState('point-up');
+        setTimeout(function () {
+          if (currentState === 'point-up') setState('idle');
+        }, 2200);
+      });
+    }, { threshold: 0.55 });
+    formObserver.observe(form);
+  }
+
+  // ---------- Mechanic 5 + word easter eggs: keyboard ----------
   const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown',
                   'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
   let konamiBuffer = [];
+  let wordBuffer = '';
   function onKonamiKey(e) {
     if (!spriteEl) return;
+    // Konami sequence -> celebration.
     konamiBuffer.push((e.key || '').toLowerCase());
     if (konamiBuffer.length > KONAMI.length) konamiBuffer.shift();
     if (konamiBuffer.length === KONAMI.length &&
         konamiBuffer.every(function (k, i) { return k === KONAMI[i]; })) {
       konamiBuffer = [];
-      if (prefersReducedMotion) return;
-      setState('jump');
-      spawnHeartBurst();
+      if (!prefersReducedMotion) { setState('jump'); spawnHeartBurst(); }
+    }
+    // Typed-word easter egg: "snake" -> dives under the box (MGS).
+    if (e.key && e.key.length === 1) {
+      wordBuffer = (wordBuffer + e.key.toLowerCase()).slice(-6);
+      if (wordBuffer.indexOf('snake') !== -1) {
+        wordBuffer = '';
+        if (!prefersReducedMotion && currentState !== 'box-hide') setState('box-hide');
+      }
     }
   }
   function spawnHeartBurst() {
@@ -812,6 +855,10 @@
   const DASH_DISTANCE_PX = 140;
   const DASH_DURATION_MS = 400;
   const DASH_COOLDOWN_MS = 1000;
+  // Easter egg: fast-scroll "whoa".
+  const WHOA_VELOCITY = 2.4;     // px per ms (~2400px/s)
+  const WHOA_COOLDOWN_MS = 1500;
+  let lastWhoaAt = 0;
 
   function onScroll() {
     if (scrollPending) return;
@@ -821,12 +868,19 @@
 
   function handleScroll() {
     scrollPending = false;
+    const now = performance.now();
     const y = window.scrollY;
     const delta = y - lastScrollY;
+    const dt = now - lastScrollAt;
     lastScrollY = y;
-    lastScrollAt = performance.now();
-    lastInteractionAt = lastScrollAt; // mechanic 3: scrolling cancels autonomous wander
+    lastScrollAt = now;
+    lastInteractionAt = now; // mechanic 3: scrolling cancels autonomous wander
     updatePosition();
+    // Fast-scroll "whoa": a ! pops above his head when you fling the page.
+    if (dt > 0 && Math.abs(delta) / dt > WHOA_VELOCITY && now - lastWhoaAt > WHOA_COOLDOWN_MS) {
+      lastWhoaAt = now;
+      showOverlay('overlay-bang', 280);
+    }
     if (delta > 0) setState('walk-right');
     else if (delta < 0) setState('walk-left');
   }
