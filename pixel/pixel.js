@@ -786,7 +786,7 @@
     if (konamiBuffer.length === KONAMI.length &&
         konamiBuffer.every(function (k, i) { return k === KONAMI[i]; })) {
       konamiBuffer = [];
-      if (!prefersReducedMotion) { setState('jump'); spawnHeartBurst(); }
+      celebrateKonami();
     }
     // Typed-word easter egg: "snake" -> dives under the box (MGS).
     if (e.key && e.key.length === 1) {
@@ -808,6 +808,41 @@
       spriteEl.appendChild(heart);
       setTimeout(function () { heart.remove(); }, 1400);
     }
+  }
+
+  // ---------- Konami payoff: confetti shower + rainbow shimmer + triple jump ----------
+  const CONFETTI_COLORS = ['#B89968', '#E63946', '#3D6B5C', '#2A4359',
+                           '#D9B978', '#F4F1EA', '#7E5AA8', '#E0533B', '#9FC8E8'];
+  function spawnConfetti() {
+    if (prefersReducedMotion) return;
+    const vw = window.innerWidth;
+    const fall = (window.innerHeight + 40) + 'px';
+    for (let i = 0; i < 24; i++) {
+      const c = document.createElement('div');
+      c.className = 'pixel-confetti';
+      c.style.left = (Math.random() * vw) + 'px';
+      c.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+      c.style.setProperty('--dx', (Math.random() * 140 - 70) + 'px');
+      c.style.setProperty('--spin', (360 + Math.random() * 720) + 'deg');
+      c.style.setProperty('--delay', (Math.random() * 500) + 'ms');
+      c.style.setProperty('--dur', (2000 + Math.random() * 1400) + 'ms');
+      c.style.setProperty('--fall', fall);
+      document.body.appendChild(c);
+      setTimeout(function () { c.remove(); }, 4200);
+    }
+  }
+
+  function celebrateKonami() {
+    if (prefersReducedMotion || !spriteEl) return;
+    spriteEl.classList.add('pixel-celebrating');
+    spawnConfetti();
+    spawnHeartBurst();
+    setState('jump');
+    // Two more jumps, staggered so each fires after the previous one returns
+    // to idle (~800ms jump), plus a second confetti wave for sustained rain.
+    setTimeout(function () { if (spriteEl) setState('jump'); }, 850);
+    setTimeout(function () { if (spriteEl) { setState('jump'); spawnConfetti(); } }, 1700);
+    setTimeout(function () { if (spriteEl) spriteEl.classList.remove('pixel-celebrating'); }, 5000);
   }
 
   let rafHandle = null;
