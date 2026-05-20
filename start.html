@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Start a Project — LGR Web Studio</title>
+<meta name="description" content="Start your custom website with LGR Web Studio. Tell us about your business and we'll send a proposal within 24 hours.">
+
+<!-- iMessage / WhatsApp / SMS rich preview -->
+<meta property="og:title" content="Start a Project — LGR Web Studio">
+<meta property="og:description" content="Tell us about your business and we'll send a proposal within 24 hours.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://laurencerugley.github.io/start">
+<meta property="og:image" content="https://laurencerugley.github.io/card-preview.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #2A2218;
+    --gold: #B89968;
+    --limestone: #FAF7F2;
+    --slate: #5A4F3E;
+    --sand: #EFE8DD;
+    --line: #E5DDD0;
+    --serif: 'Cormorant Garamond', serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    background: var(--limestone);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* HEADER */
+  .header { text-align: center; margin-bottom: 48px; }
+  .mark {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-bottom: 6px;
+  }
+  .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--slate);
+    margin-bottom: 18px;
+  }
+  .rule {
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+    margin: 0 auto 32px;
+  }
+  .h1 {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+  .lead {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--slate);
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* PROGRESS */
+  .progress {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 36px;
+  }
+  .progress-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--line);
+    transition: background 0.3s ease;
+  }
+  .progress-dot.active { background: var(--gold); }
+
+  /* SECTIONS */
+  .section {
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 32px 28px;
+    margin-bottom: 24px;
+  }
+  .section-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .section-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 24px;
+  }
+
+  /* FIELDS */
+  .field { margin-bottom: 18px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 480px) {
+    .field-row { grid-template-columns: 1fr; gap: 0; }
+    .field-row .field:last-child { margin-top: 18px; margin-bottom: 0; }
+  }
+
+  .field label,
+  .field legend {
+    display: block;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--slate);
+    margin-bottom: 8px;
+  }
+  .field-help {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--slate);
+    margin-top: 4px;
+  }
+  .field input[type="text"],
+  .field input[type="email"],
+  .field input[type="tel"],
+  .field input[type="url"],
+  .field textarea,
+  .field select {
+    width: 100%;
+    background: var(--limestone);
+    border: 1px solid var(--line);
+    padding: 12px 14px;
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--ink);
+    border-radius: 0;
+    -webkit-appearance: none;
+    transition: border-color 0.2s ease;
+  }
+  .field input:focus,
+  .field textarea:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: #fff;
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 90px;
+    font-family: var(--sans);
+  }
+  .field select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235A4F3E' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  /* RADIO/CHECKBOX */
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--limestone);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .option:hover { border-color: var(--gold); }
+  .option input { margin-top: 3px; flex-shrink: 0; accent-color: var(--gold); }
+  .option-text {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .option:has(input:checked) {
+    border-color: var(--gold);
+    background: #fff;
+  }
+
+  /* SUBMIT */
+  .submit-section {
+    margin-top: 32px;
+    text-align: center;
+  }
+  .submit-btn {
+    display: inline-block;
+    width: 100%;
+    max-width: 320px;
+    background: var(--ink);
+    color: var(--limestone);
+    border: none;
+    padding: 18px 24px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    cursor: pointer;
+    transition: background 0.25s ease, transform 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .submit-btn:hover { background: var(--gold); }
+  .submit-btn:active { transform: scale(0.98); }
+
+  .submit-help {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--slate);
+    margin-top: 14px;
+  }
+
+  /* SUCCESS STATE */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+  }
+  .success-screen.active { display: block; }
+  .success-mark {
+    width: 60px;
+    height: 60px;
+    border: 1px solid var(--gold);
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    font-size: 24px;
+    font-family: var(--serif);
+    font-style: italic;
+  }
+  .success-title {
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .success-body {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--slate);
+    max-width: 460px;
+    margin: 0 auto 32px;
+    line-height: 1.5;
+  }
+  .next-steps {
+    background: var(--sand);
+    border: 1px solid var(--line);
+    padding: 28px;
+    text-align: left;
+    max-width: 460px;
+    margin: 0 auto;
+  }
+  .next-step {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .next-step:last-child { margin-bottom: 0; }
+  .next-num {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--gold);
+    flex-shrink: 0;
+    width: 24px;
+  }
+  .next-text {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  /* FOOTER */
+  .form-footer {
+    text-align: center;
+    margin-top: 32px;
+    font-family: var(--sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    color: var(--slate);
+  }
+  .form-footer a { color: var(--slate); text-decoration: none; }
+  .form-footer .dot { color: var(--gold); margin: 0 8px; }
+
+  /* Required indicator */
+  .req { color: var(--gold); margin-left: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="header">
+    <div class="mark">LGR Web Studio</div>
+    <div class="tagline">A Digital Atelier</div>
+    <div class="rule"></div>
+    <h1 class="h1">Start a Project</h1>
+    <p class="lead">Tell us about your business. We'll send a proposal within 24 hours.</p>
+  </header>
+
+  <form id="intakeForm" action="https://formspree.io/f/xvzlaaoo" method="POST">
+
+    <!-- Hidden field to tag this as an intake form (vs the simpler /card form) -->
+    <input type="hidden" name="_subject" value="New project intake — LGR Web Studio">
+    <input type="hidden" name="form_type" value="start_intake">
+
+    <!-- SECTION 1 — ABOUT YOU -->
+    <div class="section">
+      <div class="section-label">Section 01</div>
+      <h2 class="section-title">About you</h2>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="name">Your name<span class="req">*</span></label>
+          <input type="text" id="name" name="name" required autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="business">Business name<span class="req">*</span></label>
+          <input type="text" id="business" name="business" required>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="email">Email<span class="req">*</span></label>
+          <input type="email" id="email" name="email" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="phone">Phone<span class="req">*</span></label>
+          <input type="tel" id="phone" name="phone" required autocomplete="tel">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Best way to reach you<span class="req">*</span></label>
+        <div class="options">
+          <label class="option"><input type="radio" name="contact_pref" value="email" required><span class="option-text">Email</span></label>
+          <label class="option"><input type="radio" name="contact_pref" value="text"><span class="option-text">Text</span></label>
+          <label class="option"><input type="radio" name="contact_pref" value="call"><span class="option-text">Phone call</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="referral">How did you find us?</label>
+        <input type="text" id="referral" name="referral" placeholder="Vince, Hunter, Instagram, search…">
+        <div class="field-help">If someone referred you, mention their name here.</div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 — ABOUT YOUR BUSINESS -->
+    <div class="section">
+      <div class="section-label">Section 02</div>
+      <h2 class="section-title">About your business</h2>
+
+      <div class="field">
+        <label for="business_type">What kind of business is it?<span class="req">*</span></label>
+        <input type="text" id="business_type" name="business_type" required placeholder="hair salon, clothing brand, mobile detailing…">
+      </div>
+
+      <div class="field">
+        <label for="description">What do you sell or offer?<span class="req">*</span></label>
+        <textarea id="description" name="description" required placeholder="A short description of what you do."></textarea>
+      </div>
+
+      <div class="field">
+        <label>What's the website for?<span class="req">*</span></label>
+        <div class="options">
+          <label class="option"><input type="radio" name="website_goal" value="ecommerce" required><span class="option-text">Sell physical products online (cart + checkout)</span></label>
+          <label class="option"><input type="radio" name="website_goal" value="preorder"><span class="option-text">Pre-orders or waitlist signups</span></label>
+          <label class="option"><input type="radio" name="website_goal" value="booking"><span class="option-text">Booking or appointments</span></label>
+          <label class="option"><input type="radio" name="website_goal" value="showcase"><span class="option-text">Showcase work + contact form (no e-commerce)</span></label>
+          <label class="option"><input type="radio" name="website_goal" value="replace"><span class="option-text">Replace an existing site</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Do you have a domain?<span class="req">*</span></label>
+        <div class="options">
+          <label class="option"><input type="radio" name="has_domain" value="yes" required><span class="option-text">Yes, I own one</span></label>
+          <label class="option"><input type="radio" name="has_domain" value="no"><span class="option-text">No, but I have one in mind</span></label>
+          <label class="option"><input type="radio" name="has_domain" value="help"><span class="option-text">Need help picking one</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="domain">If yes, what is it?</label>
+        <input type="url" id="domain" name="domain" placeholder="yourbusiness.com">
+      </div>
+    </div>
+
+    <!-- SECTION 3 — STYLE -->
+    <div class="section">
+      <div class="section-label">Section 03</div>
+      <h2 class="section-title">Style &amp; references</h2>
+
+      <div class="field">
+        <label for="references">2–3 websites you love</label>
+        <textarea id="references" name="references" placeholder="Drop URLs here, or describe what you've seen and liked."></textarea>
+        <div class="field-help">Even one example helps. We're looking for vibe, not exact copy.</div>
+      </div>
+
+      <div class="field">
+        <label for="vibe">One word for the vibe you want</label>
+        <input type="text" id="vibe" name="vibe" placeholder="luxury, playful, minimal, bold, warm…">
+      </div>
+
+      <div class="field">
+        <label for="brand_colors">Brand colors (if you have them)</label>
+        <input type="text" id="brand_colors" name="brand_colors" placeholder="#hex codes, color names, or 'no idea'">
+      </div>
+    </div>
+
+    <!-- SECTION 4 — TIMELINE & BUDGET -->
+    <div class="section">
+      <div class="section-label">Section 04</div>
+      <h2 class="section-title">Timeline &amp; budget</h2>
+
+      <div class="field">
+        <label>When do you need this live?<span class="req">*</span></label>
+        <div class="options">
+          <label class="option"><input type="radio" name="timeline" value="asap" required><span class="option-text">As soon as possible</span></label>
+          <label class="option"><input type="radio" name="timeline" value="2_weeks"><span class="option-text">Within 2 weeks</span></label>
+          <label class="option"><input type="radio" name="timeline" value="1_month"><span class="option-text">Within 1 month</span></label>
+          <label class="option"><input type="radio" name="timeline" value="flexible"><span class="option-text">Flexible</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Budget range<span class="req">*</span></label>
+        <div class="options">
+          <label class="option"><input type="radio" name="budget" value="under_1k" required><span class="option-text">Under $1,000</span></label>
+          <label class="option"><input type="radio" name="budget" value="1k_2k"><span class="option-text">$1,000 – $2,000</span></label>
+          <label class="option"><input type="radio" name="budget" value="2k_5k"><span class="option-text">$2,000 – $5,000</span></label>
+          <label class="option"><input type="radio" name="budget" value="5k_plus"><span class="option-text">$5,000+</span></label>
+          <label class="option"><input type="radio" name="budget" value="not_sure"><span class="option-text">Not sure yet</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 5 — ANYTHING ELSE -->
+    <div class="section">
+      <div class="section-label">Section 05</div>
+      <h2 class="section-title">Anything else</h2>
+
+      <div class="field">
+        <label for="notes">Tell us anything else we should know</label>
+        <textarea id="notes" name="notes" placeholder="Logo files, photos, existing branding, special requirements, questions — drop it all here."></textarea>
+        <div class="field-help">Optional. After you submit, we'll send you a Google Drive link to upload logos and photos.</div>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="submit-section">
+      <button type="submit" class="submit-btn">Send my project</button>
+      <p class="submit-help">We'll respond within 24 hours.</p>
+    </div>
+  </form>
+
+  <!-- SUCCESS SCREEN -->
+  <div class="success-screen" id="success">
+    <div class="success-mark">✓</div>
+    <h2 class="success-title">Thank you.</h2>
+    <p class="success-body">Your project request is in. We'll review what you sent and get back to you within 24 hours.</p>
+
+    <div class="next-steps">
+      <div class="next-step">
+        <div class="next-num">i.</div>
+        <div class="next-text">We review what you sent and send back a proposal with timeline + price.</div>
+      </div>
+      <div class="next-step">
+        <div class="next-num">ii.</div>
+        <div class="next-text">You sign and pay 50% deposit.</div>
+      </div>
+      <div class="next-step">
+        <div class="next-num">iii.</div>
+        <div class="next-text">Build kicks off the next business day.</div>
+      </div>
+    </div>
+
+    <p class="submit-help" style="margin-top: 28px;">If you don't hear from us in 24 hours, email <a href="mailto:lrugley@gmail.com" style="color: var(--gold);">lrugley@gmail.com</a>.</p>
+  </div>
+
+  <footer class="form-footer">
+    LGR Web Studio
+    <span class="dot">·</span>
+    Pasadena, CA
+    <span class="dot">·</span>
+    EST · MMXXVI
+  </footer>
+</div>
+
+<script>
+  const form = document.getElementById('intakeForm');
+  const success = document.getElementById('success');
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = new FormData(form);
+    const submitBtn = form.querySelector('.submit-btn');
+    submitBtn.textContent = 'Sending…';
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        form.style.display = 'none';
+        success.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        submitBtn.textContent = 'Send my project';
+        submitBtn.disabled = false;
+        alert('Something went wrong. Please email lrugley@gmail.com directly.');
+      }
+    } catch (err) {
+      submitBtn.textContent = 'Send my project';
+      submitBtn.disabled = false;
+      alert('Something went wrong. Please email lrugley@gmail.com directly.');
+    }
+  });
+</script>
+
+</body>
+</html>
