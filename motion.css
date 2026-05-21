@@ -1,0 +1,181 @@
+/* ============================================================
+   motion.css — LGR Web Studio site motion + layout system.
+   Built from the template-factory starter, tuned for restraint
+   (lighter reveals) and dual light/dark theming. Page-specific
+   styles (form, work list, footer, pixel toggle) stay inline in
+   index.html. This file owns ALL design tokens.
+   ============================================================ */
+
+:root {
+  /* Brand */
+  --ink: #2A2218;
+  --gold: #B89968;
+  --serif: 'Cormorant Garamond', serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+
+  /* Semantic (theme-aware) */
+  --bg: #EDE7D9;
+  --surface: #ffffff;
+  --text: #2A2218;
+  --muted: #5A4F3E;
+  --line: #E5DDD0;
+
+  /* Back-compat aliases (older inline rules / pixel overlays) */
+  --limestone: #EDE7D9;
+  --slate: #5A4F3E;
+
+  --maxw: 920px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #211B12;
+  --surface: #2C2417;
+  --text: #EDE7D9;
+  --muted: #B7A98E;
+  --line: #3A3022;
+  --limestone: #EDE7D9; /* stays light: used where we want light-on-dark */
+  --slate: #B7A98E;
+}
+
+/* ---------- NAV (glass, sticky) ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; padding: 14px 24px;
+}
+.nav-mark {
+  font-family: var(--serif); font-size: 19px; font-weight: 500;
+  letter-spacing: 0.02em; text-decoration: none; color: var(--text);
+}
+.nav-links { display: flex; gap: 24px; margin-left: auto; margin-right: 6px; }
+.nav-links a {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em;
+  color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease);
+}
+.nav-links a:hover { color: var(--gold); }
+.glass {
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: var(--bg); }
+}
+@media (max-width: 560px) { .nav-links { display: none; } }
+
+/* ---------- THEME TOGGLE ---------- */
+.theme-toggle {
+  background: none; border: 1px solid var(--line); border-radius: 999px;
+  width: 34px; height: 34px; cursor: pointer; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text); transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle:hover { border-color: var(--gold); color: var(--gold); }
+.theme-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+.theme-toggle-icon {
+  width: 13px; height: 13px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px currentColor;
+  transition: box-shadow 0.35s var(--ease);
+}
+[data-theme="dark"] .theme-toggle-icon { box-shadow: inset -4px -4px 0 0 currentColor; }
+
+/* ---------- SECTION SHELL ---------- */
+.section { padding: 84px 24px; }
+.band { max-width: var(--maxw); margin: 0 auto; width: 100%; }
+.section-label {
+  font-family: var(--sans); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold);
+  text-align: center; margin-bottom: 28px;
+}
+
+/* ---------- HERO ---------- */
+.hero {
+  min-height: 84vh; max-width: var(--maxw); margin: 0 auto;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; padding: 24px;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.32em; color: var(--gold); margin-bottom: 22px;
+}
+.hero-title {
+  font-family: var(--serif); font-weight: 500; line-height: 1.12;
+  font-size: clamp(38px, 7vw, 64px); margin-bottom: 22px;
+}
+.hero-title em { color: var(--gold); font-style: italic; }
+.hero-sub {
+  font-family: var(--serif); font-size: clamp(17px, 2.6vw, 22px);
+  color: var(--muted); max-width: 34ch; line-height: 1.45;
+}
+.scroll-cue {
+  margin-top: 52px; width: 20px; height: 32px; flex: none;
+  border: 1px solid var(--muted); border-radius: 12px; position: relative;
+  opacity: 0.7;
+}
+.scroll-cue::after {
+  content: ""; position: absolute; top: 7px; left: 50%;
+  width: 3px; height: 6px; background: var(--gold); border-radius: 2px;
+  transform: translateX(-50%); animation: cue 1.8s var(--ease) infinite;
+}
+@keyframes cue {
+  0% { opacity: 0; transform: translate(-50%, 0); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 10px); }
+}
+
+/* ---------- APPROACH CARDS ---------- */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); padding: 28px 24px;
+  transition: transform 0.35s var(--ease), border-color 0.35s var(--ease);
+}
+.card:hover { transform: translateY(-3px); border-color: var(--gold); }
+.card h3 { font-family: var(--serif); font-weight: 500; font-size: 23px; margin-bottom: 9px; }
+.card p { color: var(--muted); font-size: 15px; }
+@media (max-width: 680px) { .cards { grid-template-columns: 1fr; } }
+
+/* ---------- PROCESS STEPS ---------- */
+.steps { list-style: none; max-width: 600px; margin: 0 auto; }
+.step {
+  display: flex; gap: 20px; padding: 22px 4px;
+  border-bottom: 1px solid var(--line); align-items: baseline;
+}
+.step:first-child { border-top: 1px solid var(--line); }
+.step-n { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--gold); min-width: 40px; }
+.step h3 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin-bottom: 4px; }
+.step p { color: var(--muted); font-size: 15px; }
+
+/* ============================================================
+   MOTION — lighter than the factory default. Content is only
+   hidden once .js-reveal is added by motion.js.
+   ============================================================ */
+html.js-reveal .reveal {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+}
+html.js-reveal .reveal.is-visible { opacity: 1; transform: none; }
+
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 100%;
+  background: var(--gold); transform-origin: 0 50%; transform: scaleX(0); z-index: 60;
+  opacity: 0.85;
+}
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress { animation: progress linear both; animation-timeline: scroll(root); }
+  }
+}
+@keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.js-reveal .reveal { opacity: 1; transform: none; transition: none; }
+  .scroll-cue::after { animation: none; }
+  .scroll-progress { display: none; }
+  body, .card, .theme-toggle, .theme-toggle-icon { transition: none; }
+}
