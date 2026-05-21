@@ -1,0 +1,185 @@
+/* ============================================================
+   motion.css — no-build premium-motion starter.
+   Brand lives in the tokens below. Progressive enhancement:
+   the page is fully usable with no JS and no animation.
+   ============================================================ */
+
+:root {
+  /* Brand tokens — change these to rebrand the whole template. */
+  --ink: #2A2218;       /* darkest brand color (buttons in light mode) */
+  --gold: #B89968;      /* single accent color */
+  --bg: #EDE7D9;        /* page background (light) */
+  --surface: #ffffff;   /* cards / raised surfaces (light) */
+  --text: #2A2218;      /* body text (light) */
+  --muted: #5A4F3E;     /* secondary text (light) */
+  --line: #E5DDD0;      /* hairlines / borders (light) */
+
+  --serif: 'Cormorant Garamond', serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+  --maxw: 920px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #211B12;
+  --surface: #2C2417;
+  --text: #EDE7D9;
+  --muted: #B7A98E;
+  --line: #3A3022;
+  /* --gold and --ink stay the same; gold pops beautifully on dark. */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 300;
+  line-height: 1.6;
+  transition: background-color 0.5s var(--ease), color 0.5s var(--ease);
+}
+main { display: block; }
+section { padding: 96px 24px; }
+.band { max-width: var(--maxw); margin: 0 auto; width: 100%; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 500; line-height: 1.15; }
+a { color: inherit; }
+
+.section-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.32em;
+  color: var(--gold); margin-bottom: 32px; text-align: center;
+}
+
+/* ---------- NAV (glass, sticky) ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; padding: 14px 24px;
+}
+.nav-mark { font-family: var(--serif); font-size: 20px; font-weight: 500; text-decoration: none; }
+.nav-links { display: flex; gap: 26px; margin-left: auto; margin-right: 8px; }
+.nav-links a {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.22em;
+  color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease);
+}
+.nav-links a:hover { color: var(--gold); }
+.glass {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: var(--bg); }
+}
+@media (max-width: 560px) { .nav-links { display: none; } }
+
+/* ---------- THEME TOGGLE ---------- */
+.theme-toggle {
+  background: none; border: 1px solid var(--line); border-radius: 999px;
+  width: 36px; height: 36px; cursor: pointer; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text); transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+.theme-toggle:hover, .theme-toggle:focus-visible { border-color: var(--gold); color: var(--gold); outline: none; }
+.theme-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+.theme-toggle-icon {
+  width: 14px; height: 14px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px currentColor;
+  transition: box-shadow 0.35s var(--ease);
+}
+[data-theme="dark"] .theme-toggle-icon { box-shadow: inset -4px -4px 0 0 currentColor; }
+
+/* ---------- HERO ---------- */
+.hero {
+  min-height: 92vh; max-width: var(--maxw); margin: 0 auto;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center;
+}
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold); margin-bottom: 22px; }
+.hero-title { font-size: clamp(40px, 8vw, 78px); margin-bottom: 22px; }
+.hero-title em { color: var(--gold); font-style: italic; }
+.hero-sub { font-family: var(--serif); font-size: clamp(18px, 3vw, 25px); color: var(--muted); max-width: 32ch; }
+.scroll-cue {
+  margin-top: 60px; width: 22px; height: 34px;
+  border: 1px solid var(--muted); border-radius: 12px; position: relative; flex: none;
+}
+.scroll-cue::after {
+  content: ""; position: absolute; top: 7px; left: 50%;
+  width: 3px; height: 7px; background: var(--gold); border-radius: 2px;
+  transform: translateX(-50%); animation: cue 1.6s var(--ease) infinite;
+}
+@keyframes cue {
+  0% { opacity: 0; transform: translate(-50%, 0); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 12px); }
+}
+
+/* ---------- CARDS ---------- */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); padding: 30px 26px;
+  transition: transform 0.35s var(--ease), border-color 0.35s var(--ease);
+}
+.card:hover { transform: translateY(-4px); border-color: var(--gold); }
+.card h3 { font-size: 25px; margin-bottom: 10px; }
+.card p { color: var(--muted); }
+@media (max-width: 680px) { .cards { grid-template-columns: 1fr; } }
+
+/* ---------- STEPS ---------- */
+.steps { list-style: none; max-width: 620px; margin: 0 auto; }
+.step {
+  display: flex; gap: 22px; padding: 24px 4px;
+  border-bottom: 1px solid var(--line); align-items: baseline;
+}
+.step:first-child { border-top: 1px solid var(--line); }
+.step-n { font-family: var(--serif); font-style: italic; font-size: 24px; color: var(--gold); min-width: 42px; }
+.step h3 { font-size: 23px; margin-bottom: 4px; }
+.step p { color: var(--muted); }
+
+/* ---------- CTA + FOOTER ---------- */
+.cta { text-align: center; }
+.cta-title { font-size: clamp(28px, 5vw, 46px); margin-bottom: 30px; }
+.btn {
+  display: inline-block; background: var(--ink); color: var(--bg); text-decoration: none;
+  padding: 16px 38px; font-family: var(--sans); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.28em; transition: background-color 0.25s var(--ease), color 0.25s var(--ease);
+}
+[data-theme="dark"] .btn { background: var(--gold); color: var(--ink); }
+.btn:hover { background: var(--gold); color: var(--ink); }
+.footer {
+  text-align: center; padding: 36px 24px 52px; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.26em; color: var(--muted);
+}
+
+/* ============================================================
+   MOTION — only hide content when JS + motion are available
+   to reveal it again (.js-reveal is added by motion.js).
+   ============================================================ */
+html.js-reveal .reveal {
+  opacity: 0; transform: translateY(26px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+html.js-reveal .reveal.is-visible { opacity: 1; transform: none; }
+
+/* Native scroll-driven progress bar where supported. */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 100%;
+  background: var(--gold); transform-origin: 0 50%; transform: scaleX(0); z-index: 60;
+}
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress { animation: progress linear both; animation-timeline: scroll(root); }
+  }
+}
+@keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ============================================================
+   REDUCED MOTION — show everything, stop continuous motion.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.js-reveal .reveal { opacity: 1; transform: none; transition: none; }
+  .scroll-cue::after { animation: none; }
+  .scroll-progress { display: none; }
+  body, .card, .btn, .theme-toggle, .theme-toggle-icon { transition: none; }
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // No-flash: apply the saved (or system) theme before first paint.
+  try {
+    var t = localStorage.getItem('lgr-theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* localStorage may be unavailable */ }
+</script>
+<title>Atelier — Premium Motion Template</title>
+<meta name="description" content="A no-build, copy-and-ship starter with tasteful scroll motion, a light/dark theme, and a glass nav.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="motion.css">
+</head>
+<body>
+  <div class="scroll-progress" aria-hidden="true"></div>
+
+  <header class="nav glass">
+    <a class="nav-mark" href="#top">Atelier</a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#approach">Approach</a>
+      <a href="#process">Process</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <span class="theme-toggle-icon" aria-hidden="true"></span>
+    </button>
+  </header>
+
+  <main id="top">
+
+    <section class="hero">
+      <p class="eyebrow reveal">Studio · City</p>
+      <h1 class="hero-title reveal">Work that feels<br><em>made</em>, not assembled.</h1>
+      <p class="hero-sub reveal">One honest sentence of positioning — the promise that earns the scroll.</p>
+      <a class="scroll-cue reveal" href="#approach" aria-label="Scroll to learn more"></a>
+    </section>
+
+    <section class="band" id="approach">
+      <p class="section-label reveal">Approach</p>
+      <div class="cards">
+        <article class="card reveal">
+          <h3>Considered</h3>
+          <p>Every decision earns its place. Nothing is on the page by accident.</p>
+        </article>
+        <article class="card reveal">
+          <h3>Durable</h3>
+          <p>Built on simple, fast foundations that keep working long after launch.</p>
+        </article>
+        <article class="card reveal">
+          <h3>Cared for</h3>
+          <p>A relationship, not a hand-off. We stay close after the work ships.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="band" id="process">
+      <p class="section-label reveal">Process</p>
+      <ol class="steps">
+        <li class="step reveal"><span class="step-n">01</span><div><h3>Discovery</h3><p>We learn the business before we draw a single screen.</p></div></li>
+        <li class="step reveal"><span class="step-n">02</span><div><h3>Design</h3><p>A direction you can see and react to — early and often.</p></div></li>
+        <li class="step reveal"><span class="step-n">03</span><div><h3>Build</h3><p>Hand-built, fast, and accessible. No bloat, no shortcuts.</p></div></li>
+        <li class="step reveal"><span class="step-n">04</span><div><h3>Care</h3><p>Monitoring, edits, and improvements on a simple monthly plan.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="band cta" id="contact">
+      <p class="section-label reveal">Start</p>
+      <h2 class="cta-title reveal">Have something in mind?</h2>
+      <a class="btn reveal" href="#top">Start a conversation</a>
+    </section>
+
+  </main>
+
+  <footer class="footer">Atelier · City · Built with the LGR premium-motion starter</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" crossorigin="anonymous" defer></script>
+  <script defer src="motion.js"></script>
+</body>
+</html>
