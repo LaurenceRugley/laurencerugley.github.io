@@ -192,7 +192,13 @@
 
   function applyTransform() {
     if (!spriteEl) return;
-    const facing = STATES[currentState].facing;
+    let facing = STATES[currentState].facing;
+    // Phase 2 (alive): when calmly idle, turn to WATCH the cursor — curious.
+    // (He still flees via maybeStartDash if it gets close — curious but shy.)
+    if (currentState === 'idle' && cursorX > -9000) {
+      const center = spriteX + (FRAME_W * SCALE) / 2;
+      facing = cursorX < center ? 'left' : 'right';
+    }
     spriteEl.dataset.facing = facing;
     const scaleX = facing === 'left' ? -1 : 1;
     // When mirroring, we also need to flip the x-anchor so it doesn't visually jump.
@@ -455,6 +461,7 @@
   function handleMouseMove() {
     mouseMovePending = false;
     maybeStartDash(performance.now());
+    if (currentState === 'idle') applyTransform(); // Phase 2: track the cursor while idle
   }
 
   function onWorkEnter(e) {
