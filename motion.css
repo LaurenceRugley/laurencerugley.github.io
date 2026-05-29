@@ -9,7 +9,8 @@
 :root {
   /* Brand */
   --ink: #2A2218;
-  --gold: #B89968;
+  --gold: #B89968;        /* decorative fills only (bars, button bg) */
+  --gold-text: #7E6234;   /* darker gold for TEXT/UI state — passes WCAG AA on limestone */
   --serif: 'Cormorant Garamond', serif;
   --sans: 'Inter', -apple-system, sans-serif;
 
@@ -19,6 +20,7 @@
   --text: #2A2218;
   --muted: #5A4F3E;
   --line: #E5DDD0;
+  --field-border: #8E8472; /* form-control boundary — passes WCAG 1.4.11 (3:1) */
 
   /* Back-compat aliases (older inline rules / pixel overlays) */
   --limestone: #EDE7D9;
@@ -34,8 +36,10 @@
   --text: #EDE7D9;
   --muted: #B7A98E;
   --line: #3A3022;
+  --field-border: #6E6452; /* form-control boundary on dark surface (3:1) */
   --limestone: #EDE7D9; /* stays light: used where we want light-on-dark */
   --slate: #B7A98E;
+  --gold-text: #B89968; /* gold already passes AA on dark ink */
 }
 
 /* Offset native anchor jumps + scroll-into-view below the sticky nav.
@@ -58,7 +62,9 @@ html { scroll-padding-top: 64px; }
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em;
   color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease);
 }
-.nav-links a:hover { color: var(--gold); }
+.nav-links a:hover { color: var(--gold-text); }
+.nav-links a:focus-visible,
+.nav-mark:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 4px; border-radius: 2px; }
 .glass {
   background: color-mix(in srgb, var(--bg) 74%, transparent);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -77,7 +83,7 @@ html { scroll-padding-top: 64px; }
   color: var(--text); transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
   -webkit-tap-highlight-color: transparent;
 }
-.theme-toggle:hover { border-color: var(--gold); color: var(--gold); }
+.theme-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); }
 .theme-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
 .theme-toggle-icon {
   width: 13px; height: 13px; border-radius: 50%;
@@ -108,7 +114,7 @@ html { scroll-padding-top: 64px; }
 #start { min-height: auto; }
 .section-label {
   font-family: var(--sans); font-size: 10px; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold-text);
   text-align: center; margin-bottom: 28px;
 }
 
@@ -122,13 +128,13 @@ html { scroll-padding-top: 64px; }
 }
 .hero-eyebrow {
   font-family: var(--sans); font-size: 10px; text-transform: uppercase;
-  letter-spacing: 0.32em; color: var(--gold); margin-bottom: 22px;
+  letter-spacing: 0.32em; color: var(--gold-text); margin-bottom: 22px;
 }
 .hero-title {
   font-family: var(--serif); font-weight: 500; line-height: 1.12;
   font-size: clamp(38px, 7vw, 64px); margin-bottom: 22px;
 }
-.hero-title em { color: var(--gold); font-style: italic; }
+.hero-title em { color: var(--gold-text); font-style: italic; }
 .hero-sub {
   font-family: var(--serif); font-size: clamp(17px, 2.6vw, 22px);
   color: var(--muted); max-width: 34ch; line-height: 1.45;
@@ -167,7 +173,7 @@ html { scroll-padding-top: 64px; }
   border-bottom: 1px solid var(--line); align-items: baseline;
 }
 .step:first-child { border-top: 1px solid var(--line); }
-.step-n { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--gold); min-width: 40px; }
+.step-n { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--gold-text); min-width: 40px; }
 .step h3 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin-bottom: 4px; }
 .step p { color: var(--muted); font-size: 15px; }
 
