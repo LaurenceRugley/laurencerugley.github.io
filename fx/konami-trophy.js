@@ -82,7 +82,7 @@
 
     'void main(){',
     '  vec2 uv = (gl_FragCoord.xy - 0.5*u_res) / u_res.y;',
-    '  vec3 ro = vec3(0.0, 0.16, 2.3);',                     // camera
+    '  vec3 ro = vec3(0.0, 0.16, 3.1);',                     // camera (further back = smaller trophy)
     '  vec3 rd = normalize(vec3(uv, -1.6));',
     '  float t = 0.0; bool hit = false;',
     '  for(int i = 0; i < 90; i++){',
