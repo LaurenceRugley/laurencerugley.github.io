@@ -1,0 +1,98 @@
+/* pixel/breakout.css — "SMASH" mode (Breakout against the page content).
+   Launch button is nested in the companion easter egg (only shows in companion
+   mode). Pixel-art rules: hard edges, flat colours, no glow/blur. */
+
+/* ---- launch button: hidden unless companion is on; hidden during the game ---- */
+.breakout-launch {
+  display: none;
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 95;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bg, #ede7d9);
+  background: var(--ink, #2a2218);
+  border: 2px solid var(--gold, #b89968);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.breakout-launch .bl-glyph { color: var(--gold, #b89968); font-size: 14px; line-height: 1; }
+.breakout-launch:hover, .breakout-launch:focus-visible { background: var(--gold, #b89968); color: var(--ink, #2a2218); outline: none; }
+body[data-pixel="on"] .breakout-launch { display: inline-flex; }
+body[data-breakout="on"] .breakout-launch { display: none; }
+
+/* ---- in-game: hide the casual ball, lock scroll (clean arena) ---- */
+body[data-breakout="on"] .pixel-ball { display: none !important; }
+.breakout-lock { overflow: hidden !important; }
+
+/* ---- the game ball (gold, hard rubber edges) ---- */
+.breakout-ball {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e8b84b;
+  border: 2px solid #3a2a08;
+  box-shadow:
+    inset -3px -4px 0 0 rgba(58, 42, 8, 0.5),
+    inset  4px  4px 0 0 rgba(255, 255, 255, 0.6);
+  z-index: 9997;
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+}
+.breakout-ball:active { cursor: grabbing; }
+
+/* ---- a smashed brick falls away (transforms are visual only; scroll is locked
+        so this can't add scrollbars). Removing the class snaps it back on exit. ---- */
+.is-smashed {
+  transform: translateY(115vh) rotate(22deg) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.85s cubic-bezier(0.5, 0, 1, 1), opacity 0.85s ease-in !important;
+}
+
+/* ---- HUD ---- */
+.breakout-hud {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 10px 8px 16px;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--bg, #ede7d9);
+  background: rgba(20, 14, 6, 0.86);
+  border: 1px solid var(--gold, #b89968);
+  border-radius: 999px;
+}
+.breakout-hud .bh-label { font-weight: 700; letter-spacing: 0.18em; color: #e8b84b; }
+.breakout-hud .bh-count { font-variant-numeric: tabular-nums; }
+.breakout-hud .bh-tip { opacity: 0.6; font-size: 11px; }
+.breakout-hud .bh-exit {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 1px solid rgba(255, 255, 255, 0.3); color: var(--bg, #ede7d9);
+  font-size: 16px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.breakout-hud .bh-exit:hover, .breakout-hud .bh-exit:focus-visible { border-color: var(--gold, #b89968); color: #e8b84b; outline: none; }
+
+/* Motion-heavy game — never expose it for reduced-motion users (JS also no-ops). */
+@media (prefers-reduced-motion: reduce) {
+  .breakout-launch, .breakout-ball, .breakout-hud { display: none !important; }
+}

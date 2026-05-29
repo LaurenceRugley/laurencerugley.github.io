@@ -80,13 +80,13 @@ All gated to `prefers-reduced-motion` and the companion easter-egg mode.
 ---
 
 ## 🅿️ Parked / backlog
-- **Ball → BREAKOUT game mode** (owner's idea, high "wow" + portfolio candidate):
-  evolve the battable ball into a brick-breaker — fling it to knock things down;
-  bounce it off sections so pieces **crumble off until the whole section falls**.
-  Two modes envisioned: (1) casual always-on ball (current, with mobile
-  click-through passthrough), (2) an explicit **game mode** toggle where the site
-  becomes the playfield (and you switch back to normal mode to use the forms).
-  The game-mode path is the robust home for the destruction/physics; build there.
+- **SMASH / Breakout game mode** — ✅ **V1 built** (`pixel/breakout.js` + `.css`):
+  a "smash" launch button (companion mode only) starts a no-gravity ball that
+  bounces the viewport; fling it to knock content blocks (cards/steps/work-items/
+  headings/CTA) away; HUD counts smashed/total; ✕/Esc/companion-off exits + fully
+  restores. Scroll locked during play (clean arena). *Future polish:* bricks
+  **shatter into pixel shards** (vs. fall away), the **companion as a paddle**, a
+  proper win state, multi-hit bricks. The richer "whole section crumbles" lives here.
 - **Rive** — great for a future **client** mascot (smooth vector/skeletal), NOT
   the pixel companion (it'd bend pixels off-grid). Free editor tier + MIT runtime.
 - **Phase 3** — type accent (mono) + tasteful kinetic type.
