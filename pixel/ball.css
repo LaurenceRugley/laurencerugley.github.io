@@ -1,0 +1,30 @@
+/* pixel/ball.css — the companion's battable ball.
+   Pixel-art rules honoured (per the r/StableDiffusion pro): hard edges, flat
+   limited colours, a consistent dark outline, NO glow/blur/gradient.
+   Positioned via JS transform; sits just below the sprite (z 98 < sprite 100). */
+
+.pixel-ball {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d9533b;                 /* flat rubber red */
+  border: 2px solid #3a1e16;           /* consistent dark outline */
+  /* hard inset shade + highlight (0 blur) — reads as a rubber ball, not a glow */
+  box-shadow:
+    inset -3px -4px 0 0 rgba(58, 30, 22, 0.45),
+    inset  4px  4px 0 0 rgba(255, 255, 255, 0.55);
+  z-index: 98;
+  cursor: grab;
+  touch-action: none;                  /* dragging shouldn't scroll the page */
+  will-change: transform;
+}
+
+.pixel-ball.is-grabbed { cursor: grabbing; }
+
+/* Motion toy — never show it for reduced-motion users (JS also no-ops). */
+@media (prefers-reduced-motion: reduce) {
+  .pixel-ball { display: none; }
+}
