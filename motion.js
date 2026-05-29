@@ -48,11 +48,13 @@
   var tries = 0;
   (function initLenis() {
     if (window.Lenis) {
-      // lerp (not duration) is the right knob for wheel feel: higher = snappier,
-      // less trailing glide. 0.12 reads tactile/responsive without losing smoothness.
-      var lenis = new Lenis({ lerp: 0.12, smoothWheel: true, wheelMultiplier: 1.1, syncTouch: false });
+      // Natural free-scroll feel (Lenis default lerp ~0.1); mobile stays native.
+      var lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false });
       function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
       requestAnimationFrame(raf);
+
+      var navEl = document.querySelector('.nav');
+      function navH() { return navEl ? Math.round(navEl.getBoundingClientRect().height) : 0; }
 
       // Smooth-scroll in-page anchor links (nav + scroll cue) instead of jumping.
       document.addEventListener('click', function (e) {
@@ -63,8 +65,55 @@
         var target = document.querySelector(id);
         if (!target) return;
         e.preventDefault();
-        lenis.scrollTo(target, { offset: -64 }); // clear the sticky nav
+        lenis.scrollTo(target, { offset: -navH() }); // clear the sticky nav
       });
+
+      /* ---------- HYBRID PROXIMITY SECTION-SNAP ----------
+         Free smooth scrolling stays free. When you STOP near a section, it
+         eases that section fully into frame (below the nav). It never fires
+         mid-scroll (130ms settle debounce), never traps you (only engages
+         within ~45% of a viewport of a section), and the snap itself is a
+         quick Lenis scrollTo (~0.55s) so it's part of the smooth motion, not
+         a fight with it. Hand-rolled = fully ours to tune; no extra deps. */
+      var sections = [].slice.call(document.querySelectorAll('main section'));
+      if (sections.length) {
+        var snapping = false, snapTimer = null, safety = null;
+
+        function snapTargets() {
+          var nh = navH(), y = window.scrollY || window.pageYOffset || 0;
+          return sections.map(function (s, i) {
+            var top = s.getBoundingClientRect().top + y;
+            return i === 0 ? 0 : Math.max(0, Math.round(top - nh)); // top of page for hero
+          });
+        }
+
+        function settle() {
+          if (snapping) return;
+          var y = window.scrollY || window.pageYOffset || 0;
+          var vh = window.innerHeight;
+          var pts = snapTargets(), best = null, bestD = Infinity;
+          for (var i = 0; i < pts.length; i++) {
+            var d = Math.abs(pts[i] - y);
+            if (d < bestD) { bestD = d; best = pts[i]; }
+          }
+          if (best == null || bestD < 3) return;     // nothing near, or already framed
+          if (bestD > vh * 0.45) return;             // proximity gate: keep free scroll free
+          snapping = true;
+          lenis.scrollTo(best, {
+            duration: 0.55,
+            easing: function (t) { return 1 - Math.pow(1 - t, 3); }, // easeOutCubic
+            onComplete: function () { snapping = false; }
+          });
+          clearTimeout(safety);
+          safety = setTimeout(function () { snapping = false; }, 900); // backup unlock
+        }
+
+        lenis.on('scroll', function () {
+          if (snapping) return;
+          clearTimeout(snapTimer);
+          snapTimer = setTimeout(settle, 130); // snap only after scrolling stops
+        });
+      }
       return;
     }
     if (tries++ < 20) setTimeout(initLenis, 50);

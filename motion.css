@@ -38,6 +38,11 @@
   --slate: #B7A98E;
 }
 
+/* Offset native anchor jumps + scroll-into-view below the sticky nav.
+   (Lenis ignores this and uses the JS offset instead; this covers the
+   reduced-motion / no-Lenis path.) */
+html { scroll-padding-top: 64px; }
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
@@ -82,7 +87,20 @@
 [data-theme="dark"] .theme-toggle-icon { box-shadow: inset -4px -4px 0 0 currentColor; }
 
 /* ---------- SECTION SHELL ---------- */
-.section { padding: 84px 24px; }
+/* Full-height sections so each "presents fully" when the proximity-snap
+   settles on it. svh (small viewport height) avoids the mobile address-bar
+   jump; the vh line is a fallback for old engines. Minus the ~64px sticky nav.
+   These are min-heights, never fixed — a taller-than-screen section (e.g. a
+   long form) grows and scrolls instead of clipping. */
+.section {
+  padding: 72px 24px;
+  min-height: 100vh;
+  min-height: calc(100svh - 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 .band { max-width: var(--maxw); margin: 0 auto; width: 100%; }
 .section-label {
   font-family: var(--sans); font-size: 10px; font-weight: 500;
@@ -92,7 +110,9 @@
 
 /* ---------- HERO ---------- */
 .hero {
-  min-height: 84vh; max-width: var(--maxw); margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100svh;
+  max-width: var(--maxw); margin: 0 auto;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   text-align: center; padding: 24px;
 }
