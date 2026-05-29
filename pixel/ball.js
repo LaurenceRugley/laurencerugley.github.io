@@ -21,9 +21,10 @@
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (prefersReduced) return; // motion toy — skip for reduced-motion users
 
-  // Mouse-only toy (same convention as fx/cursor-ripple.js): on touch / coarse-pointer
-  // devices the ball would just rest over the footer + Start CTA and intercept taps.
-  if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+  // Runs on touch AND mouse. The old tap-hazard (ball resting over the footer /
+  // Start CTA and eating taps) is solved by the click-through "passthrough" mode
+  // below: whenever the ball is over an interactive element it goes transparent +
+  // pointer-events:none, so the link/field underneath receives the tap.
 
   // --- tuning ---------------------------------------------------------------
   var R = 12;               // ball radius (px) — diameter 24, ~proportionate to the 48x72 sprite
@@ -41,9 +42,40 @@
   var dragging = false, dragId = null;
   var lastPX = 0, lastPY = 0, dragVX = 0, dragVY = 0;
   var prevSpriteLeft = null;                      // for estimating the companion's vx
+  // Click-through ("passthrough"): cached rects of interactive elements; when the
+  // ball overlaps one it turns transparent + pointer-events:none so taps go through.
+  var interactiveRects = [];
+  var wasPassthrough = false;
+  var frame = 0;
 
   function floorY() { return window.innerHeight - FLOOR_OFFSET; }
   function maxX() { return window.innerWidth - R; }
+
+  // --- click-through near interactive elements ------------------------------
+  var INTERACTIVE_SEL = 'a[href], button, input, textarea, select, label, [role="button"]';
+  function refreshInteractiveRects() {
+    interactiveRects = [];
+    var els = document.querySelectorAll(INTERACTIVE_SEL);
+    for (var i = 0; i < els.length; i++) {
+      if (els[i] === ball) continue;
+      var r = els[i].getBoundingClientRect();
+      if (r.width && r.height && r.bottom > 0 && r.top < window.innerHeight) interactiveRects.push(r);
+    }
+  }
+  function overInteractive() {
+    var m = 12; // margin: ease out a little before fully overlapping
+    for (var i = 0; i < interactiveRects.length; i++) {
+      var r = interactiveRects[i];
+      if (cx + R > r.left - m && cx - R < r.right + m &&
+          cy + R > r.top - m && cy - R < r.bottom + m) return true;
+    }
+    return false;
+  }
+  function setPassthrough(on) {
+    if (on === wasPassthrough || !ball) return;
+    wasPassthrough = on;
+    ball.classList.toggle('is-passthrough', on);
+  }
 
   // --- lifecycle ------------------------------------------------------------
   function makeBall() {
@@ -56,7 +88,8 @@
     // entrance: drop in from above, ~62% across, so it's noticed
     cx = Math.max(R, Math.min(maxX(), window.innerWidth * 0.62));
     cy = floorY() - R - Math.min(170, window.innerHeight * 0.3);
-    vx = 0; vy = 0; prevSpriteLeft = null;
+    vx = 0; vy = 0; prevSpriteLeft = null; wasPassthrough = false; frame = 0;
+    refreshInteractiveRects();
     place();
     start();
   }
@@ -176,8 +209,13 @@
         vx = 0; vy = 0;
       }
       place();
+      // click-through: refresh the interactive rects periodically (cheap), then
+      // dim + pass taps through whenever the ball is over a link/field.
+      if (++frame % 8 === 0) refreshInteractiveRects();
+      setPassthrough(overInteractive());
     } else {
       collideSprite(); // while held, still let the companion nudge it
+      setPassthrough(false); // solid + grabbable while actively dragging
     }
     raf = requestAnimationFrame(step);
   }
