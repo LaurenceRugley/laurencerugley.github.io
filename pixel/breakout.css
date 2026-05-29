@@ -29,9 +29,8 @@
 body[data-pixel="on"] .breakout-launch { display: inline-flex; }
 body[data-breakout="on"] .breakout-launch { display: none; }
 
-/* ---- in-game: hide the casual ball, lock scroll (clean arena) ---- */
+/* ---- in-game: hide the casual ball (scroll stays free so you can roam) ---- */
 body[data-breakout="on"] .pixel-ball { display: none !important; }
-.breakout-lock { overflow: hidden !important; }
 
 /* ---- the game ball (gold, hard rubber edges) ---- */
 .breakout-ball {
@@ -64,7 +63,7 @@ body[data-breakout="on"] .pixel-ball { display: none !important; }
 
 /* shatter shards — small hard pixel squares bursting from a smashed block */
 .brick-shard {
-  position: fixed;
+  position: absolute;   /* page coords — shards stay anchored + scroll with content */
   z-index: 9996;
   pointer-events: none;
   will-change: transform, opacity;
