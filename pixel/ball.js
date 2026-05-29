@@ -76,6 +76,13 @@
     wasPassthrough = on;
     ball.classList.toggle('is-passthrough', on);
   }
+  // Recompute on scroll/resize too: a resting ball can have a link scrolled UNDER
+  // it, and the rAF loop may be throttled/paused — so don't rely on the loop alone.
+  function onScrollResize() {
+    if (!ball) return;
+    refreshInteractiveRects();
+    if (!dragging) setPassthrough(overInteractive());
+  }
 
   // --- lifecycle ------------------------------------------------------------
   function makeBall() {
@@ -92,10 +99,14 @@
     refreshInteractiveRects();
     place();
     start();
+    window.addEventListener('scroll', onScrollResize, { passive: true });
+    window.addEventListener('resize', onScrollResize);
   }
 
   function destroyBall() {
     stop();
+    window.removeEventListener('scroll', onScrollResize);
+    window.removeEventListener('resize', onScrollResize);
     if (ball) {
       ball.removeEventListener('pointerdown', onDown);
       ball.remove();
