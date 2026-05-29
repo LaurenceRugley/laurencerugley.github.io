@@ -80,6 +80,13 @@ All gated to `prefers-reduced-motion` and the companion easter-egg mode.
 ---
 
 ## 🅿️ Parked / backlog
+- **Ball → BREAKOUT game mode** (owner's idea, high "wow" + portfolio candidate):
+  evolve the battable ball into a brick-breaker — fling it to knock things down;
+  bounce it off sections so pieces **crumble off until the whole section falls**.
+  Two modes envisioned: (1) casual always-on ball (current, with mobile
+  click-through passthrough), (2) an explicit **game mode** toggle where the site
+  becomes the playfield (and you switch back to normal mode to use the forms).
+  The game-mode path is the robust home for the destruction/physics; build there.
 - **Rive** — great for a future **client** mascot (smooth vector/skeletal), NOT
   the pixel companion (it'd bend pixels off-grid). Free editor tier + MIT runtime.
 - **Phase 3** — type accent (mono) + tasteful kinetic type.
