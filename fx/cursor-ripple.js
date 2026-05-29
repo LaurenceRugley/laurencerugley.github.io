@@ -1,19 +1,20 @@
 /* ============================================================
    fx/cursor-ripple.js — water-ripple cursor wake (companion mode only).
 
-   A transparent full-viewport WebGL overlay. Moving the pointer lays down a
-   TRAIL of ripples behind it, each stretched LENGTHWISE along the direction of
-   travel (a wake) that spreads out and rounds off slowly as it ages. Clicking
-   drops a round POOL splash. Light crests + dark troughs read as light on
-   water; the page stays fully visible underneath.
+   A transparent full-viewport WebGL overlay:
+     - MOVING lays down a thin, spindly, CURVY filament along your actual path;
+       ripples emanate from that drag-line and spread/soften as they age — like
+       dragging a pencil across shallow water.
+     - CLICKING drops a POOL: many soft concentric rings expanding outward with
+       bleeding, mushy edges.
+   Light crests + dark troughs read as light on water; the page stays visible.
 
-   Honest scope: a ripple SURFACE drawn over the page (transparent caustics),
-   not true refraction of the live text (that needs a build-step DOM-to-texture).
+   Honest scope: a ripple SURFACE over the page (transparent caustics), not true
+   refraction of the live text (that needs a build-step rasterize-and-displace).
 
    Gated to the easter egg: only runs while the pixel companion is on
-   (body[data-pixel="on"]). Zero cost otherwise. Never inits under
-   prefers-reduced-motion, on touch (no fine pointer), or without WebGL;
-   pointer-events:none; rAF only while enabled + ripples alive; pauses on hide.
+   (body[data-pixel="on"]). Never inits under prefers-reduced-motion, on touch,
+   or without WebGL; pointer-events:none; rAF only while alive; pauses on hide.
    ============================================================ */
 (function () {
   'use strict';
@@ -29,46 +30,57 @@
   if (!gl) return;
   document.body.appendChild(canvas);
 
-  var SCALE = 0.7;   // render below CSS res (ripples are soft) — cheaper
-  var MAX = 22;      // recent ripple sources (trail length)
-  var STEP = 11;     // px between interpolated trail points (continuous wake)
-  var LIFE = 1.7;    // seconds a ripple lives
+  var SCALE = 0.7;     // render below CSS res (ripples are soft) — cheaper
+  var MAX = 24;        // trail points (the curvy path)
+  var ND = 6;          // simultaneous click pools
+  var STEP = 9;        // px between interpolated trail points (smooth curve)
+  var TLIFE = 1.6;     // trail ripple life (s)
+  var DLIFE = 2.4;     // pool life (s)
 
   var VERT = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
   var FRAG = [
     'precision highp float;',
     '#define MAX ' + MAX,
+    '#define ND ' + ND,
     'uniform vec2 u_res;',
     'uniform float u_time;',
-    'uniform vec4 u_pts[MAX];', // x, y (backing px, y-up), spawnTime, amplitude
-    'uniform vec2 u_dir[MAX];', // unit travel direction (0,0 = round pool)
-    'uniform int u_count;',
+    'uniform vec3 u_trail[MAX];', // x, y (backing px, y-up), spawnTime — ordered path
+    'uniform int u_tn;',
+    'uniform vec3 u_drop[ND];',   // x, y, spawnTime — clicks
+    'uniform int u_dn;',
+    // distance from point p to the segment a->b
+    'float segDist(vec2 p, vec2 a, vec2 b){',
+    '  vec2 pa = p - a, ba = b - a;',
+    '  float t = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);',
+    '  return length(pa - ba * t);',
+    '}',
     'void main(){',
     '  vec2 f = gl_FragCoord.xy;',
     '  float h = 0.0;',
-    '  for (int i = 0; i < MAX; i++) {',
-    '    if (i >= u_count) break;',
-    '    vec4 pt = u_pts[i];',
-    '    float age = u_time - pt.z;',
-    '    if (age <= 0.0 || age > ' + LIFE.toFixed(1) + ') continue;',
-    '    vec2 rel = f - pt.xy;',
-    '    vec2 dir = u_dir[i];',
-    '    float d;',
-    '    if (dot(dir, dir) > 0.0001) {',                      // moving: stretch lengthwise along travel
-    '      vec2 perp = vec2(-dir.y, dir.x);',
-    '      float al = dot(rel, dir), pe = dot(rel, perp);',
-    '      float stretch = mix(2.6, 1.15, clamp(age / ' + LIFE.toFixed(1) + ', 0.0, 1.0));', // rounds out slowly
-    '      d = length(vec2(al / stretch, pe));',
-    '    } else {',                                            // click: round pool
-    '      d = length(rel);',
-    '    }',
-    '    float r = age * 150.0;',                              // expansion speed (slow spread)
-    '    float ring = exp(-pow((d - r) / 12.0, 2.0));',       // tight soft band
-    '    float life = 1.0 - age / ' + LIFE.toFixed(1) + ';',
-    '    h += sin((d - r) * 0.17) * ring * life * pt.w;',     // pt.w = amplitude (move vs pool)
+    // ---- spindly curvy trail: ripples emanate from the drag-line, spread w/ age
+    '  for (int i = 1; i < MAX; i++) {',
+    '    if (i >= u_tn) break;',
+    '    vec3 a = u_trail[i - 1], b = u_trail[i];',
+    '    float age = u_time - b.z;',
+    '    if (age < 0.0 || age > ' + TLIFE.toFixed(1) + ') continue;',
+    '    float d = segDist(f, a.xy, b.xy);',
+    '    float life = 1.0 - age / ' + TLIFE.toFixed(1) + ';',
+    '    float spread = 8.0 + age * 42.0;',                  // thin near the line, bleeds wider w/ age
+    '    h += sin(d * 0.18 - u_time * 4.0) * exp(-d / spread) * life * 0.6;',
     '  }',
-    '  float a = clamp(abs(h), 0.0, 1.0) * 0.42;',            // transparent — page shows through
-    '  vec3 col = h > 0.0 ? vec3(1.0) : vec3(0.04);',         // crest light, trough dark
+    // ---- click pools: many soft concentric rings expanding out, mushy edges
+    '  for (int j = 0; j < ND; j++) {',
+    '    if (j >= u_dn) break;',
+    '    vec3 dp = u_drop[j];',
+    '    float age = u_time - dp.z;',
+    '    if (age < 0.0 || age > ' + DLIFE.toFixed(1) + ') continue;',
+    '    float d = distance(f, dp.xy);',
+    '    float life = 1.0 - age / ' + DLIFE.toFixed(1) + ';',
+    '    float spread = 22.0 + age * 170.0;',                // rings reach further as they age (bleed)
+    '    h += sin(d * 0.13 - u_time * 5.0) * exp(-d / spread) * life * 1.1;',
+    '  }',
+    '  float a = clamp(abs(h), 0.0, 1.0) * 0.4;',            // transparent — page shows through
+    '  vec3 col = h > 0.0 ? vec3(1.0) : vec3(0.04);',        // crest light, trough dark
     '  gl_FragColor = vec4(col, a);',
     '}'
   ].join('\n');
@@ -89,9 +101,10 @@
 
   var uRes = gl.getUniformLocation(prog, 'u_res');
   var uTime = gl.getUniformLocation(prog, 'u_time');
-  var uPts = gl.getUniformLocation(prog, 'u_pts');
-  var uDir = gl.getUniformLocation(prog, 'u_dir');
-  var uCount = gl.getUniformLocation(prog, 'u_count');
+  var uTrail = gl.getUniformLocation(prog, 'u_trail');
+  var uTn = gl.getUniformLocation(prog, 'u_tn');
+  var uDrop = gl.getUniformLocation(prog, 'u_drop');
+  var uDn = gl.getUniformLocation(prog, 'u_dn');
 
   function size() {
     canvas.width = Math.max(1, Math.round(window.innerWidth * SCALE));
@@ -100,61 +113,56 @@
   }
   size(); window.addEventListener('resize', size);
 
-  var pts = [];            // {x, y, t, amp, dx, dy} in backing px (y-up)
-  var ptData = new Float32Array(MAX * 4);
-  var dirData = new Float32Array(MAX * 2);
+  var trail = [];          // ordered {x, y, t} path points (backing px, y-up)
+  var drops = [];          // {x, y, t} clicks
+  var trailData = new Float32Array(MAX * 3);
+  var dropData = new Float32Array(ND * 3);
   var rafId = null, t0 = (window.performance && performance.now) ? performance.now() : Date.now();
   var lastX = null, lastY = null;
   function nowSec() { return (((window.performance && performance.now) ? performance.now() : Date.now()) - t0) / 1000; }
   function enabled() { return document.body.getAttribute('data-pixel') === 'on'; }
-
-  function push(x, y, amp, dx, dy) {
-    pts.push({ x: x, y: y, t: nowSec(), amp: amp, dx: dx, dy: dy });
-    if (pts.length > MAX) pts.shift();
-    if (rafId == null) rafId = requestAnimationFrame(frame);
-  }
+  function wake() { if (rafId == null) rafId = requestAnimationFrame(frame); }
 
   window.addEventListener('pointermove', function (e) {
     if (!enabled() || (e.pointerType && e.pointerType !== 'mouse')) return;
     var x = e.clientX * SCALE, y = canvas.height - e.clientY * SCALE;
     if (lastX == null) { lastX = x; lastY = y; }
     var dx = x - lastX, dy = y - lastY, dist = Math.sqrt(dx * dx + dy * dy);
-    var ndx = dist > 0.001 ? dx / dist : 0, ndy = dist > 0.001 ? dy / dist : 0;
     var steps = Math.min(MAX, Math.floor(dist / STEP));
-    for (var s = 1; s <= steps; s++) {
-      push(lastX + dx * (s / (steps + 1)), lastY + dy * (s / (steps + 1)), 0.45, ndx, ndy);
-    }
-    push(x, y, 0.45, ndx, ndy);
-    lastX = x; lastY = y;
+    for (var s = 1; s <= steps; s++) { trail.push({ x: lastX + dx * (s / (steps + 1)), y: lastY + dy * (s / (steps + 1)), t: nowSec() }); }
+    trail.push({ x: x, y: y, t: nowSec() });
+    while (trail.length > MAX) trail.shift();
+    lastX = x; lastY = y; wake();
   }, { passive: true });
 
-  // Click -> a stronger, round "pool" drop (no direction).
   window.addEventListener('pointerdown', function (e) {
     if (!enabled() || (e.pointerType && e.pointerType !== 'mouse')) return;
-    push(e.clientX * SCALE, canvas.height - e.clientY * SCALE, 2.2, 0, 0);
+    drops.push({ x: e.clientX * SCALE, y: canvas.height - e.clientY * SCALE, t: nowSec() });
+    while (drops.length > ND) drops.shift();
+    wake();
   }, { passive: true });
 
   function frame() {
     rafId = null;
     var now = nowSec();
-    while (pts.length && now - pts[0].t > LIFE) pts.shift();
+    while (trail.length && now - trail[0].t > TLIFE) trail.shift();
+    while (drops.length && now - drops[0].t > DLIFE) drops.shift();
     gl.clear(gl.COLOR_BUFFER_BIT);
-    if (pts.length && enabled()) {
-      for (var i = 0; i < pts.length; i++) {
-        ptData[i * 4] = pts[i].x; ptData[i * 4 + 1] = pts[i].y; ptData[i * 4 + 2] = pts[i].t; ptData[i * 4 + 3] = pts[i].amp;
-        dirData[i * 2] = pts[i].dx; dirData[i * 2 + 1] = pts[i].dy;
-      }
+    if ((trail.length || drops.length) && enabled()) {
+      for (var i = 0; i < trail.length; i++) { trailData[i*3] = trail[i].x; trailData[i*3+1] = trail[i].y; trailData[i*3+2] = trail[i].t; }
+      for (var j = 0; j < drops.length; j++) { dropData[j*3] = drops[j].x; dropData[j*3+1] = drops[j].y; dropData[j*3+2] = drops[j].t; }
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, now);
-      gl.uniform1i(uCount, pts.length);
-      gl.uniform4fv(uPts, ptData);
-      gl.uniform2fv(uDir, dirData);
+      gl.uniform1i(uTn, trail.length);
+      gl.uniform1i(uDn, drops.length);
+      gl.uniform3fv(uTrail, trailData);
+      gl.uniform3fv(uDrop, dropData);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       rafId = requestAnimationFrame(frame);
     }
   }
 
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { pts = []; lastX = lastY = null; if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } gl.clear(gl.COLOR_BUFFER_BIT); }
+    if (document.hidden) { trail = []; drops = []; lastX = lastY = null; if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } gl.clear(gl.COLOR_BUFFER_BIT); }
   });
 })();
