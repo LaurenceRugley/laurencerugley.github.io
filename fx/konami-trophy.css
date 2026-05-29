@@ -1,0 +1,58 @@
+/* fx/konami-trophy.css — overlay for the Konami reward (the 3D gold trophy).
+   The trophy itself is drawn on a transparent WebGL canvas; this just dims the
+   page behind it and styles the caption. Matches the site's type tokens. */
+
+.konami-trophy {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(12, 8, 3, 0.66);
+  cursor: pointer;
+  animation: kttFade 0.3s ease both;
+}
+@keyframes kttFade { from { opacity: 0; } to { opacity: 1; } }
+
+.konami-trophy-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.konami-trophy-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 15%;
+  text-align: center;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.konami-trophy.is-captioned .konami-trophy-caption { opacity: 1; transform: none; }
+
+.ktt-title {
+  display: block;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;                 /* balance the trailing letter-spacing */
+  font-size: clamp(1.1rem, 3.2vw, 1.7rem);
+  color: #EFD58E;
+  text-shadow: 0 2px 22px rgba(184, 153, 104, 0.55);
+}
+.ktt-sub {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-weight: 400;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  color: rgba(245, 242, 234, 0.66);
+}
+
+@media (prefers-reduced-motion: reduce) { .konami-trophy { display: none; } }
