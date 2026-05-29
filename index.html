@@ -33,9 +33,10 @@
 <meta name="twitter:title" content="LGR Web Studio — Custom websites, made by hand">
 <meta name="twitter:description" content="A Digital Atelier in Pasadena. Custom websites for product brands and service businesses.">
 <meta name="twitter:image" content="https://lgrwebstudios.com/card-preview.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Self-hosted fonts (woff2, latin) — no third-party request, no render block.
+     @font-face lives in motion.css; preload the two above-the-fold faces. -->
+<link rel="preload" as="font" type="font/woff2" href="fonts/cormorant-garamond.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="fonts/inter.woff2" crossorigin>
 <link rel="stylesheet" href="motion.css">
 <link rel="stylesheet" href="pixel/pixel.css">
 <link rel="stylesheet" href="fx/hero-gradient.css">
@@ -169,7 +170,10 @@
     <p class="hero-eyebrow reveal">A Digital Atelier · Pasadena</p>
     <h1 class="hero-title reveal">Custom websites,<br>made <em>by hand</em>.</h1>
     <p class="hero-sub reveal">For product brands and service businesses — designed and built in-house in Pasadena, California.</p>
-    <a class="scroll-cue reveal" href="#approach" aria-label="Scroll to learn more"></a>
+    <div class="hero-actions reveal">
+      <a class="btn-primary" href="#start">Start a project</a>
+      <a class="scroll-cue" href="#approach" aria-label="Scroll to learn more"></a>
+    </div>
   </section>
 
   <section class="section" id="approach">
@@ -193,8 +197,8 @@
   </section>
 
   <section class="section" id="process">
-    <div class="band">
-      <h2 class="section-label reveal">Process</h2>
+    <div class="band reveal">
+      <h2 class="section-label">Process</h2>
       <ol class="steps">
         <li class="step reveal"><span class="step-n">01</span><div><h3>Discovery</h3><p>We talk through your business, your customers, and what the site needs to do.</p></div></li>
         <li class="step reveal"><span class="step-n">02</span><div><h3>Design</h3><p>You see a real direction early — and shape it before a line of code is written.</p></div></li>
@@ -205,8 +209,8 @@
   </section>
 
   <section class="section" id="work">
-    <div class="band">
-      <h2 class="section-label reveal">Recent Work</h2>
+    <div class="band reveal">
+      <h2 class="section-label">Recent Work</h2>
       <ul class="work-list">
         <li>
           <a class="work-item reveal" href="https://alsoknownas.la" target="_blank" rel="noopener">

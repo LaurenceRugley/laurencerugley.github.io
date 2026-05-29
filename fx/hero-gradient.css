@@ -51,6 +51,7 @@ body .hero {
 .hero > .hero-eyebrow,
 .hero > .hero-title,
 .hero > .hero-sub,
+.hero > .hero-actions,
 .hero > .scroll-cue { position: relative; z-index: 1; }
 
 /* When the live canvas is running, fade it in once to avoid a hard pop. */

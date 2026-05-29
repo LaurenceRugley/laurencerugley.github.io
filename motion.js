@@ -23,6 +23,37 @@
     });
   }
 
+  /* ---------- NAV: active-section indicator + condense on scroll ----------
+     Runs regardless of motion preference (it's state, not motion). The sticky
+     nav already follows the scroll (position:sticky); this highlights the
+     section you're in and tightens the bar once you leave the hero. */
+  (function () {
+    var nav = document.querySelector('.nav');
+    var links = [].slice.call(document.querySelectorAll('.nav-links a'));
+    var byHref = {};
+    links.forEach(function (a) { byHref[a.getAttribute('href')] = a; });
+
+    if ('IntersectionObserver' in window && links.length) {
+      var spy = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          var a = byHref['#' + en.target.id];
+          if (!a) return;
+          links.forEach(function (l) { l.removeAttribute('aria-current'); });
+          a.setAttribute('aria-current', 'true');
+        });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      ['approach', 'process', 'work', 'start'].forEach(function (id) {
+        var s = document.getElementById(id); if (s) spy.observe(s);
+      });
+    }
+    if (nav) {
+      var onNavScroll = function () { nav.classList.toggle('is-condensed', (window.scrollY || window.pageYOffset || 0) > 24); };
+      onNavScroll();
+      window.addEventListener('scroll', onNavScroll, { passive: true });
+    }
+  })();
+
   // Everything below is motion — skip entirely under reduced-motion.
   if (reduce) return;
 

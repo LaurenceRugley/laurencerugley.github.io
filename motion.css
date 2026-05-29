@@ -6,6 +6,24 @@
    index.html. This file owns ALL design tokens.
    ============================================================ */
 
+/* ---------- SELF-HOSTED FONTS (woff2, latin subset) ----------
+   Replaces the render-blocking third-party Google Fonts request. The two
+   above-the-fold faces are preloaded in <head>. font-display:swap shows the
+   fallback immediately, then swaps in — no invisible text. Variable woff2:
+   one file each covers the Cormorant 400–500 and Inter 300–500 ranges. */
+@font-face {
+  font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400 500;
+  font-display: swap; src: url('fonts/cormorant-garamond.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 400;
+  font-display: swap; src: url('fonts/cormorant-garamond-italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 300 500;
+  font-display: swap; src: url('fonts/inter.woff2') format('woff2');
+}
+
 :root {
   /* Brand */
   --ink: #2A2218;
@@ -52,6 +70,13 @@ html { scroll-padding-top: 64px; }
   position: sticky; top: 0; z-index: 50;
   display: flex; justify-content: space-between; align-items: center;
   gap: 16px; padding: 14px 24px;
+  transition: padding 0.3s var(--ease), background-color 0.3s var(--ease);
+}
+/* Condense once you leave the hero: tighter bar + firmer glass. */
+.nav.glass.is-condensed {
+  padding-top: 9px; padding-bottom: 9px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  box-shadow: 0 1px 0 var(--line);
 }
 .nav-mark {
   font-family: var(--serif); font-size: 19px; font-weight: 500;
@@ -59,10 +84,19 @@ html { scroll-padding-top: 64px; }
 }
 .nav-links { display: flex; gap: 24px; margin-left: auto; margin-right: 6px; }
 .nav-links a {
+  position: relative;
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em;
   color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease);
 }
 .nav-links a:hover { color: var(--gold-text); }
+/* gold underline slides in under the section you're currently viewing */
+.nav-links a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -5px; height: 1px;
+  background: var(--gold); transform: scaleX(0); transform-origin: left;
+  transition: transform 0.3s var(--ease);
+}
+.nav-links a[aria-current="true"] { color: var(--gold-text); }
+.nav-links a[aria-current="true"]::after { transform: scaleX(1); }
 .nav-links a:focus-visible,
 .nav-mark:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 4px; border-radius: 2px; }
 .glass {
@@ -139,8 +173,20 @@ html { scroll-padding-top: 64px; }
   font-family: var(--serif); font-size: clamp(17px, 2.6vw, 22px);
   color: var(--muted); max-width: 34ch; line-height: 1.45;
 }
+/* Hero call-to-action: primary button + the scroll cue beneath it. */
+.hero-actions { display: flex; flex-direction: column; align-items: center; gap: 28px; margin-top: 44px; }
+.btn-primary {
+  font-family: var(--sans); font-size: 11px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.28em; text-decoration: none; padding: 15px 36px;
+  background: var(--ink); color: #EDE7D9; border: 1px solid var(--ink);
+  transition: background-color 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+.btn-primary:hover { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.btn-primary:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 4px; }
+[data-theme="dark"] .btn-primary { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+[data-theme="dark"] .btn-primary:hover { background: #EDE7D9; }
 .scroll-cue {
-  margin-top: 52px; width: 20px; height: 32px; flex: none;
+  width: 20px; height: 32px; flex: none;
   border: 1px solid var(--muted); border-radius: 12px; position: relative;
   opacity: 0.7;
 }
@@ -216,9 +262,21 @@ main { counter-reset: sec; }
 #process .band::after,  #work .band::after {
   content: ""; position: absolute; width: 9px; height: 9px;
   border: 1px solid var(--gold); pointer-events: none;
+  transition: width 0.5s var(--ease), height 0.5s var(--ease);
 }
 #process .band::before, #work .band::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
 #process .band::after,  #work .band::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+/* Ticks "ink in" (draw from the corner) as the panel reveals — like a plate
+   being registered on a press. Static immediately if no JS / reduced motion. */
+html.js-reveal #process .band:not(.is-visible)::before,
+html.js-reveal #process .band:not(.is-visible)::after,
+html.js-reveal #work .band:not(.is-visible)::before,
+html.js-reveal #work .band:not(.is-visible)::after { width: 0; height: 0; }
+
+/* Signature: a quiet gold wash on text selection (the one moment a visitor
+   "touches" the page) — reads as considered, not a default blue template. */
+::selection { background: color-mix(in srgb, var(--gold) 30%, transparent); }
+::-moz-selection { background: color-mix(in srgb, var(--gold) 30%, transparent); }
 
 /* ============================================================
    MOTION — lighter than the factory default. Content is only
