@@ -65,6 +65,21 @@
    reduced-motion / no-Lenis path.) */
 html { scroll-padding-top: 64px; }
 
+/* ---------- LENIS recommended stylesheet ----------
+   The official CSS (darkroomengineering/lenis). Lenis adds .lenis / .lenis-smooth
+   / .lenis-stopped / .lenis-scrolling / .lenis-locked to <html> at runtime; these
+   rules make it behave correctly (proper height, scroll-lock clipping, nested
+   scroll containment via [data-lenis-prevent], iframe pointer safety). */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; } /* guard vs native smooth */
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis [data-lenis-prevent],
+.lenis [data-lenis-prevent-wheel],
+.lenis [data-lenis-prevent-touch],
+.lenis [data-lenis-prevent-vertical],
+.lenis [data-lenis-prevent-horizontal] { overscroll-behavior: contain; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;

@@ -44,7 +44,9 @@
 <style>
   /* Global reset + page base (tokens live in motion.css). */
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  /* No CSS scroll-behavior: smooth — it fights Lenis (which owns smooth scroll).
+     Reduced-motion users get native instant scrolling (Lenis never inits). */
+  html { -webkit-font-smoothing: antialiased; }
   body {
     background: var(--bg);
     color: var(--text);
