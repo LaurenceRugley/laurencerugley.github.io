@@ -85,10 +85,23 @@
         // caused the "snaps unaligned, then snaps back" double-adjust.
         function absTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
         function snapTargets() {
-          var nh = navH();
-          return sections.map(function (s, i) {
-            return i === 0 ? 0 : Math.max(0, Math.round(absTop(s) - nh)); // top of page for hero
+          var nh = navH(), vh = window.innerHeight;
+          var maxY = Math.max(0, (document.documentElement.scrollHeight || document.body.scrollHeight) - vh);
+          var raw = sections.map(function (s, i) {
+            var t = i === 0 ? 0 : Math.max(0, Math.round(absTop(s) - nh)); // top of page for hero
+            return Math.min(t, maxY); // never past the bottom — the footer must stay reachable
           });
+          // Always allow resting at the very bottom so the footer (contact +
+          // companion button) is fully visible and is itself a snap point.
+          if (raw.length && raw[raw.length - 1] < maxY - 4) raw.push(maxY);
+          // Drop near-duplicates (e.g. last section top vs. the bottom), keeping
+          // the lower one so the footer ends up fully framed.
+          var pts = [];
+          for (var i = 0; i < raw.length; i++) {
+            if (i < raw.length - 1 && (raw[i + 1] - raw[i]) < vh * 0.5) continue;
+            pts.push(raw[i]);
+          }
+          return pts;
         }
 
         function settle() {

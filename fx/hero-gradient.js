@@ -106,13 +106,10 @@
   function targetPalette() {
     return PALETTES[document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'];
   }
-  // Current (animated) colors, lerped toward target so theme flips fade smoothly.
+  // Current (animated) colors, lerped toward the live target each frame so a
+  // light/dark theme flip fades the gradient smoothly (target read in frame()).
   var tp = targetPalette();
   var cur = [tp[0].slice(), tp[1].slice(), tp[2].slice()];
-
-  // React to theme toggle.
-  var mo = new MutationObserver(function () { /* target read live each frame */ });
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   function size() {
