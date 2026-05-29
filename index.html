@@ -23,6 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="motion.css">
 <link rel="stylesheet" href="pixel/pixel.css">
+<link rel="stylesheet" href="fx/hero-gradient.css">
 <style>
   /* Global reset + page base (tokens live in motion.css). */
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -136,6 +137,7 @@
 <main id="top">
 
   <section class="hero">
+    <canvas class="hero-fx" aria-hidden="true"></canvas>
     <p class="hero-eyebrow reveal">A Digital Atelier · Pasadena</p>
     <h1 class="hero-title reveal">Custom websites,<br>made <em>by hand</em>.</h1>
     <p class="hero-sub reveal">For product brands and service businesses — designed and built in-house in Pasadena, California.</p>
@@ -277,6 +279,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" crossorigin="anonymous" defer></script>
 <script defer src="motion.js"></script>
+<script defer src="fx/hero-gradient.js"></script>
 <script defer src="pixel/sprite-frames.js"></script>
 <script defer src="pixel/pixel.js"></script>
 

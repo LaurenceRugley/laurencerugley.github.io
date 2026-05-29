@@ -1,0 +1,50 @@
+/* ============================================================
+   fx/hero-gradient.css — styling + fallback for the owned WebGL
+   hero backdrop. Fully self-contained; safe to delete with the
+   matching <canvas> tag and hero-gradient.js to fully remove.
+   Loads AFTER motion.css so the .hero overrides win.
+   ============================================================ */
+
+/* Hero becomes the positioning + clipping context for the backdrop. */
+body .hero { position: relative; overflow: hidden; isolation: isolate; }
+
+/* The backdrop layer. Sits behind hero content.
+   Its CSS background is the STATIC FALLBACK shown when WebGL is
+   unavailable or prefers-reduced-motion is set (JS leaves it as-is). */
+.hero-fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+  /* Light-theme static fallback: limestone base with a soft gold bloom. */
+  background:
+    radial-gradient(120% 90% at 70% 18%, rgba(184, 153, 104, 0.20) 0%, transparent 55%),
+    radial-gradient(90% 80% at 15% 90%, rgba(184, 153, 104, 0.10) 0%, transparent 60%),
+    var(--bg, #EDE7D9);
+}
+[data-theme="dark"] .hero-fx {
+  /* Dark-theme static fallback: deep ink with a warm gold glow. */
+  background:
+    radial-gradient(120% 90% at 70% 18%, rgba(184, 153, 104, 0.22) 0%, transparent 55%),
+    radial-gradient(90% 80% at 15% 90%, rgba(184, 153, 104, 0.10) 0%, transparent 62%),
+    var(--bg, #211B12);
+}
+
+/* Keep hero content above the backdrop (positioned elements paint over
+   a z-index:0 canvas only if they too establish a layer). */
+.hero > .hero-eyebrow,
+.hero > .hero-title,
+.hero > .hero-sub,
+.hero > .scroll-cue { position: relative; z-index: 1; }
+
+/* When the live canvas is running, fade it in once to avoid a hard pop. */
+.hero-fx.hero-fx-live { animation: heroFxFade 900ms ease-out both; }
+@keyframes heroFxFade { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* No fade, no motion — the static gradient fallback above is the final look. */
+  .hero-fx.hero-fx-live { animation: none; }
+}
