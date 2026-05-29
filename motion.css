@@ -158,6 +158,15 @@ html.lenis, html.lenis body { height: auto; }
 [data-theme="dark"] .theme-toggle-icon::before { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .theme-toggle-icon::before { transition: none; } }
 
+/* Mobile width: keep the serif wordmark on one line (a slow font-swap could wrap it). */
+@media (max-width: 560px) {
+  .nav-mark { font-size: 16px; white-space: nowrap; }
+}
+/* Touch devices: enlarge the round theme-toggle hit area to >=44px (icon unchanged). */
+@media (pointer: coarse) {
+  .theme-toggle { width: 44px; height: 44px; }
+}
+
 /* ---------- SECTION SHELL ---------- */
 /* Full-height sections so each "presents fully" when the proximity-snap
    settles on it. svh (small viewport height) avoids the mobile address-bar

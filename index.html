@@ -158,6 +158,10 @@
   @media (prefers-reduced-motion: reduce) {
     .nav-pixel:hover svg, .nav-pixel:focus-visible svg { animation: none; }
   }
+  /* Touch devices: enlarge the pixel-toggle hit area to >=44px (glyph stays small). */
+  @media (pointer: coarse) {
+    .pixel-toggle { min-width: 44px; min-height: 44px; justify-content: center; }
+  }
 </style>
 </head>
 <body>

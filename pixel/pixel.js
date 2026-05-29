@@ -78,6 +78,7 @@
     spriteEl.appendChild(cigarEl);
     document.body.appendChild(spriteEl);
     spriteEl.addEventListener('click', triggerCatch);
+    spriteEl.addEventListener('click', onKonamiTap); // touch path to the Konami reward
 
     if (prefersReducedMotion) {
       spriteEl.style.transform = `translateX(${MARGIN}px)`;
@@ -140,6 +141,7 @@
       el.classList.remove('pixel-spotlight');
     });
     spriteEl.removeEventListener('click', triggerCatch);
+    spriteEl.removeEventListener('click', onKonamiTap);
     if (formObserver) { formObserver.disconnect(); formObserver = null; }
     if (spriteEl.parentNode) spriteEl.parentNode.removeChild(spriteEl);
     spriteEl = null;
@@ -825,6 +827,16 @@
                   'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
   let konamiBuffer = [];
   let wordBuffer = '';
+  // Touch path to the Konami reward: 7 quick taps on the companion. Phones have no
+  // keyboard, so the arrow-key sequence is unreachable there — this keeps the reward
+  // findable on the platform most easter-egg hunters actually use.
+  let konamiTaps = [];
+  function onKonamiTap() {
+    const now = performance.now();
+    konamiTaps.push(now);
+    konamiTaps = konamiTaps.filter(function (t) { return now - t < 2000; });
+    if (konamiTaps.length >= 7) { konamiTaps = []; celebrateKonami(); }
+  }
   function onKonamiKey(e) {
     if (!spriteEl) return;
     // Konami sequence -> celebration.
