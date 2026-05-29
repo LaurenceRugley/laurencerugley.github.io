@@ -884,6 +884,7 @@
     spriteEl.classList.add('pixel-celebrating');
     spawnConfetti();
     spawnHeartBurst();
+    if (window.LGRTrophy) window.LGRTrophy.show(); // lazy-loads the 3D trophy reward
     setState('jump');
     // Two more jumps, staggered so each fires after the previous one returns
     // to idle (~800ms jump), plus a second confetti wave for sustained rain.
