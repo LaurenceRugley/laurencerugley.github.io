@@ -53,13 +53,25 @@ body[data-breakout="on"] .pixel-ball { display: none !important; }
 }
 .breakout-ball:active { cursor: grabbing; }
 
-/* ---- a smashed brick falls away (transforms are visual only; scroll is locked
-        so this can't add scrollbars). Removing the class snaps it back on exit. ---- */
+/* ---- a smashed brick shatters: it quickly shrinks + fades while pixel shards
+        burst out (see .brick-shard). Removing the class snaps it back on exit. ---- */
 .is-smashed {
-  transform: translateY(115vh) rotate(22deg) !important;
+  transform: scale(0.82) !important;
   opacity: 0 !important;
   pointer-events: none !important;
-  transition: transform 0.85s cubic-bezier(0.5, 0, 1, 1), opacity 0.85s ease-in !important;
+  transition: transform 0.18s ease-in, opacity 0.18s ease-in !important;
+}
+
+/* shatter shards — small hard pixel squares bursting from a smashed block */
+.brick-shard {
+  position: fixed;
+  z-index: 9996;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: shardFly 0.72s ease-out forwards;
+}
+@keyframes shardFly {
+  to { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; }
 }
 
 /* ---- HUD ---- */
