@@ -1,19 +1,18 @@
 /* ============================================================
    fx/cursor-ripple.js — water-ripple cursor wake (companion mode only).
 
-   A transparent full-viewport WebGL overlay. As the pointer moves it spawns
-   expanding ripple rings (bright crests + dark troughs, like light on shallow
-   water) that trail behind and fade — the page stays fully visible underneath.
+   A transparent full-viewport WebGL overlay. Moving the pointer lays down a
+   TRAIL of expanding ripples behind it (like a finger dragged across shallow
+   water); clicking drops a stronger POOL splash. Light crests + dark troughs
+   read as light on water; the page stays fully visible underneath.
 
-   Honest scope: this is a ripple SURFACE drawn over the page, not true
-   refraction of the live text (that needs a build-step DOM-to-texture step).
+   Honest scope: a ripple SURFACE drawn over the page (transparent caustics),
+   not true refraction of the live text (that needs a build-step DOM-to-texture).
 
    Gated to the easter egg: only runs while the pixel companion is on
-   (body[data-pixel="on"]). Zero cost otherwise.
-
-   Safe by construction: never inits under prefers-reduced-motion, on touch
-   (no fine pointer), or without WebGL; pointer-events:none; rAF only runs while
-   enabled AND ripples are alive; pauses on tab hide. Self-contained + deletable.
+   (body[data-pixel="on"]). Zero cost otherwise. Never inits under
+   prefers-reduced-motion, on touch (no fine pointer), or without WebGL;
+   pointer-events:none; rAF only while enabled + ripples alive; pauses on hide.
    ============================================================ */
 (function () {
   'use strict';
@@ -30,7 +29,8 @@
   document.body.appendChild(canvas);
 
   var SCALE = 0.7;   // render below CSS res (ripples are soft) — cheaper
-  var MAX = 14;      // recent cursor points contributing ripples
+  var MAX = 20;      // recent ripple sources contributing (trail length)
+  var STEP = 14;     // px between trail points (interpolated for smooth wake)
 
   var VERT = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
   var FRAG = [
@@ -38,24 +38,24 @@
     '#define MAX ' + MAX,
     'uniform vec2 u_res;',
     'uniform float u_time;',
-    'uniform vec3 u_pts[MAX];', // x, y (backing px, y-up), spawnTime
+    'uniform vec4 u_pts[MAX];', // x, y (backing px, y-up), spawnTime, amplitude
     'uniform int u_count;',
     'void main(){',
     '  vec2 f = gl_FragCoord.xy;',
     '  float h = 0.0;',
     '  for (int i = 0; i < MAX; i++) {',
     '    if (i >= u_count) break;',
-    '    vec3 pt = u_pts[i];',
+    '    vec4 pt = u_pts[i];',
     '    float age = u_time - pt.z;',
-    '    if (age <= 0.0 || age > 1.5) continue;',
+    '    if (age <= 0.0 || age > 1.6) continue;',
     '    float d = distance(f, pt.xy);',
-    '    float r = age * 175.0;',                         // ring expansion speed (backing px/s)
-    '    float ring = exp(-pow((d - r) / 15.0, 2.0));',   // soft expanding band
-    '    float life = 1.0 - age / 1.5;',                  // fade with age
-    '    h += sin((d - r) * 0.16) * ring * life;',
+    '    float r = age * 175.0;',                          // ring expansion speed (backing px/s)
+    '    float ring = exp(-pow((d - r) / 16.0, 2.0));',    // soft expanding band
+    '    float life = 1.0 - age / 1.6;',                   // fade with age
+    '    h += sin((d - r) * 0.16) * ring * life * pt.w;',  // pt.w = amplitude (move vs pool)
     '  }',
-    '  float a = clamp(abs(h), 0.0, 1.0) * 0.42;',        // transparent — page shows through
-    '  vec3 col = h > 0.0 ? vec3(1.0) : vec3(0.04);',     // crest light, trough dark
+    '  float a = clamp(abs(h), 0.0, 1.0) * 0.42;',         // transparent — page shows through
+    '  vec3 col = h > 0.0 ? vec3(1.0) : vec3(0.04);',      // crest light, trough dark
     '  gl_FragColor = vec4(col, a);',
     '}'
   ].join('\n');
@@ -86,38 +86,56 @@
   }
   size(); window.addEventListener('resize', size);
 
-  var pts = [];            // {x, y, t} in backing px (y-up)
-  var data = new Float32Array(MAX * 3);
+  var pts = [];            // {x, y, t, amp} in backing px (y-up)
+  var data = new Float32Array(MAX * 4);
   var rafId = null, t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  var lastX = null, lastY = null;
   function nowSec() { return (((window.performance && performance.now) ? performance.now() : Date.now()) - t0) / 1000; }
   function enabled() { return document.body.getAttribute('data-pixel') === 'on'; }
 
-  window.addEventListener('pointermove', function (e) {
-    if (!enabled()) return;
-    if (e.pointerType && e.pointerType !== 'mouse') return;
-    pts.push({ x: e.clientX * SCALE, y: canvas.height - e.clientY * SCALE, t: nowSec() });
+  function push(x, y, amp) {
+    pts.push({ x: x, y: y, t: nowSec(), amp: amp });
     if (pts.length > MAX) pts.shift();
     if (rafId == null) rafId = requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('pointermove', function (e) {
+    if (!enabled() || (e.pointerType && e.pointerType !== 'mouse')) return;
+    var x = e.clientX * SCALE, y = canvas.height - e.clientY * SCALE;
+    if (lastX == null) { lastX = x; lastY = y; }
+    // interpolate along the move so the trail stays continuous on fast flicks
+    var dx = x - lastX, dy = y - lastY, dist = Math.sqrt(dx * dx + dy * dy);
+    var steps = Math.min(MAX, Math.floor(dist / STEP));
+    for (var s = 1; s <= steps; s++) { push(lastX + dx * (s / (steps + 1)), lastY + dy * (s / (steps + 1)), 0.45); }
+    push(x, y, 0.45);
+    lastX = x; lastY = y;
+  }, { passive: true });
+
+  // Click -> a stronger, longer "pool" drop.
+  window.addEventListener('pointerdown', function (e) {
+    if (!enabled() || (e.pointerType && e.pointerType !== 'mouse')) return;
+    push(e.clientX * SCALE, canvas.height - e.clientY * SCALE, 2.2);
   }, { passive: true });
 
   function frame() {
     rafId = null;
     var now = nowSec();
-    // drop fully-faded points
-    while (pts.length && now - pts[0].t > 1.5) pts.shift();
+    while (pts.length && now - pts[0].t > 1.6) pts.shift();
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (pts.length && enabled()) {
-      for (var i = 0; i < pts.length; i++) { data[i*3] = pts[i].x; data[i*3+1] = pts[i].y; data[i*3+2] = pts[i].t; }
+      for (var i = 0; i < pts.length; i++) {
+        data[i * 4] = pts[i].x; data[i * 4 + 1] = pts[i].y; data[i * 4 + 2] = pts[i].t; data[i * 4 + 3] = pts[i].amp;
+      }
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, now);
       gl.uniform1i(uCount, pts.length);
-      gl.uniform3fv(uPts, data);
+      gl.uniform4fv(uPts, data);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      rafId = requestAnimationFrame(frame); // keep animating while ripples live
+      rafId = requestAnimationFrame(frame);
     }
   }
 
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { pts = []; if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } gl.clear(gl.COLOR_BUFFER_BIT); }
+    if (document.hidden) { pts = []; lastX = lastY = null; if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } gl.clear(gl.COLOR_BUFFER_BIT); }
   });
 })();
