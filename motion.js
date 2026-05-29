@@ -48,8 +48,8 @@
   var tries = 0;
   (function initLenis() {
     if (window.Lenis) {
-      // Natural free-scroll feel (Lenis default lerp ~0.1); mobile stays native.
-      var lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false });
+      // Slightly snappier than default so the glide tail is short (less "lag").
+      var lenis = new Lenis({ lerp: 0.14, smoothWheel: true, syncTouch: false });
       function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
       requestAnimationFrame(raf);
 
@@ -79,11 +79,15 @@
       if (sections.length) {
         var snapping = false, snapTimer = null, safety = null;
 
+        // offsetTop is the LAYOUT position — immune to the reveal animation's
+        // transform — so the snap lands aligned on the first try (no drift-
+        // then-correct). getBoundingClientRect() includes the transform, which
+        // caused the "snaps unaligned, then snaps back" double-adjust.
+        function absTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
         function snapTargets() {
-          var nh = navH(), y = window.scrollY || window.pageYOffset || 0;
+          var nh = navH();
           return sections.map(function (s, i) {
-            var top = s.getBoundingClientRect().top + y;
-            return i === 0 ? 0 : Math.max(0, Math.round(top - nh)); // top of page for hero
+            return i === 0 ? 0 : Math.max(0, Math.round(absTop(s) - nh)); // top of page for hero
           });
         }
 
@@ -96,22 +100,22 @@
             var d = Math.abs(pts[i] - y);
             if (d < bestD) { bestD = d; best = pts[i]; }
           }
-          if (best == null || bestD < 3) return;     // nothing near, or already framed
-          if (bestD > vh * 0.45) return;             // proximity gate: keep free scroll free
+          if (best == null || bestD < 4) return;     // nothing near, or already framed
+          if (bestD > vh * 0.5) return;              // proximity gate: keep free scroll free
           snapping = true;
           lenis.scrollTo(best, {
-            duration: 0.55,
-            easing: function (t) { return 1 - Math.pow(1 - t, 3); }, // easeOutCubic
+            duration: 0.4,                                            // quick, not laggy
+            easing: function (t) { return 1 - Math.pow(1 - t, 3); },  // easeOutCubic
             onComplete: function () { snapping = false; }
           });
           clearTimeout(safety);
-          safety = setTimeout(function () { snapping = false; }, 900); // backup unlock
+          safety = setTimeout(function () { snapping = false; }, 700); // backup unlock
         }
 
         lenis.on('scroll', function () {
           if (snapping) return;
           clearTimeout(snapTimer);
-          snapTimer = setTimeout(settle, 130); // snap only after scrolling stops
+          snapTimer = setTimeout(settle, 80); // engage soon after scrolling stops
         });
       }
       return;
