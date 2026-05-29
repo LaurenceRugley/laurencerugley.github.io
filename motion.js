@@ -48,7 +48,9 @@
   var tries = 0;
   (function initLenis() {
     if (window.Lenis) {
-      var lenis = new Lenis({ duration: 0.9, smoothWheel: true });
+      // lerp (not duration) is the right knob for wheel feel: higher = snappier,
+      // less trailing glide. 0.12 reads tactile/responsive without losing smoothness.
+      var lenis = new Lenis({ lerp: 0.12, smoothWheel: true, wheelMultiplier: 1.1, syncTouch: false });
       function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
       requestAnimationFrame(raf);
 
