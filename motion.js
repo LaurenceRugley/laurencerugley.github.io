@@ -43,8 +43,9 @@
     els.forEach(function (el) { el.classList.add('is-visible'); });
   }
 
-  /* ---------- LENIS SMOOTH SCROLL (gentle) ---------- */
-  // Loaded from CDN with `defer`; poll briefly, then fall back to native.
+  /* ---------- LENIS SMOOTH SCROLL ---------- */
+  // Self-hosted Lenis (vendor/lenis.min.js, defer): poll briefly until the
+  // global is ready, then fall back to native scrolling if it never loads.
   var tries = 0;
   (function initLenis() {
     if (window.Lenis) {
@@ -55,6 +56,7 @@
 
       var navEl = document.querySelector('.nav');
       function navH() { return navEl ? Math.round(navEl.getBoundingClientRect().height) : 0; }
+      function scrollY() { return typeof lenis.scroll === 'number' ? lenis.scroll : (window.scrollY || window.pageYOffset || 0); }
 
       // Smooth-scroll in-page anchor links (nav + scroll cue) instead of jumping.
       document.addEventListener('click', function (e) {
@@ -65,70 +67,75 @@
         var target = document.querySelector(id);
         if (!target) return;
         e.preventDefault();
-        lenis.scrollTo(target, { offset: -navH() }); // clear the sticky nav
+        lenis.scrollTo(target, { offset: -navH(), lock: true, duration: 0.6 }); // clear the sticky nav
       });
 
-      /* ---------- HYBRID PROXIMITY SECTION-SNAP ----------
-         Free smooth scrolling stays free. When you STOP near a section, it
-         eases that section fully into frame (below the nav). It never fires
-         mid-scroll (130ms settle debounce), never traps you (only engages
-         within ~45% of a viewport of a section), and the snap itself is a
-         quick Lenis scrollTo (~0.55s) so it's part of the smooth motion, not
-         a fight with it. Hand-rolled = fully ours to tune; no extra deps. */
+      /* ---------- DIRECTIONAL COMMIT-SNAP ----------
+         Free smooth scrolling stays free. The snap NEVER pulls you backward:
+         it only moves toward the direction you were travelling, and only once
+         Lenis has actually stopped (not mid-glide). It engages only after you
+         coast close to the next section (commit zone), is locked so live input
+         can't fight it, and never re-fires while one is in flight. Hand-rolled
+         on Lenis's own scrollTo — fully ours, no extra deps. */
       var sections = [].slice.call(document.querySelectorAll('main section'));
       if (sections.length) {
         var snapping = false, snapTimer = null, safety = null;
+        var lastY = scrollY(), dir = 0; // dir: 1 = down, -1 = up
 
-        // offsetTop is the LAYOUT position — immune to the reveal animation's
-        // transform — so the snap lands aligned on the first try (no drift-
-        // then-correct). getBoundingClientRect() includes the transform, which
-        // caused the "snaps unaligned, then snaps back" double-adjust.
+        // offsetTop is the LAYOUT position — immune to the reveal transform — so
+        // the snap lands aligned (getBoundingClientRect would include it).
         function absTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
         function snapTargets() {
           var nh = navH(), vh = window.innerHeight;
           var maxY = Math.max(0, (document.documentElement.scrollHeight || document.body.scrollHeight) - vh);
           var raw = sections.map(function (s, i) {
             var t = i === 0 ? 0 : Math.max(0, Math.round(absTop(s) - nh)); // top of page for hero
-            return Math.min(t, maxY); // never past the bottom — the footer must stay reachable
+            return Math.min(t, maxY); // never past the bottom — keep the footer reachable
           });
-          // Always allow resting at the very bottom so the footer (contact +
-          // companion button) is fully visible and is itself a snap point.
-          if (raw.length && raw[raw.length - 1] < maxY - 4) raw.push(maxY);
-          // Drop near-duplicates (e.g. last section top vs. the bottom), keeping
-          // the lower one so the footer ends up fully framed.
-          var pts = [];
-          for (var i = 0; i < raw.length; i++) {
-            if (i < raw.length - 1 && (raw[i + 1] - raw[i]) < vh * 0.5) continue;
-            pts.push(raw[i]);
+          if (raw.length && raw[raw.length - 1] < maxY - 4) raw.push(maxY); // bottom = footer framed
+          // Always keep the top (0) and the bottom; drop near-duplicates between.
+          var pts = [raw[0]];
+          for (var i = 1; i < raw.length; i++) {
+            if (raw[i] - pts[pts.length - 1] > vh * 0.5) pts.push(raw[i]);
           }
+          var bottom = raw[raw.length - 1];
+          if (pts[pts.length - 1] !== bottom) pts.push(bottom);
           return pts;
         }
 
         function settle() {
           if (snapping) return;
-          var y = window.scrollY || window.pageYOffset || 0;
-          var vh = window.innerHeight;
+          if (lenis.isScrolling) { snapTimer = setTimeout(settle, 60); return; } // wait for a real stop
+          var y = scrollY(), vh = window.innerHeight;
           var pts = snapTargets(), best = null, bestD = Infinity;
           for (var i = 0; i < pts.length; i++) {
-            var d = Math.abs(pts[i] - y);
+            var delta = pts[i] - y;
+            if (dir > 0 && delta < -4) continue;   // going down: ignore targets above — no backward snap
+            if (dir < 0 && delta >  4) continue;   // going up:   ignore targets below
+            var d = Math.abs(delta);
             if (d < bestD) { bestD = d; best = pts[i]; }
           }
-          if (best == null || bestD < 4) return;     // nothing near, or already framed
-          if (bestD > vh * 0.5) return;              // proximity gate: keep free scroll free
+          if (best == null) return;
+          if (bestD < 24) return;            // already framed — leave it (dead-zone, no micro-snaps)
+          if (bestD > vh * 0.4) return;      // not committed yet — free scroll stays free
           snapping = true;
           lenis.scrollTo(best, {
-            duration: 0.4,                                            // quick, not laggy
-            easing: function (t) { return 1 - Math.pow(1 - t, 3); },  // easeOutCubic
-            onComplete: function () { snapping = false; }
+            duration: 0.45,
+            lock: true,                                              // don't let momentum fight the snap
+            easing: function (t) { return 1 - Math.pow(1 - t, 3); }, // easeOutCubic
+            onComplete: function () { clearTimeout(safety); snapping = false; }
           });
           clearTimeout(safety);
-          safety = setTimeout(function () { snapping = false; }, 700); // backup unlock
+          safety = setTimeout(function () { snapping = false; }, 1400); // > max duration; backup unlock
         }
 
         lenis.on('scroll', function () {
+          var y = scrollY();
+          if (y > lastY + 1) dir = 1; else if (y < lastY - 1) dir = -1;
+          lastY = y;
           if (snapping) return;
           clearTimeout(snapTimer);
-          snapTimer = setTimeout(settle, 80); // engage soon after scrolling stops
+          snapTimer = setTimeout(settle, 140); // wait out the glide tail, then settle
         });
       }
       return;

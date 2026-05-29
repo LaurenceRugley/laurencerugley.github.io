@@ -16,8 +16,23 @@
     document.documentElement.setAttribute('data-theme', t);
   } catch (e) { /* localStorage may be unavailable */ }
 </script>
-<title>LGR Web Studio</title>
+<title>LGR Web Studio — Custom websites, made by hand</title>
 <meta name="description" content="LGR Web Studio — A Digital Atelier in Pasadena. Custom websites for product brands and service businesses.">
+<link rel="canonical" href="https://lgrwebstudios.com/">
+<meta name="theme-color" content="#EDE7D9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#211B12" media="(prefers-color-scheme: dark)">
+<!-- Favicon: the same pixel mark used in the footer toggle, inlined (no extra request). -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23211B12'/%3E%3Cg fill='%23B89968'%3E%3Crect x='2' y='1' width='4' height='1'/%3E%3Crect x='1' y='2' width='6' height='1'/%3E%3Crect x='1' y='3' width='2' height='1'/%3E%3Crect x='5' y='3' width='2' height='1'/%3E%3Crect x='1' y='4' width='6' height='1'/%3E%3Crect x='2' y='5' width='4' height='1'/%3E%3Crect x='2' y='6' width='1' height='1'/%3E%3Crect x='5' y='6' width='1' height='1'/%3E%3C/g%3E%3C/svg%3E">
+<!-- Social sharing -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="LGR Web Studio — Custom websites, made by hand">
+<meta property="og:description" content="A Digital Atelier in Pasadena. Custom websites for product brands and service businesses.">
+<meta property="og:url" content="https://lgrwebstudios.com/">
+<meta property="og:image" content="https://lgrwebstudios.com/card-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LGR Web Studio — Custom websites, made by hand">
+<meta name="twitter:description" content="A Digital Atelier in Pasadena. Custom websites for product brands and service businesses.">
+<meta name="twitter:image" content="https://lgrwebstudios.com/card-preview.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -46,6 +61,7 @@
     text-decoration: none; color: var(--text); transition: padding 0.3s var(--ease);
   }
   .work-item:hover { padding-left: 14px; }
+  .work-item:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 4px; }
   .work-name { font-family: var(--serif); font-size: clamp(28px, 4vw, 38px); font-weight: 500; }
   .work-meta {
     font-family: var(--sans); font-size: 10px; text-transform: uppercase;
@@ -66,12 +82,13 @@
     text-transform: uppercase; letter-spacing: 0.22em; color: var(--muted); margin-bottom: 8px;
   }
   .field input, .field textarea {
-    width: 100%; background: var(--bg); border: 1px solid var(--line); padding: 12px 14px;
+    width: 100%; background: var(--bg); border: 1px solid var(--field-border, #8E8472); padding: 12px 14px;
     font-family: var(--sans); font-size: 16px; color: var(--text); border-radius: 0;
-    -webkit-appearance: none; transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+    -webkit-appearance: none; transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
   }
-  .field input:focus, .field textarea:focus { outline: none; border-color: var(--gold); background: var(--surface); }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--gold-text, #7E6234); background: var(--surface); box-shadow: 0 0 0 2px var(--gold-text, #7E6234); }
   .field textarea { resize: vertical; min-height: 90px; }
+  .field .req { color: var(--gold-text); }
   .submit-btn {
     width: 100%; background: var(--ink); color: #EDE7D9; border: none; padding: 16px;
     font-family: var(--sans); font-size: 11px; font-weight: 500; text-transform: uppercase;
@@ -82,7 +99,7 @@
   [data-theme="dark"] .submit-btn { background: var(--gold); color: var(--ink); }
   [data-theme="dark"] .submit-btn:hover { background: #EDE7D9; }
   .success { display: none; text-align: center; padding: 32px 16px; font-family: var(--serif); font-size: 22px; color: var(--text); }
-  .success em { color: var(--gold); font-style: italic; }
+  .success em { color: var(--gold-text); font-style: italic; }
 
   /* FOOTER */
   footer {
@@ -90,7 +107,8 @@
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.28em; color: var(--muted);
   }
   footer a { color: var(--muted); text-decoration: none; transition: color 0.2s ease; }
-  footer a:hover { color: var(--gold); }
+  footer a:hover, footer a:focus-visible { color: var(--gold-text); }
+  footer a:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 3px; }
   footer .dot { color: var(--gold); margin: 0 8px; }
 
   .pixel-toggle {
@@ -98,8 +116,8 @@
     color: var(--muted); vertical-align: middle; display: inline-flex; align-items: center;
     transition: color 0.2s ease; -webkit-tap-highlight-color: transparent;
   }
-  .pixel-toggle:hover, .pixel-toggle:focus { color: var(--gold); outline: none; }
-  .pixel-toggle:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+  .pixel-toggle:hover, .pixel-toggle:focus { color: var(--gold-text); outline: none; }
+  .pixel-toggle:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 2px; }
 
   @keyframes pixelToggleWave {
     0%, 100% { transform: rotate(0deg); }
@@ -108,7 +126,7 @@
     60% { transform: rotate(-6deg); }
     80% { transform: rotate(6deg); }
   }
-  body[data-pixel="on"] .pixel-toggle { color: var(--gold); }
+  body[data-pixel="on"] .pixel-toggle { color: var(--gold-text); }
   body[data-pixel="on"] .pixel-toggle svg {
     animation: pixelToggleWave 2.4s ease-in-out infinite; transform-origin: 50% 60%;
   }
@@ -146,7 +164,7 @@
 
   <section class="section" id="approach">
     <div class="band">
-      <p class="section-label reveal">Approach</p>
+      <h2 class="section-label reveal">Approach</h2>
       <div class="cards">
         <article class="card reveal">
           <h3>In-house</h3>
@@ -166,7 +184,7 @@
 
   <section class="section" id="process">
     <div class="band">
-      <p class="section-label reveal">Process</p>
+      <h2 class="section-label reveal">Process</h2>
       <ol class="steps">
         <li class="step reveal"><span class="step-n">01</span><div><h3>Discovery</h3><p>We talk through your business, your customers, and what the site needs to do.</p></div></li>
         <li class="step reveal"><span class="step-n">02</span><div><h3>Design</h3><p>You see a real direction early — and shape it before a line of code is written.</p></div></li>
@@ -178,7 +196,7 @@
 
   <section class="section" id="work">
     <div class="band">
-      <p class="section-label reveal">Recent Work</p>
+      <h2 class="section-label reveal">Recent Work</h2>
       <ul class="work-list">
         <li>
           <a class="work-item reveal" href="https://alsoknownas.la" target="_blank" rel="noopener">
@@ -198,19 +216,19 @@
 
   <section class="section" id="start">
     <div class="band">
-      <p class="section-label reveal">Start a project</p>
+      <h2 class="section-label reveal">Start a project</h2>
       <div class="form-section reveal">
-        <h2 class="form-title">Tell me about it</h2>
+        <h3 class="form-title">Tell me about it</h3>
         <p class="form-sub">A few sentences about what you have in mind.</p>
 
         <form id="contactForm" action="https://formspree.io/f/xvzlaaoo" method="POST">
           <div class="field">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" required>
+            <label for="name">Name <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="name" name="name" autocomplete="name" required>
           </div>
           <div class="field">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
+            <label for="email">Email <span class="req" aria-hidden="true">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email" required>
           </div>
           <div class="field">
             <label for="message">About your project</label>
@@ -253,7 +271,7 @@
 <script>
   const form = document.getElementById('contactForm');
   const success = document.getElementById('success');
-  form.addEventListener('submit', async function(e) {
+  if (form) form.addEventListener('submit', async function(e) {
     e.preventDefault();
     const data = new FormData(form);
     try {
@@ -277,7 +295,7 @@
   });
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" crossorigin="anonymous" defer></script>
+<script src="vendor/lenis.min.js" defer></script>
 <script defer src="motion.js"></script>
 <script defer src="fx/hero-gradient.js"></script>
 <script defer src="pixel/sprite-frames.js"></script>

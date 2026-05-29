@@ -124,7 +124,7 @@
   size();
 
   // Pause when offscreen or tab hidden.
-  var onScreen = true, visible = !document.hidden, rafId = null;
+  var onScreen = true, visible = !document.hidden, rafId = null, lost = false;
 
   function frame(ts) {
     rafId = null;
@@ -143,8 +143,16 @@
     schedule();
   }
   function schedule() {
-    if (rafId == null && onScreen && visible) { rafId = requestAnimationFrame(frame); }
+    if (!lost && rafId == null && onScreen && visible) { rafId = requestAnimationFrame(frame); }
   }
+
+  // Mobile GPUs can drop the WebGL context under memory pressure. Stop drawing
+  // (no per-frame errors) and fall back to the static CSS gradient on .hero-fx.
+  canvas.addEventListener('webglcontextlost', function (e) {
+    e.preventDefault();
+    lost = true;
+    if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+  }, false);
 
   document.addEventListener('visibilitychange', function () {
     visible = !document.hidden;
