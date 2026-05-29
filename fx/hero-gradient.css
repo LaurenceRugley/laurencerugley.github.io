@@ -5,8 +5,22 @@
    Loads AFTER motion.css so the .hero overrides win.
    ============================================================ */
 
-/* Hero becomes the positioning + clipping context for the backdrop. */
-body .hero { position: relative; overflow: hidden; isolation: isolate; }
+/* Hero becomes the positioning + clipping context for the backdrop.
+   Full-bleed: the band spans the full viewport width so the gradient reaches
+   edge-to-edge (no "clipped" dead space on wide desktops). Text content below
+   stays centered + measured via .hero-content. Reversible: revert this rule
+   and the .hero-content cap to restore the old 920px-boxed hero. */
+body .hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  max-width: none;
+  width: 100%;
+}
+/* Keep the hero text composed/centered now that the band is full width. */
+.hero > .hero-eyebrow,
+.hero > .hero-title,
+.hero > .hero-sub { max-width: 760px; margin-left: auto; margin-right: auto; }
 
 /* The backdrop layer. Sits behind hero content.
    Its CSS background is the STATIC FALLBACK shown when WebGL is
