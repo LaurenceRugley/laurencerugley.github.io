@@ -204,6 +204,9 @@
     // When mirroring, we also need to flip the x-anchor so it doesn't visually jump.
     const tx = facing === 'left' ? spriteX + FRAME_W * SCALE : spriteX;
     let rotateDeg = 0;
+    // Phase 2 (alive): a gentle eased lean toward the cursor while idle.
+    // (* scaleX cancels the mirror so the tilt always points at the cursor.)
+    if (currentState === 'idle') rotateDeg += lean * scaleX;
     if (currentState === 'roll-right' || currentState === 'roll-left') {
       const t = Math.min(1, (performance.now() - dashStartedAt) / DASH_DURATION_MS);
       rotateDeg = (currentState === 'roll-left' ? -1 : 1) * t * 540; // 1.5 tumbles
@@ -442,6 +445,7 @@
   // ---------- Cursor proximity + dash ----------
   let cursorX = -9999;
   let cursorY = -9999;
+  let lean = 0; // Phase 2: eased degrees the idle companion leans toward the cursor
   let mouseMovePending = false;
   let lastDashAt = 0;
   let dashStartedAt = 0;
@@ -462,6 +466,19 @@
     mouseMovePending = false;
     maybeStartDash(performance.now());
     if (currentState === 'idle') applyTransform(); // Phase 2: track the cursor while idle
+  }
+
+  // Phase 2 (alive): ease a small lean toward the cursor while idle, so the
+  // companion subtly tips toward you — spring-smoothed each frame.
+  function tickLean() {
+    if (!spriteEl || prefersReducedMotion) return;
+    let target = 0;
+    if (currentState === 'idle' && cursorX > -9000) {
+      const center = spriteX + (FRAME_W * SCALE) / 2;
+      target = Math.max(-6, Math.min(6, (cursorX - center) / 45)); // ≤6° toward cursor
+    }
+    lean += (target - lean) * 0.12; // spring ease
+    if (currentState === 'idle' && Math.abs(target - lean) > 0.01) applyTransform();
   }
 
   function onWorkEnter(e) {
@@ -856,6 +873,7 @@
   function startLoop() {
     if (rafHandle !== null) return;
     function frame(now) {
+      tickLean(now);
       tickAnimation(now);
       tickIdleTimeout(now);
       tickIdleQuirk(now);
