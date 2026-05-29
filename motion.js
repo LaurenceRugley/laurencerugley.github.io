@@ -57,6 +57,42 @@
   // Everything below is motion — skip entirely under reduced-motion.
   if (reduce) return;
 
+  /* ---------- LETTER-BY-LETTER REVEAL (accessible) ----------
+     Split a few display headings into per-letter spans that cascade in when
+     their section reveals/snaps (Lusion-style). ACCESSIBLE: the element keeps
+     an aria-label with the full text and every letter span is aria-hidden, so
+     screen readers + copy/paste get the real words, not "C-u-s-t-o-m". Done
+     before the reveal observer runs so the spans exist when .is-visible lands.
+     Skipped under reduced-motion (we already returned above). */
+  function splitNode(node, counter) {
+    [].slice.call(node.childNodes).forEach(function (child) {
+      if (child.nodeType === 3) { // text node -> one span per character
+        var frag = document.createDocumentFragment();
+        child.textContent.split('').forEach(function (ch) {
+          if (ch === ' ') { frag.appendChild(document.createTextNode(' ')); return; }
+          var s = document.createElement('span');
+          s.className = 'char'; s.textContent = ch;
+          s.setAttribute('aria-hidden', 'true');
+          s.style.setProperty('--i', counter.i++);
+          frag.appendChild(s);
+        });
+        node.replaceChild(frag, child);
+      } else if (child.nodeType === 1 && child.tagName !== 'BR') {
+        child.setAttribute('aria-hidden', 'true'); // e.g. <em> — recurse, keep it
+        splitNode(child, counter);
+      }
+    });
+  }
+  [].slice.call(document.querySelectorAll('.hero-title, .section-label')).forEach(function (el) {
+    if (el.dataset.split) return;
+    // innerText respects the <br> as a break so screen readers don't run
+    // "websites,made" together; fall back to textContent if unavailable.
+    el.setAttribute('aria-label', (el.innerText || el.textContent).replace(/\s+/g, ' ').trim());
+    splitNode(el, { i: 0 });
+    el.classList.add('split');
+    el.dataset.split = '1';
+  });
+
   /* ---------- SCROLL REVEALS (IntersectionObserver) ---------- */
   root.classList.add('js-reveal');
   var els = document.querySelectorAll('.reveal');

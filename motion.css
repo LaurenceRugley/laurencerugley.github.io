@@ -318,6 +318,22 @@ html.js-reveal .reveal.is-visible { opacity: 1; transform: none; }
   html.js-reveal .work-list li:nth-child(2) .work-item { transition-delay: 90ms; }
 }
 
+/* Letter-by-letter reveal: motion.js splits a few headings into .char spans
+   (accessibly — aria-label on the element, aria-hidden chars). The element box
+   shows immediately; the letters cascade in when the section is-visible. */
+.split .char {
+  display: inline-block;
+  opacity: 0; transform: translateY(0.45em);
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+  transition-delay: calc(var(--i, 0) * 26ms);
+}
+html.js-reveal .reveal.split { opacity: 1; transform: none; } /* box visible; chars do the reveal */
+html.js-reveal .reveal.split.is-visible .char,
+html.js-reveal .is-visible .split .char { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .split .char { opacity: 1; transform: none; transition: none; }
+}
+
 .scroll-progress {
   position: fixed; top: 0; left: 0; height: 2px; width: 100%;
   background: var(--gold); transform-origin: 0 50%; transform: scaleX(0); z-index: 60;
