@@ -172,8 +172,8 @@
       removeSprite();
     }
     document.documentElement.removeAttribute('data-pixel-pending');
-    const btn = document.querySelector('.pixel-toggle');
-    if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    // Sync every pixel toggle (footer + nav) so all entry points stay in sync.
+    document.querySelectorAll('.pixel-toggle').forEach((b) => b.setAttribute('aria-pressed', on ? 'true' : 'false'));
   }
 
   // ---------- Horizontal position ----------
@@ -944,12 +944,13 @@
   // ---------- Init ----------
   function init() {
     applyMode(readMode());
-    const btn = document.querySelector('.pixel-toggle');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const next = document.body.getAttribute('data-pixel') !== 'on';
-      writeMode(next);
-      applyMode(next);
+    // Wire every pixel toggle (footer + nav) — more ways to find the easter egg.
+    document.querySelectorAll('.pixel-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = document.body.getAttribute('data-pixel') !== 'on';
+        writeMode(next);
+        applyMode(next);
+      });
     });
   }
 

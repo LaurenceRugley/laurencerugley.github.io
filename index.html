@@ -144,6 +144,15 @@
   @media (prefers-reduced-motion: reduce) {
     body[data-pixel="on"] .pixel-toggle svg { animation: none; }
   }
+  /* Nav easter-egg entry: a quiet pixel glyph that waves hello on hover —
+     a second, eye-catching way in, never labeled as "easter egg". */
+  .nav-pixel { flex: none; padding: 4px; }
+  .nav-pixel:hover svg, .nav-pixel:focus-visible svg {
+    animation: pixelToggleWave 1.5s ease-in-out infinite; transform-origin: 50% 60%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-pixel:hover svg, .nav-pixel:focus-visible svg { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -158,6 +167,18 @@
     <a href="#work">Work</a>
     <a href="#start">Start</a>
   </nav>
+  <button type="button" class="pixel-toggle nav-pixel" aria-pressed="false" aria-label="Toggle pixel companion" title="Say hello">
+    <svg viewBox="0 0 8 8" width="15" height="15" aria-hidden="true">
+      <rect x="2" y="1" width="4" height="1" fill="currentColor"/>
+      <rect x="1" y="2" width="6" height="1" fill="currentColor"/>
+      <rect x="1" y="3" width="2" height="1" fill="currentColor"/>
+      <rect x="5" y="3" width="2" height="1" fill="currentColor"/>
+      <rect x="1" y="4" width="6" height="1" fill="currentColor"/>
+      <rect x="2" y="5" width="4" height="1" fill="currentColor"/>
+      <rect x="2" y="6" width="1" height="1" fill="currentColor"/>
+      <rect x="5" y="6" width="1" height="1" fill="currentColor"/>
+    </svg>
+  </button>
   <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Toggle dark mode" title="Toggle dark mode">
     <span class="theme-toggle-icon" aria-hidden="true"></span>
   </button>
