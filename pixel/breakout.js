@@ -27,7 +27,7 @@
   var smashed = 0, total = 0;
   var dragging = false, dragId = null, lastPX = 0, lastPY = 0, dragVX = 0, dragVY = 0, moved = 0;
 
-  function speed() { return Math.max(6, Math.min(11, window.innerWidth / 150)); } // faster
+  function speed() { return Math.max(8, Math.min(14, window.innerWidth / 120)); } // faster + bouncier
 
   // ---- launch button (CSS shows it only in companion mode) -----------------
   function ensureLaunch() {
