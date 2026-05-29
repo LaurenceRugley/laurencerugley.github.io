@@ -72,8 +72,8 @@
       var sz = 6 + Math.random() * 8;
       var ang = Math.random() * Math.PI * 2;
       var dist = 40 + Math.random() * 130;
-      s.style.left = (r.left + Math.random() * r.width) + 'px';
-      s.style.top = (r.top + Math.random() * r.height) + 'px';
+      s.style.left = (r.left + window.scrollX + Math.random() * r.width) + 'px';
+      s.style.top = (r.top + window.scrollY + Math.random() * r.height) + 'px';
       s.style.width = sz + 'px';
       s.style.height = sz + 'px';
       s.style.background = color;
@@ -196,7 +196,7 @@
     hud.className = 'breakout-hud';
     var label = document.createElement('span'); label.className = 'bh-label'; label.textContent = 'SMASH';
     countEl = document.createElement('span'); countEl.className = 'bh-count'; countEl.textContent = '0 / ' + total;
-    var tip = document.createElement('span'); tip.className = 'bh-tip'; tip.textContent = 'fling the ball';
+    var tip = document.createElement('span'); tip.className = 'bh-tip'; tip.textContent = 'fling · scroll to roam';
     var exit = document.createElement('button');
     exit.type = 'button'; exit.className = 'bh-exit'; exit.setAttribute('aria-label', 'Exit smash mode');
     exit.innerHTML = '&times;';
@@ -210,8 +210,9 @@
     if (active) return;
     active = true; smashed = 0;
     document.body.setAttribute('data-breakout', 'on');
-    document.documentElement.classList.add('breakout-lock');
-    document.body.classList.add('breakout-lock');
+    // Scroll stays UNLOCKED: one finger off the ball (or the wheel) roams the
+    // sections; the ball is isolated (touch-action:none + pointer capture) so
+    // flinging never scrolls. Lets you smash your way through the whole page.
     gatherBricks();
     ensureHud();
     if (countEl) countEl.textContent = '0 / ' + total;
@@ -229,8 +230,6 @@
     active = false;
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     document.body.removeAttribute('data-breakout');
-    document.documentElement.classList.remove('breakout-lock');
-    document.body.classList.remove('breakout-lock');
     restoreBricks();
     if (ball) { ball.removeEventListener('pointerdown', onDown); ball.remove(); ball = null; }
     if (hud) { hud.remove(); hud = null; countEl = null; }
