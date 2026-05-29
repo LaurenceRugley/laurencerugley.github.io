@@ -200,18 +200,38 @@
       facing = cursorX < center ? 'left' : 'right';
     }
     spriteEl.dataset.facing = facing;
-    const scaleX = facing === 'left' ? -1 : 1;
+    const dir = facing === 'left' ? -1 : 1;
     // When mirroring, we also need to flip the x-anchor so it doesn't visually jump.
     const tx = facing === 'left' ? spriteX + FRAME_W * SCALE : spriteX;
-    let rotateDeg = 0;
-    // Phase 2 (alive): a gentle eased lean toward the cursor while idle.
-    // (* scaleX cancels the mirror so the tilt always points at the cursor.)
-    if (currentState === 'idle') rotateDeg += lean * scaleX;
-    if (currentState === 'roll-right' || currentState === 'roll-left') {
-      const t = Math.min(1, (performance.now() - dashStartedAt) / DASH_DURATION_MS);
+    const now = performance.now();
+
+    // Phase 2 (alive): procedural squash/stretch + bob layered on the frames
+    // (no new art). Roughly volume-preserving — width squashes as height stretches.
+    // Quirk states (yawn/sit/box/smoke/codec/"!"…) fall through with sx=sy=1, i.e.
+    // the original translateX·scaleX behaviour, so they're untouched.
+    let sx = 1, sy = 1, ty = 0, rotateDeg = 0;
+    if (currentState === 'idle') {
+      rotateDeg += lean * dir;                    // gentle lean toward the cursor
+      const b = Math.sin(now / 1300);             // ~2.6s breathing cycle
+      sy = 1 + b * 0.025;                          // chest rises ~2.5%
+      sx = 1 - b * 0.012;
+    } else if (currentState === 'walk-right' || currentState === 'walk-left') {
+      const bob = Math.abs(Math.sin(now / 95));    // two bobs per stride
+      ty = -bob * 2.5;                             // lift on each step
+      sy = 1 + bob * 0.02;
+      sx = 1 - bob * 0.02;
+    } else if (currentState === 'roll-right' || currentState === 'roll-left') {
+      const t = Math.min(1, (now - dashStartedAt) / DASH_DURATION_MS);
       rotateDeg = (currentState === 'roll-left' ? -1 : 1) * t * 540; // 1.5 tumbles
+    } else if (currentState === 'dash-right' || currentState === 'dash-left') {
+      const t = Math.min(1, (now - dashStartedAt) / DASH_DURATION_MS);
+      const sq = Math.sin(Math.min(1, t * 3) * Math.PI); // 0→1→0 over the launch
+      sy = 1 - sq * 0.12;                          // squash low, then stretch into the run
+      sx = 1 + sq * 0.12;
     }
-    spriteEl.style.transform = `translateX(${tx}px) scaleX(${scaleX}) rotate(${rotateDeg}deg)`;
+    const scaleX = dir * sx;                        // dir keeps the facing mirror
+    spriteEl.style.transform =
+      `translate(${tx}px, ${ty}px) scale(${scaleX}, ${sy}) rotate(${rotateDeg}deg)`;
   }
 
   // ---------- State machine ----------
@@ -219,8 +239,10 @@
   // Each state has a list of frame keys + per-frame ms.
   const STATES = {
     'idle': {
+      // Uneven holds read as natural breathing, not a metronome (the procedural
+      // squash/stretch in applyTransform does the heavy lifting on top of this).
       frames: ['idle-0', 'idle-1'],
-      durations: [600, 600],
+      durations: [520, 880],
       facing: 'right'
     },
     'walk-right': {
@@ -478,7 +500,8 @@
       target = Math.max(-6, Math.min(6, (cursorX - center) / 45)); // ≤6° toward cursor
     }
     lean += (target - lean) * 0.12; // spring ease
-    if (currentState === 'idle' && Math.abs(target - lean) > 0.01) applyTransform();
+    // Re-apply every idle frame so the lean AND the breathing stay live.
+    if (currentState === 'idle') applyTransform();
   }
 
   function onWorkEnter(e) {
@@ -875,6 +898,9 @@
     function frame(now) {
       tickLean(now);
       tickAnimation(now);
+      // Walk bob: re-apply each frame so the procedural bounce is smooth between
+      // scroll events. (idle handled by tickLean; dash/roll by tickDashPosition.)
+      if (!prefersReducedMotion && (currentState === 'walk-right' || currentState === 'walk-left')) applyTransform();
       tickIdleTimeout(now);
       tickIdleQuirk(now);
       tickDashPosition(now);
