@@ -16,17 +16,18 @@
   if (prefersReduced) return; // game mode is motion-heavy
 
   // Smashable content blocks.
-  var BRICK_SEL = '.card, .step, .work-item, .hero-title, .hero-sub, .btn-primary, .section-label';
+  var BRICK_SEL = '.card, .step, .work-item, .hero-title, .hero-sub, .btn-primary, .section-label, h2, p';
   var R = 13; // ball radius (px)
 
   var active = false, raf = 0;
   var ball = null, hud = null, launchBtn = null, countEl = null;
   var cx = 0, cy = 0, vx = 0, vy = 0;
   var bricks = [];           // { el, alive }
+  var shards = [];           // transient shatter pieces
   var smashed = 0, total = 0;
-  var dragging = false, dragId = null, lastPX = 0, lastPY = 0, dragVX = 0, dragVY = 0;
+  var dragging = false, dragId = null, lastPX = 0, lastPY = 0, dragVX = 0, dragVY = 0, moved = 0;
 
-  function speed() { return Math.max(4, Math.min(7, window.innerWidth / 220)); }
+  function speed() { return Math.max(6, Math.min(11, window.innerWidth / 150)); } // faster
 
   // ---- launch button (CSS shows it only in companion mode) -----------------
   function ensureLaunch() {
@@ -53,12 +54,47 @@
   function smashBrick(b) {
     b.alive = false;
     smashed++;
+    shatter(b.el);
     b.el.classList.add('is-smashed');
     if (countEl) countEl.textContent = smashed + ' / ' + total;
+  }
+  // burst the block into small hard pixel shards (in its own colour)
+  function shatter(el) {
+    var r = el.getBoundingClientRect();
+    var color = getComputedStyle(el).backgroundColor;
+    if (!color || color === 'rgba(0, 0, 0, 0)' || color === 'transparent') {
+      color = getComputedStyle(el).color || '#b89968';
+    }
+    var n = Math.min(16, Math.max(7, Math.round(r.width * r.height / 2600)));
+    for (var i = 0; i < n; i++) {
+      var s = document.createElement('div');
+      s.className = 'brick-shard';
+      var sz = 6 + Math.random() * 8;
+      var ang = Math.random() * Math.PI * 2;
+      var dist = 40 + Math.random() * 130;
+      s.style.left = (r.left + Math.random() * r.width) + 'px';
+      s.style.top = (r.top + Math.random() * r.height) + 'px';
+      s.style.width = sz + 'px';
+      s.style.height = sz + 'px';
+      s.style.background = color;
+      s.style.setProperty('--dx', (Math.cos(ang) * dist) + 'px');
+      s.style.setProperty('--dy', (Math.sin(ang) * dist + 70 + Math.random() * 130) + 'px'); // gravity bias
+      s.style.setProperty('--r', (Math.random() * 600 - 300) + 'deg');
+      document.body.appendChild(s);
+      shards.push(s);
+      (function (node) {
+        setTimeout(function () {
+          var k = shards.indexOf(node); if (k >= 0) shards.splice(k, 1);
+          if (node.parentNode) node.parentNode.removeChild(node);
+        }, 760);
+      })(s);
+    }
   }
   function restoreBricks() {
     for (var i = 0; i < bricks.length; i++) bricks[i].el.classList.remove('is-smashed');
     bricks = [];
+    for (var j = 0; j < shards.length; j++) if (shards[j].parentNode) shards[j].parentNode.removeChild(shards[j]);
+    shards = [];
   }
 
   // ---- ball ----------------------------------------------------------------
@@ -120,7 +156,7 @@
   function onDown(e) {
     dragging = true; dragId = e.pointerId;
     try { ball.setPointerCapture(e.pointerId); } catch (_) {}
-    lastPX = e.clientX; lastPY = e.clientY; dragVX = 0; dragVY = 0;
+    lastPX = e.clientX; lastPY = e.clientY; dragVX = 0; dragVY = 0; moved = 0;
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
@@ -128,6 +164,7 @@
   }
   function onMove(e) {
     if (!dragging || e.pointerId !== dragId) return;
+    moved += Math.abs(e.clientX - lastPX) + Math.abs(e.clientY - lastPY);
     dragVX = dragVX * 0.4 + (e.clientX - lastPX) * 0.6;
     dragVY = dragVY * 0.4 + (e.clientY - lastPY) * 0.6;
     lastPX = e.clientX; lastPY = e.clientY;
@@ -137,8 +174,17 @@
   function onUp() {
     if (!dragging) return;
     dragging = false;
-    var m = Math.sqrt(dragVX * dragVX + dragVY * dragVY);
-    if (m > 1) { var s = speed(); vx = dragVX / m * s; vy = dragVY / m * s; } // direction at constant speed
+    var s = speed();
+    if (moved < 8) {
+      // quick tap = bop it back UP (redirect on the way down)
+      vy = -Math.abs(vy || s);
+      vx += (Math.random() * 2 - 1) * s * 0.6;
+      var mt = Math.sqrt(vx * vx + vy * vy) || 1; vx = vx / mt * s; vy = vy / mt * s;
+    } else {
+      // a drag = fling: aim by drag direction at constant speed
+      var m = Math.sqrt(dragVX * dragVX + dragVY * dragVY);
+      if (m > 1) { vx = dragVX / m * s; vy = dragVY / m * s; }
+    }
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
     document.removeEventListener('pointercancel', onUp);
