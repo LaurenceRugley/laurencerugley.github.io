@@ -102,6 +102,10 @@ html { scroll-padding-top: 64px; }
   align-items: center;
 }
 .band { max-width: var(--maxw); margin: 0 auto; width: 100%; }
+/* Contact is the last screen: size it to its content so the footer sits with
+   it (reachable + fully visible at the bottom snap) instead of being pushed a
+   whole screen below. */
+#start { min-height: auto; }
 .section-label {
   font-family: var(--sans); font-size: 10px; font-weight: 500;
   text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold);
