@@ -2,9 +2,10 @@
    fx/cursor-ripple.js — water-ripple cursor wake (companion mode only).
 
    A transparent full-viewport WebGL overlay. Moving the pointer lays down a
-   TRAIL of expanding ripples behind it (like a finger dragged across shallow
-   water); clicking drops a stronger POOL splash. Light crests + dark troughs
-   read as light on water; the page stays fully visible underneath.
+   TRAIL of ripples behind it, each stretched LENGTHWISE along the direction of
+   travel (a wake) that spreads out and rounds off slowly as it ages. Clicking
+   drops a round POOL splash. Light crests + dark troughs read as light on
+   water; the page stays fully visible underneath.
 
    Honest scope: a ripple SURFACE drawn over the page (transparent caustics),
    not true refraction of the live text (that needs a build-step DOM-to-texture).
@@ -29,8 +30,9 @@
   document.body.appendChild(canvas);
 
   var SCALE = 0.7;   // render below CSS res (ripples are soft) — cheaper
-  var MAX = 20;      // recent ripple sources contributing (trail length)
-  var STEP = 14;     // px between trail points (interpolated for smooth wake)
+  var MAX = 22;      // recent ripple sources (trail length)
+  var STEP = 11;     // px between interpolated trail points (continuous wake)
+  var LIFE = 1.7;    // seconds a ripple lives
 
   var VERT = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
   var FRAG = [
@@ -39,6 +41,7 @@
     'uniform vec2 u_res;',
     'uniform float u_time;',
     'uniform vec4 u_pts[MAX];', // x, y (backing px, y-up), spawnTime, amplitude
+    'uniform vec2 u_dir[MAX];', // unit travel direction (0,0 = round pool)
     'uniform int u_count;',
     'void main(){',
     '  vec2 f = gl_FragCoord.xy;',
@@ -47,15 +50,25 @@
     '    if (i >= u_count) break;',
     '    vec4 pt = u_pts[i];',
     '    float age = u_time - pt.z;',
-    '    if (age <= 0.0 || age > 1.6) continue;',
-    '    float d = distance(f, pt.xy);',
-    '    float r = age * 175.0;',                          // ring expansion speed (backing px/s)
-    '    float ring = exp(-pow((d - r) / 16.0, 2.0));',    // soft expanding band
-    '    float life = 1.0 - age / 1.6;',                   // fade with age
-    '    h += sin((d - r) * 0.16) * ring * life * pt.w;',  // pt.w = amplitude (move vs pool)
+    '    if (age <= 0.0 || age > ' + LIFE.toFixed(1) + ') continue;',
+    '    vec2 rel = f - pt.xy;',
+    '    vec2 dir = u_dir[i];',
+    '    float d;',
+    '    if (dot(dir, dir) > 0.0001) {',                      // moving: stretch lengthwise along travel
+    '      vec2 perp = vec2(-dir.y, dir.x);',
+    '      float al = dot(rel, dir), pe = dot(rel, perp);',
+    '      float stretch = mix(2.6, 1.15, clamp(age / ' + LIFE.toFixed(1) + ', 0.0, 1.0));', // rounds out slowly
+    '      d = length(vec2(al / stretch, pe));',
+    '    } else {',                                            // click: round pool
+    '      d = length(rel);',
+    '    }',
+    '    float r = age * 150.0;',                              // expansion speed (slow spread)
+    '    float ring = exp(-pow((d - r) / 12.0, 2.0));',       // tight soft band
+    '    float life = 1.0 - age / ' + LIFE.toFixed(1) + ';',
+    '    h += sin((d - r) * 0.17) * ring * life * pt.w;',     // pt.w = amplitude (move vs pool)
     '  }',
-    '  float a = clamp(abs(h), 0.0, 1.0) * 0.42;',         // transparent — page shows through
-    '  vec3 col = h > 0.0 ? vec3(1.0) : vec3(0.04);',      // crest light, trough dark
+    '  float a = clamp(abs(h), 0.0, 1.0) * 0.42;',            // transparent — page shows through
+    '  vec3 col = h > 0.0 ? vec3(1.0) : vec3(0.04);',         // crest light, trough dark
     '  gl_FragColor = vec4(col, a);',
     '}'
   ].join('\n');
@@ -77,6 +90,7 @@
   var uRes = gl.getUniformLocation(prog, 'u_res');
   var uTime = gl.getUniformLocation(prog, 'u_time');
   var uPts = gl.getUniformLocation(prog, 'u_pts');
+  var uDir = gl.getUniformLocation(prog, 'u_dir');
   var uCount = gl.getUniformLocation(prog, 'u_count');
 
   function size() {
@@ -86,15 +100,16 @@
   }
   size(); window.addEventListener('resize', size);
 
-  var pts = [];            // {x, y, t, amp} in backing px (y-up)
-  var data = new Float32Array(MAX * 4);
+  var pts = [];            // {x, y, t, amp, dx, dy} in backing px (y-up)
+  var ptData = new Float32Array(MAX * 4);
+  var dirData = new Float32Array(MAX * 2);
   var rafId = null, t0 = (window.performance && performance.now) ? performance.now() : Date.now();
   var lastX = null, lastY = null;
   function nowSec() { return (((window.performance && performance.now) ? performance.now() : Date.now()) - t0) / 1000; }
   function enabled() { return document.body.getAttribute('data-pixel') === 'on'; }
 
-  function push(x, y, amp) {
-    pts.push({ x: x, y: y, t: nowSec(), amp: amp });
+  function push(x, y, amp, dx, dy) {
+    pts.push({ x: x, y: y, t: nowSec(), amp: amp, dx: dx, dy: dy });
     if (pts.length > MAX) pts.shift();
     if (rafId == null) rafId = requestAnimationFrame(frame);
   }
@@ -103,33 +118,37 @@
     if (!enabled() || (e.pointerType && e.pointerType !== 'mouse')) return;
     var x = e.clientX * SCALE, y = canvas.height - e.clientY * SCALE;
     if (lastX == null) { lastX = x; lastY = y; }
-    // interpolate along the move so the trail stays continuous on fast flicks
     var dx = x - lastX, dy = y - lastY, dist = Math.sqrt(dx * dx + dy * dy);
+    var ndx = dist > 0.001 ? dx / dist : 0, ndy = dist > 0.001 ? dy / dist : 0;
     var steps = Math.min(MAX, Math.floor(dist / STEP));
-    for (var s = 1; s <= steps; s++) { push(lastX + dx * (s / (steps + 1)), lastY + dy * (s / (steps + 1)), 0.45); }
-    push(x, y, 0.45);
+    for (var s = 1; s <= steps; s++) {
+      push(lastX + dx * (s / (steps + 1)), lastY + dy * (s / (steps + 1)), 0.45, ndx, ndy);
+    }
+    push(x, y, 0.45, ndx, ndy);
     lastX = x; lastY = y;
   }, { passive: true });
 
-  // Click -> a stronger, longer "pool" drop.
+  // Click -> a stronger, round "pool" drop (no direction).
   window.addEventListener('pointerdown', function (e) {
     if (!enabled() || (e.pointerType && e.pointerType !== 'mouse')) return;
-    push(e.clientX * SCALE, canvas.height - e.clientY * SCALE, 2.2);
+    push(e.clientX * SCALE, canvas.height - e.clientY * SCALE, 2.2, 0, 0);
   }, { passive: true });
 
   function frame() {
     rafId = null;
     var now = nowSec();
-    while (pts.length && now - pts[0].t > 1.6) pts.shift();
+    while (pts.length && now - pts[0].t > LIFE) pts.shift();
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (pts.length && enabled()) {
       for (var i = 0; i < pts.length; i++) {
-        data[i * 4] = pts[i].x; data[i * 4 + 1] = pts[i].y; data[i * 4 + 2] = pts[i].t; data[i * 4 + 3] = pts[i].amp;
+        ptData[i * 4] = pts[i].x; ptData[i * 4 + 1] = pts[i].y; ptData[i * 4 + 2] = pts[i].t; ptData[i * 4 + 3] = pts[i].amp;
+        dirData[i * 2] = pts[i].dx; dirData[i * 2 + 1] = pts[i].dy;
       }
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, now);
       gl.uniform1i(uCount, pts.length);
-      gl.uniform4fv(uPts, data);
+      gl.uniform4fv(uPts, ptData);
+      gl.uniform2fv(uDir, dirData);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       rafId = requestAnimationFrame(frame);
     }
