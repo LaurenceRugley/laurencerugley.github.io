@@ -21,6 +21,10 @@
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (prefersReduced) return; // motion toy — skip for reduced-motion users
 
+  // Mouse-only toy (same convention as fx/cursor-ripple.js): on touch / coarse-pointer
+  // devices the ball would just rest over the footer + Start CTA and intercept taps.
+  if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+
   // --- tuning ---------------------------------------------------------------
   var R = 12;               // ball radius (px) — diameter 24, ~proportionate to the 48x72 sprite
   var G = 0.55;             // gravity per frame
