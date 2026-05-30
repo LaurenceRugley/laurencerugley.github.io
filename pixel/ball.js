@@ -58,12 +58,16 @@
     var els = document.querySelectorAll(INTERACTIVE_SEL);
     for (var i = 0; i < els.length; i++) {
       if (els[i] === ball) continue;
+      // Don't treat our OWN easter-egg controls as click-through targets — else the
+      // ball goes transparent + ungrabbable resting over them (e.g. the smash button
+      // in the bottom-right corner: "stuck behind the button").
+      if (els[i].matches && els[i].matches('.breakout-launch, .pixel-toggle, .theme-toggle')) continue;
       var r = els[i].getBoundingClientRect();
       if (r.width && r.height && r.bottom > 0 && r.top < window.innerHeight) interactiveRects.push(r);
     }
   }
   function overInteractive() {
-    var m = 12; // margin: ease out a little before fully overlapping
+    var m = 2; // tight: only go click-through when actually over a link/field (grab stays responsive)
     for (var i = 0; i < interactiveRects.length; i++) {
       var r = interactiveRects[i];
       if (cx + R > r.left - m && cx - R < r.right + m &&
