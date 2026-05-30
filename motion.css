@@ -80,6 +80,39 @@ html.lenis, html.lenis body { height: auto; }
 .lenis [data-lenis-prevent-horizontal] { overscroll-behavior: contain; }
 .lenis.lenis-smooth iframe { pointer-events: none; }
 
+/* ---------- Selected Work — case studies ---------- */
+.cases { display: grid; gap: 18px; margin-top: 22px; }
+@media (min-width: 760px) {
+  .cases { grid-template-columns: 1fr 1fr; }
+  .case-cta { grid-column: 1 / -1; }
+}
+.case {
+  display: flex; flex-direction: column;
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid var(--line); border-radius: 4px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.case-head { margin-bottom: 12px; }
+.case-title { font-family: var(--serif); font-weight: 500; font-size: clamp(20px, 2.6vw, 26px); }
+.case-tags { font-family: var(--sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 4px; }
+.case-lead { font-family: var(--serif); font-style: italic; font-size: clamp(15px, 1.8vw, 18px); color: var(--text); margin-bottom: 14px; }
+.case-body { margin: 0 0 18px; display: grid; gap: 7px; }
+.case-body dt { font-family: var(--sans); font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--gold-text); }
+.case-body dd { margin: 0 0 5px; font-size: 14px; line-height: 1.5; color: var(--text); }
+.case-link {
+  align-self: flex-start; margin-top: auto;
+  font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
+  text-decoration: none; color: var(--gold-text);
+  border-bottom: 1px solid transparent; transition: border-color 0.2s var(--ease);
+}
+.case-link:hover, .case-link:focus-visible { border-color: var(--gold-text); outline: none; }
+.case-cta { justify-content: center; background: color-mix(in srgb, var(--gold) 12%, transparent); border-style: dashed; }
+.case-link-primary {
+  padding: 12px 22px; border: 1px solid var(--gold-text); border-radius: 999px;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.case-link-primary:hover, .case-link-primary:focus-visible { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
