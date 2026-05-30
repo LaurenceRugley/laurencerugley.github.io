@@ -27,7 +27,7 @@
 
 /* Click-through: when the ball is over a link/field it dims and lets taps pass to
    the element underneath (pointer-events:none). Solid + playable in open space. */
-.pixel-ball.is-passthrough { opacity: 0.3; pointer-events: none; }
+.pixel-ball.is-passthrough { opacity: 0.45; pointer-events: none; }
 
 /* Motion toy — never show it for reduced-motion users (JS also no-ops). */
 @media (prefers-reduced-motion: reduce) {
