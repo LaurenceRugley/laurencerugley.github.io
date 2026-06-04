@@ -2,8 +2,8 @@
 <!-- Synced from lgr-standards/CLAUDE.base.md — do not edit this block by hand.
      Re-run sync-into-repo.sh to update. -->
 
-# LGR 12-Rule Agent Standard
-Stack-specific invariants live in each project's own CLAUDE.md. These 12 are global.
+# LGR 13-Rule Agent Standard
+Stack-specific invariants live in each project's own CLAUDE.md. These 13 are global.
 Keep the combined rules surface (global + project) under ~200 lines — past that, compliance
 collapses and rules get pattern-matched instead of read.
 
@@ -29,6 +29,11 @@ collapses and rules get pattern-matched instead of read.
     If you genuinely think a convention is harmful, surface it. Don't fork silently.
 12. Fail loud. "Completed" is wrong if anything was skipped silently. "Tests pass" is wrong if any
     were skipped. Default to surfacing uncertainty, not hiding it.
+13. Verify independently, at the stakes. For irreversible or high-stakes results (money, deploys,
+    deletions, a "done" claim on a multi-part task), verify with an independent check — a fresh
+    context or adversarial agent told to refute — not self-review; and confirm every item, not a
+    sample. Combats self-preferential bias and agentic laziness.
 (Provenance: rules 1–4 = Karpathy/Forrest Chang; 9–12 verbatim from Mnimiy's May-2026 thread;
- 5–8 are content-confirmed, exact wording may be refined.)
+ 5–8 are content-confirmed, exact wording may be refined; 13 added 2026-06 — mined from LGR
+ sessions + the kalshi-trader "independent adversarial panel" lesson, ratified by Laurence.)
 <!-- LGR-STANDARDS:END -->
