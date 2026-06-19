@@ -2,8 +2,8 @@
 <!-- Synced from lgr-standards/CLAUDE.base.md — do not edit this block by hand.
      Re-run sync-into-repo.sh to update. -->
 
-# LGR 13-Rule Agent Standard
-Stack-specific invariants live in each project's own CLAUDE.md. These 13 are global.
+# LGR 14-Rule Agent Standard
+Stack-specific invariants live in each project's own CLAUDE.md. These 14 are global.
 Keep the combined rules surface (global + project) under ~200 lines — past that, compliance
 collapses and rules get pattern-matched instead of read.
 
@@ -33,7 +33,14 @@ collapses and rules get pattern-matched instead of read.
     deletions, a "done" claim on a multi-part task), verify with an independent check — a fresh
     context or adversarial agent told to refute — not self-review; and confirm every item, not a
     sample. Combats self-preferential bias and agentic laziness.
+14. Capability honesty — don't false-negative. Never tell the user something is impossible, or that
+    you "can't" do it, without checking — especially never for something you've done before. A
+    primary tool lacking a feature ≠ you can't do it: look for an alternate path (another MCP, app/
+    AppleScript automation, shell, browser control) before declining. Verify a capability exists
+    before asserting its absence, just as 12/13 require verifying an action before claiming it done.
 (Provenance: rules 1–4 = Karpathy/Forrest Chang; 9–12 verbatim from Mnimiy's May-2026 thread;
  5–8 are content-confirmed, exact wording may be refined; 13 added 2026-06 — mined from LGR
- sessions + the kalshi-trader "independent adversarial panel" lesson, ratified by Laurence.)
+ sessions + the kalshi-trader "independent adversarial panel" lesson, ratified by Laurence;
+ 14 added 2026-06-16 — the "Gmail can't send" false-negative on the Mac-fleet email, caught by
+ Laurence who knew prior sessions had sent mail; ratified by Laurence.)
 <!-- LGR-STANDARDS:END -->
