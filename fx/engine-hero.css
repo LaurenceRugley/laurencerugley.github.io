@@ -1,0 +1,56 @@
+/* engine-hero.css — WebGL scene-carousel layer for the hero section.
+   Mount fills the hero behind all text (z-index:0, later in DOM than .hero-fx
+   gradient canvas). The WebGL canvas starts invisible and fades in over the
+   gradient poster once the director's first frame renders. */
+
+#hero-3d-mount {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#hero-3d-mount canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  transition: opacity 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#hero-3d-mount.is-loaded canvas {
+  opacity: 1;
+}
+
+/* Text-protection scrim — the carousel cycles through DARK scenes (Constellation,
+   Aurora) where the dark headline would otherwise vanish. A soft wash centered on
+   the copy keeps it legible across all 4 scenes. It paints ABOVE the WebGL mount
+   (a ::after generated after #hero-3d-mount, same z-index:0) and BELOW the text
+   (text is z-index:1). Theme-aware: limestone wash in light, ink wash in dark.
+   (If the engine fails, the gradient poster shows and this light wash over
+   limestone is harmless/subtle.) */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(62% 48% at 50% 50%,
+    rgba(237, 231, 217, 0.66) 0%,
+    rgba(237, 231, 217, 0.34) 44%,
+    transparent 74%);
+}
+[data-theme="dark"] .hero::after {
+  background: radial-gradient(62% 48% at 50% 50%,
+    rgba(18, 14, 9, 0.62) 0%,
+    rgba(18, 14, 9, 0.30) 44%,
+    transparent 74%);
+}
+
+/* prefers-reduced-motion: the director still mounts and shows a STATIC first
+   scene — but skip the fade so the canvas simply appears (no transition = no
+   motion). We do NOT hide the mount: the static scene is the intended fallback. */
+@media (prefers-reduced-motion: reduce) {
+  #hero-3d-mount canvas { transition: none; }
+}
