@@ -54,20 +54,36 @@ function boot(mount) {
     });
 }
 
-window.addEventListener('load', function () {
+function init() {
   const mount = document.getElementById('hero-3d-mount');
   if (!mount) return;
 
-  // Lazy: only boot when the hero scrolls into view (it's above the fold, so this
-  // fires right after load) — keeps the import off the critical path.
+  // Boot exactly once, whoever gets there first.
+  let booted = false;
+  function bootOnce() { if (booted) return; booted = true; boot(mount); }
+
+  // Lazy: prefer booting when the hero is in view (it's above the fold, so this
+  // normally fires right after load) — keeps the import off the critical path.
+  // FALLBACK TIMER (2026-07-09): IntersectionObserver was observed NEVER FIRING on a
+  // real Chrome despite the mount being visible and in-viewport (fresh observer, no
+  // callback in 1.5s — cause unclear; Lenis/environment interplay suspected). An optimization
+  // must never gate the feature: if IO hasn't fired shortly after init, boot anyway.
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(function (entries) {
       for (let i = 0; i < entries.length; i++) {
-        if (entries[i].isIntersecting) { io.disconnect(); boot(mount); return; }
+        if (entries[i].isIntersecting) { io.disconnect(); bootOnce(); return; }
       }
     }, { rootMargin: '200px' });
     io.observe(mount);
+    setTimeout(function () { io.disconnect(); bootOnce(); }, 1200);
   } else {
-    boot(mount);
+    bootOnce();
   }
-});
+}
+
+// LOAD-RACE FIX (caught on the owner's real Chrome, 2026-07-09): this module can finish
+// loading AFTER window 'load' has already fired (fast/cached page + async module graph) —
+// a bare 'load' listener then waits forever and the hero never mounts (headless was slower
+// and won the race, which is why the probe missed it). If load already happened, boot now.
+if (document.readyState === 'complete') { init(); }
+else { window.addEventListener('load', init); }
