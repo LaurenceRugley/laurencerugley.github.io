@@ -48,6 +48,35 @@ function boot(mount) {
 
       // Expose for debugging / a future codec egg; harmless if unused.
       window.__heroDirector = director;
+
+      // PER-SCENE TEXT THEMING: scenes 1 (Constellation) + 2 (Aurora) are DARK —
+      // flip the hero copy to cream over a soft ink scrim; scenes 0 (Silk) + 3
+      // (Product) are bright — dark copy over a light scrim. We watch the
+      // director's current scene each frame and set data-hero-tone; engine-hero.css
+      // does the rest (with a smooth color transition so the flip rides the fade).
+      var hero = mount.closest('.hero');
+      if (hero) {
+        var lastTone = '';
+        (function watchTone() {
+          requestAnimationFrame(watchTone);
+          var i = director.currentIndex;
+          var tone = (i === 1 || i === 2) ? 'dark' : 'bright';
+          if (tone !== lastTone) { lastTone = tone; hero.setAttribute('data-hero-tone', tone); }
+        })();
+      }
+
+      // OFFSCREEN PAUSE: stop the hero's RAF work while it's scrolled out of view
+      // (e.g. reading the Work section) — the director's tick early-returns on
+      // core.paused. Keeps us from rendering two WebGL scenes at once (the Work
+      // card has its own live moment). Poll the rect rather than an
+      // IntersectionObserver — IO doesn't track Lenis's transform-based scroll
+      // reliably here (the same reason the boot needed a fallback).
+      (function pausePoll() {
+        var r = mount.getBoundingClientRect();
+        var vh = window.innerHeight || document.documentElement.clientHeight;
+        core.setActive(r.top < vh && r.bottom > 0);
+        setTimeout(pausePoll, 400);
+      })();
     })
     .catch(function (err) {
       console.warn('[engine-hero] boot failed — gradient poster stays.', err);

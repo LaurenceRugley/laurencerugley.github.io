@@ -100,12 +100,29 @@
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (en.isIntersecting) {
-          en.target.classList.add('is-visible');
+          en.target.classList.add('is-visible');  // lets the split cascade play normally
           io.unobserve(en.target);
         }
       });
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0.1 });
     els.forEach(function (el) { io.observe(el); });
+
+    // SAFETY NET (real-Chrome fix, 2026-07-09): the reveal observer is flaky in
+    // real Chrome for above-the-fold content — sometimes `is-visible` never
+    // lands, sometimes the split char-cascade stalls mid-transition. Either way
+    // the HERO HEADLINE stays invisible (headless never reproduced it; caught by
+    // driving the live site in a real browser). After the intended cascade
+    // window, force-complete any reveal element already in the viewport. Below-
+    // the-fold sections are out of view here, so their scroll reveal is untouched.
+    setTimeout(function () {
+      [].slice.call(els).forEach(function (el) {
+        var r = el.getBoundingClientRect();
+        if (r.top < (window.innerHeight || document.documentElement.clientHeight) && r.bottom > 0) {
+          el.classList.add('is-visible');
+          if (el.classList.contains('split')) el.classList.add('reveal-done');
+        }
+      });
+    }, 1200);
   } else {
     els.forEach(function (el) { el.classList.add('is-visible'); });
   }

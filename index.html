@@ -37,12 +37,12 @@
      @font-face lives in motion.css; preload the two above-the-fold faces. -->
 <link rel="preload" as="font" type="font/woff2" href="fonts/cormorant-garamond.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="fonts/inter.woff2" crossorigin>
-<link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="motion.css?v=3">
 <link rel="stylesheet" href="pixel/pixel.css">
 <link rel="stylesheet" href="pixel/ball.css?v=2">
 <link rel="stylesheet" href="pixel/breakout.css?v=3">
 <link rel="stylesheet" href="fx/hero-gradient.css">
-<link rel="stylesheet" href="fx/engine-hero.css">
+<link rel="stylesheet" href="fx/engine-hero.css?v=3">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
 <style>
@@ -247,6 +247,9 @@
       <div class="cases">
 
         <article class="case">
+          <a class="case-media" href="https://alsoknownas.la" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+            <img src="work/alsoknownas.jpg" alt="ALSO KNOWN AS storefront — navy product page for an LA streetwear drop" width="1200" height="800">
+          </a>
           <header class="case-head">
             <h3 class="case-title">ALSO KNOWN AS</h3>
             <p class="case-tags">Streetwear e-commerce · Shopify · Los Angeles</p>
@@ -264,6 +267,9 @@
         </article>
 
         <article class="case">
+          <a class="case-media" href="https://savycolours.com" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+            <img src="work/savycolours.jpg" alt="Savy Colours — a Pasadena hair studio's bespoke marketing + booking site" width="1200" height="800">
+          </a>
           <header class="case-head">
             <h3 class="case-title">Savy Colours</h3>
             <p class="case-tags">Hair studio · Marketing + booking · Cloudflare · Pasadena</p>
@@ -281,6 +287,10 @@
         </article>
 
         <article class="case">
+          <a class="case-media" href="https://lgrwebstudios.com" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+            <img src="work/lgrwebstudio.jpg" alt="LGR Web Studio — the studio's own site with a live custom-WebGL scene hero" width="1200" height="700">
+            <span class="case-media-note">Custom WebGL</span>
+          </a>
           <header class="case-head">
             <h3 class="case-title">LGR Web Studio</h3>
             <p class="case-tags">Bespoke site · Motion + custom WebGL · 2026</p>
@@ -389,7 +399,7 @@
 </script>
 
 <script src="vendor/lenis.min.js" defer></script>
-<script defer src="motion.js"></script>
+<script defer src="motion.js?v=3"></script>
 <script defer src="fx/hero-gradient.js"></script>
 <script defer src="fx/cursor-ripple.js"></script>
 <script defer src="pixel/sprite-frames.js"></script>
@@ -397,7 +407,7 @@
 <script defer src="pixel/ball.js?v=2"></script>
 <script defer src="pixel/breakout.js?v=3"></script>
 <script defer src="fx/konami-trophy.js"></script>
-<script type="module" src="fx/engine-hero.js"></script>
+<script type="module" src="fx/engine-hero.js?v=3"></script>
 
 </body>
 </html>

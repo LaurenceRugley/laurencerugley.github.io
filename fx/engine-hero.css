@@ -23,30 +23,61 @@
   opacity: 1;
 }
 
-/* Text-protection scrim — the carousel cycles through DARK scenes (Constellation,
-   Aurora) where the dark headline would otherwise vanish. A soft wash centered on
-   the copy keeps it legible across all 4 scenes. It paints ABOVE the WebGL mount
-   (a ::after generated after #hero-3d-mount, same z-index:0) and BELOW the text
-   (text is z-index:1). Theme-aware: limestone wash in light, ink wash in dark.
-   (If the engine fails, the gradient poster shows and this light wash over
-   limestone is harmless/subtle.) */
+/* Text-protection scrim + PER-SCENE TONE. The carousel alternates BRIGHT scenes
+   (Silk, Product) and DARK scenes (Constellation, Aurora). engine-hero.js sets
+   data-hero-tone on .hero from the director's current scene; here we pair each
+   tone with a scrim + copy color so the headline stays legible on all four:
+     • bright → soft LIMESTONE wash + dark copy
+     • dark   → soft INK wash + cream copy
+   The scrim paints ABOVE the WebGL mount (::after is generated after
+   #hero-3d-mount, same z-index:0) and BELOW the text (text is z-index:1). Before
+   the engine boots (or if it fails), no tone is set → the light default wash sits
+   harmlessly over the limestone gradient poster. */
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(62% 48% at 50% 50%,
-    rgba(237, 231, 217, 0.66) 0%,
-    rgba(237, 231, 217, 0.34) 44%,
-    transparent 74%);
+  /* Strong enough to keep the DARK headline legible over the darkest silk phase
+     (the wave dips to near-black troughs behind the text), while its soft edges
+     let the silk stay vivid around the copy. */
+  background: radial-gradient(58% 54% at 50% 48%,
+    rgba(237, 231, 217, 0.78) 0%,
+    rgba(237, 231, 217, 0.52) 40%,
+    rgba(237, 231, 217, 0.16) 62%,
+    transparent 78%);
 }
-[data-theme="dark"] .hero::after {
-  background: radial-gradient(62% 48% at 50% 50%,
-    rgba(18, 14, 9, 0.62) 0%,
-    rgba(18, 14, 9, 0.30) 44%,
-    transparent 74%);
+.hero[data-hero-tone="dark"]::after {
+  /* Dark scenes use CREAM copy, so the ink wash only needs to deepen the local
+     background a touch — keep it light so Constellation/Aurora stay moody. */
+  background: radial-gradient(64% 52% at 50% 48%,
+    rgba(16, 12, 7, 0.52) 0%,
+    rgba(16, 12, 7, 0.26) 46%,
+    transparent 78%);
 }
+
+/* Copy colors transition as the tone flips so the change rides the crossfade
+   rather than snapping. Scoped to when the engine hero is active (tone set). */
+.hero[data-hero-tone] .hero-eyebrow,
+.hero[data-hero-tone] .hero-title,
+.hero[data-hero-tone] .hero-title em,
+.hero[data-hero-tone] .hero-sub {
+  transition: color 0.7s ease;
+}
+
+/* BRIGHT tone (Silk / Product): dark copy. The eyebrow is darkened + weighted so
+   it no longer washes out on a bright silk crest (was faint var(--gold-text)). */
+.hero[data-hero-tone="bright"] .hero-title    { color: #2A2218; }
+.hero[data-hero-tone="bright"] .hero-title em { color: #6B4F28; }
+.hero[data-hero-tone="bright"] .hero-eyebrow  { color: #5E4620; font-weight: 600; }
+.hero[data-hero-tone="bright"] .hero-sub      { color: #4A4030; }
+
+/* DARK tone (Constellation / Aurora): cream copy over the ink wash. */
+.hero[data-hero-tone="dark"] .hero-title      { color: #F1EADC; }
+.hero[data-hero-tone="dark"] .hero-title em   { color: #E7C994; }
+.hero[data-hero-tone="dark"] .hero-eyebrow    { color: #EAD2A8; font-weight: 600; }
+.hero[data-hero-tone="dark"] .hero-sub        { color: #DCD2BE; }
 
 /* prefers-reduced-motion: the director still mounts and shows a STATIC first
    scene — but skip the fade so the canvas simply appears (no transition = no
