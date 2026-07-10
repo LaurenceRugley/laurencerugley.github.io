@@ -896,7 +896,12 @@
     spriteEl.classList.add('pixel-celebrating');
     spawnConfetti();
     spawnHeartBurst();
-    if (window.LGRTrophy) window.LGRTrophy.show(); // lazy-loads the 3D trophy reward
+    // Egg v2: the codec call comes first, then chains into the 3D trophy on
+    // dismiss. Both are lazy globals; either may be absent, so degrade cleanly.
+    if (window.LGRCodec) window.LGRCodec.show(function () {
+      if (window.LGRTrophy) window.LGRTrophy.show();
+    });
+    else if (window.LGRTrophy) window.LGRTrophy.show();
     setState('jump');
     // Two more jumps, staggered so each fires after the previous one returns
     // to idle (~800ms jump), plus a second confetti wave for sustained rain.

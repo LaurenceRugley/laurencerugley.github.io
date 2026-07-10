@@ -1,0 +1,136 @@
+/* fx/codec-call.css — the MGS codec-call overlay (egg v2).
+
+   Sits BELOW the trophy (z 9998 vs 9999) so the chained trophy covers it.
+   Own namespace (.codec-call*) — pixel.js already owns the .codec-dot names.
+   The panel is deliberately theme-independent (like .konami-trophy): a codec
+   screen is always a dark phosphor screen. Gold accents tie it to the brand.
+
+   prefers-reduced-motion: skipped entirely (the module guards too). */
+
+.codec-call {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 8, 3, 0.66);
+  cursor: pointer;
+  animation: ccFade 0.3s ease both;
+}
+@keyframes ccFade { from { opacity: 0; } to { opacity: 1; } }
+.codec-call.is-closing { animation: ccOut 0.28s ease both; }
+@keyframes ccOut { to { opacity: 0; } }
+
+.codec-call-panel {
+  position: relative;
+  width: min(92vw, 620px);
+  padding: 18px 18px 20px;
+  background: #0A140E;
+  border: 1px solid rgba(184, 153, 104, 0.38);
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(155, 232, 184, 0.06) inset;
+  transform: scale(0.94);
+  opacity: 0;
+  animation: ccPop 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both, ccFlicker 3.2s steps(1) 0.5s infinite;
+}
+@keyframes ccPop { to { transform: none; opacity: 1; } }
+
+/* Subtle CRT flicker — a couple of near-imperceptible dips, never a strobe. */
+@keyframes ccFlicker {
+  0%, 96%, 100% { filter: none; }
+  97%           { filter: brightness(1.09); }
+  98%           { filter: brightness(0.94); }
+}
+
+/* Scanlines. Decorative only. */
+.codec-call-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(155, 232, 184, 0.05) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.codec-call-freq {
+  display: block;
+  text-align: center;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  color: #EFD58E;
+  margin-bottom: 14px;
+}
+
+.codec-call-screens {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.codec-call-screen {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 42%, #14301F 0%, #08160E 78%);
+  border: 1px solid rgba(155, 232, 184, 0.22);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.codec-call-portrait {
+  width: 74%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 0 12px rgba(155, 232, 184, 0.22));
+}
+
+.codec-call-monogram {
+  font-family: var(--serif, 'Cormorant Garamond', Georgia, serif);
+  font-size: clamp(2.2rem, 8vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #9BE8B8;
+  text-shadow: 0 0 18px rgba(155, 232, 184, 0.35);
+}
+
+.codec-call-line {
+  margin-top: 16px;
+  min-height: 1.4em;                    /* reserve the row: the typed text must not shift layout */
+  text-align: center;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-size: clamp(0.82rem, 2.4vw, 0.95rem);
+  letter-spacing: 0.02em;
+  color: #9BE8B8;
+}
+
+.codec-call-caret {
+  display: inline-block;
+  margin-left: 2px;
+  animation: ccCaret 1s steps(1) infinite;
+}
+@keyframes ccCaret { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+.codec-call-hint {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  font-family: var(--sans, 'Inter', system-ui, sans-serif);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
+  text-transform: uppercase;
+  color: rgba(155, 232, 184, 0.42);
+}
+
+@media (prefers-reduced-motion: reduce) { .codec-call { display: none; } }
