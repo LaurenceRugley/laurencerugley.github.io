@@ -1,0 +1,13 @@
+{
+  "name": "lgrwebstudios-site",
+  "private": true,
+  "description": "Dev tooling only — the shipped site is dependency-free, no build step. These scripts guard promotes.",
+  "scripts": {
+    "probe": "node tools/site-probe.mjs",
+    "probe:neg": "NEG=1 node tools/site-probe.mjs",
+    "budget": "node tools/size-budget.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.44.0"
+  }
+}

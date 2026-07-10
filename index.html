@@ -404,12 +404,10 @@
 <script defer src="motion.js?v=3"></script>
 <script defer src="fx/hero-gradient.js"></script>
 <script defer src="fx/cursor-ripple.js"></script>
-<script defer src="pixel/sprite-frames.js"></script>
-<script defer src="pixel/pixel.js?v=2"></script>
-<script defer src="pixel/ball.js?v=2"></script>
-<script defer src="pixel/breakout.js?v=3"></script>
-<script defer src="fx/codec-call.js?v=1"></script>
-<script defer src="fx/konami-trophy.js"></script>
+<!-- Pixel-companion easter egg: a ~1KB eager loader owns the triggers and
+     dynamic-injects the ~27KB-gz chain only on first activation (or immediately
+     for returning pixel-mode users). See pixel/egg-loader.js. -->
+<script defer src="pixel/egg-loader.js?v=1"></script>
 <script type="module" src="fx/engine-hero.js?v=4"></script>
 
 </body>

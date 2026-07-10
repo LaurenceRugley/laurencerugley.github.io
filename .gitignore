@@ -15,3 +15,6 @@ Thumbs.db
 # Logs / temp
 *.log
 .tmp/
+
+# Node tooling deps (dev only — probe/budget)
+node_modules/
