@@ -10,13 +10,24 @@
 <meta property="og:title" content="Start a Project — LGR Web Studio">
 <meta property="og:description" content="Tell us about your business and we'll send a proposal within 24 hours.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://laurencerugley.github.io/start">
-<meta property="og:image" content="https://laurencerugley.github.io/card-preview.png">
+<meta property="og:url" content="https://lgrwebstudios.com/start">
+<meta property="og:image" content="https://lgrwebstudios.com/card-preview.png">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+  /* Self-hosted fonts (fonts/, root-absolute so they resolve at /start too) —
+     no third-party Google Fonts request. Mirrors index.html's @font-face set. */
+  @font-face {
+    font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400 500;
+    font-display: swap; src: url('/fonts/cormorant-garamond.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 400;
+    font-display: swap; src: url('/fonts/cormorant-garamond-italic.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter'; font-style: normal; font-weight: 300 500;
+    font-display: swap; src: url('/fonts/inter.woff2') format('woff2');
+  }
   :root {
     --ink: #2A2218;
     --gold: #B89968;

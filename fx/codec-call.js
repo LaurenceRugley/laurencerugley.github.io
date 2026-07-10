@@ -88,13 +88,19 @@
     if (active) return;
     active = true;
 
+    // Remember what had focus so we can hand it back on teardown (focus must not
+    // silently jump to <body> when the modal closes).
+    var prevFocus = document.activeElement;
+
     var overlay = document.createElement('div');
     overlay.className = 'codec-call';
     overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', 'Codec call');
 
     var panel = document.createElement('div');
     panel.className = 'codec-call-panel';
+    panel.tabIndex = -1;   // focusable target for the modal, not a tab stop
 
     var freq = document.createElement('span');
     freq.className = 'codec-call-freq';
@@ -120,6 +126,10 @@
 
     var line = document.createElement('p');
     line.className = 'codec-call-line';
+    // The visible line types character-by-character; hide it from assistive tech so
+    // it isn't read out one letter at a time. The full line is announced once via
+    // the offscreen live region below.
+    line.setAttribute('aria-hidden', 'true');
     var text = document.createElement('span');
     var caret = document.createElement('span');
     caret.className = 'codec-call-caret';
@@ -131,12 +141,25 @@
     hint.className = 'codec-call-hint';
     hint.textContent = 'click or press esc';
 
+    // Offscreen polite live region: announces the whole line once (not per keystroke).
+    var live = document.createElement('div');
+    live.setAttribute('aria-live', 'polite');
+    live.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;' +
+      'padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);' +
+      'clip-path:inset(50%);white-space:nowrap;';
+
     panel.appendChild(freq);
     panel.appendChild(screens);
     panel.appendChild(line);
     panel.appendChild(hint);
+    panel.appendChild(live);
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+
+    // Move focus into the dialog, then announce the line once (set after the node is
+    // in the a11y tree so the polite region actually fires).
+    panel.focus();
+    live.textContent = LINE;
 
     // ---- typing ----
     var i = 0;
@@ -172,6 +195,12 @@
       window.removeEventListener('keydown', onKey);
 
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+
+      // Hand focus back to wherever it was before the modal opened (the chained
+      // trophy is a decorative canvas that never takes focus, so this is safe on
+      // both the plain-dismiss and chain paths).
+      if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (_) {} }
+
       active = false;
       chain();
     }
