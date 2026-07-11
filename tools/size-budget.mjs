@@ -9,13 +9,16 @@
      NOT here (it is dynamic-imported by engine-hero, not a tag) — it has its own
      line below. The lazy egg chain is behind egg-loader, so it is not counted
      either: that is the point of the lazy loader.
-   • vendor/lgr-engine-core.es.js ≤ 300 KB — the one heavy dependency.
+   • vendor/lgr-engine-hero.es.js ≤ 300 KB — the one heavy dependency. Hero-only
+     build (Lesson O): createEngineCore + the 4 scene packs + createHeroDirector,
+     none of editor/pilot/cockpit/terrain/catalog/audio/tracer — ~216 KB gz vs the
+     slim core's ~292 KB, so there is real headroom under the 300 KB ceiling again.
 
    Numbers print either way (green or red) so drift is visible before it bites.
 
-   VENDOR-HASH DRIFT (WARN, not fail): md5 the site's engine core against the
-   lab's current dist-lib build. A mismatch means the site is running a different
-   core than the lab ships — which must be a deliberate re-vendor, never a silent
+   VENDOR-HASH DRIFT (WARN, not fail): md5 the site's engine lib against the lab's
+   current dist-lib build. A mismatch means the site is running a different build
+   than the lab ships — which must be a deliberate re-vendor, never a silent
    drift. WARN + both hashes so the owner decides.
    ============================================================ */
 import { readFileSync, existsSync } from 'node:fs';
@@ -25,7 +28,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const LAB_CORE = '/Users/lencho/dev/lgr-webgl-lab/packages/engine-core/dist-lib/lgr-engine-core.es.js';
+const LAB_CORE = '/Users/lencho/dev/lgr-webgl-lab/packages/engine-core/dist-lib/lgr-engine-hero.es.js';
 const EAGER_BUDGET = 80 * 1024;
 const VENDOR_BUDGET = 300 * 1024;
 
@@ -58,16 +61,16 @@ console.log(`    ${'—'.padStart(9)}`);
 console.log(`    ${kb(eager).padStart(9)}  EAGER TOTAL   [budget ${kb(EAGER_BUDGET)}]  ${eagerOk ? 'OK' : 'OVER ✗'}`);
 if (!eagerOk) failed++;
 
-// ---- vendor core budget ----
-const vendorPath = join(ROOT, 'vendor/lgr-engine-core.es.js');
-console.log('\n  VENDOR engine core:');
+// ---- vendor hero-lib budget ----
+const vendorPath = join(ROOT, 'vendor/lgr-engine-hero.es.js');
+console.log('\n  VENDOR engine hero-lib:');
 if (existsSync(vendorPath)) {
   const vgz = gz(vendorPath);
   const vOk = vgz <= VENDOR_BUDGET;
-  console.log(`    ${kb(vgz).padStart(9)}  vendor/lgr-engine-core.es.js   [budget ${kb(VENDOR_BUDGET)}]  ${vOk ? 'OK' : 'OVER ✗'}`);
+  console.log(`    ${kb(vgz).padStart(9)}  vendor/lgr-engine-hero.es.js   [budget ${kb(VENDOR_BUDGET)}]  ${vOk ? 'OK' : 'OVER ✗'}`);
   if (!vOk) failed++;
 } else {
-  console.log('    MISSING  vendor/lgr-engine-core.es.js'); failed++;
+  console.log('    MISSING  vendor/lgr-engine-hero.es.js'); failed++;
 }
 
 // ---- vendor-hash drift (WARN only) ----

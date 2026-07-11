@@ -2,7 +2,9 @@
    ------------------------------------------------------------------------
    The hero is a carousel of bespoke shader scenes (Dusk Silk · Constellation ·
    Aurora · Product Moment) driven by the engine's createHeroDirector, running on
-   the slim-core one-file lib (lgr-engine-core.es.js, ~300 KB gz — no city).
+   the hero-only one-file lib (lgr-engine-hero.es.js, ~216 KB gz — no city, no
+   editor/pilot/cockpit/terrain/catalog/audio/tracer; same createEngineCore + the
+   4 scene packs + createHeroDirector exports as the slim core, 76 KB lighter).
 
    Rules:
    - Never blocks LCP: waits for window 'load', then an IntersectionObserver so the
@@ -15,7 +17,7 @@
 */
 
 function boot(mount) {
-  import('../vendor/lgr-engine-core.es.js?v=2')
+  import('../vendor/lgr-engine-hero.es.js?v=1')
     .then(async function (lib) {
       // createEngineCore may be sync or async — await handles both.
       const core = await lib.createEngineCore({ container: mount });
