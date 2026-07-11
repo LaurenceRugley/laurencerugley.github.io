@@ -15,7 +15,7 @@
 */
 
 function boot(mount) {
-  import('../vendor/lgr-engine-core.es.js?v=1')
+  import('../vendor/lgr-engine-core.es.js?v=2')
     .then(async function (lib) {
       // createEngineCore may be sync or async — await handles both.
       const core = await lib.createEngineCore({ container: mount });
@@ -49,32 +49,30 @@ function boot(mount) {
       // Expose for debugging / a future codec egg; harmless if unused.
       window.__heroDirector = director;
 
-      // PER-SCENE TEXT THEMING: scenes 1 (Constellation) + 2 (Aurora) are DARK —
-      // flip the hero copy to cream over a soft ink scrim; scenes 0 (Silk) + 3
-      // (Product) are bright — dark copy over a light scrim. We watch the
-      // director's current scene each frame and set data-hero-tone; engine-hero.css
-      // does the rest (with a smooth color transition so the flip rides the fade).
+      // PER-SCENE TEXT THEMING: each scene declares its own tone in the N-pack
+      // director contract (director.currentTone -> 'dark' | 'bright'), so a re-skin
+      // that changes which scenes are dark/bright stays correct with no edit here
+      // (this used to hard-code the scene indices). Cream copy over a soft ink scrim
+      // on dark scenes; dark copy on bright ones. engine-hero.css does the visual
+      // flip with a smooth color transition so it rides the crossfade. Read in the
+      // pause poll below — no separate always-on RAF loop.
       var hero = mount.closest('.hero');
-      if (hero) {
-        var lastTone = '';
-        (function watchTone() {
-          requestAnimationFrame(watchTone);
-          var i = director.currentIndex;
-          var tone = (i === 1 || i === 2) ? 'dark' : 'bright';
-          if (tone !== lastTone) { lastTone = tone; hero.setAttribute('data-hero-tone', tone); }
-        })();
-      }
+      var lastTone = '';
 
-      // OFFSCREEN PAUSE: stop the hero's RAF work while it's scrolled out of view
-      // (e.g. reading the Work section) — the director's tick early-returns on
-      // core.paused. Keeps us from rendering two WebGL scenes at once (the Work
-      // card has its own live moment). Poll the rect rather than an
+      // OFFSCREEN PAUSE + TONE POLL: stop the hero's RAF work while it's scrolled
+      // out of view (e.g. reading the Work section) — the director's tick early-
+      // returns on core.paused; keeps us from rendering two WebGL scenes at once —
+      // and refresh the text tone from the director. Poll the rect rather than an
       // IntersectionObserver — IO doesn't track Lenis's transform-based scroll
       // reliably here (the same reason the boot needed a fallback).
       (function pausePoll() {
         var r = mount.getBoundingClientRect();
         var vh = window.innerHeight || document.documentElement.clientHeight;
         core.setActive(r.top < vh && r.bottom > 0);
+        if (hero) {
+          var tone = director.currentTone;
+          if (tone && tone !== lastTone) { lastTone = tone; hero.setAttribute('data-hero-tone', tone); }
+        }
         setTimeout(pausePoll, 400);
       })();
     })
