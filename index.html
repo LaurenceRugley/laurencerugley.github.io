@@ -43,6 +43,7 @@
 <link rel="stylesheet" href="pixel/breakout.css?v=3">
 <link rel="stylesheet" href="fx/hero-gradient.css">
 <link rel="stylesheet" href="fx/engine-hero.css?v=3">
+<link rel="stylesheet" href="fx/before-after.css">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
 <link rel="stylesheet" href="fx/codec-call.css">
@@ -273,9 +274,9 @@
           </a>
           <header class="case-head">
             <h3 class="case-title">Savy Colours</h3>
-            <p class="case-tags">Hair studio · Marketing + booking · Cloudflare · Pasadena</p>
+            <p class="case-tags">Colorist · Marketing + booking · Cloudflare · Pasadena</p>
           </header>
-          <p class="case-lead">A Pasadena hair studio with a bespoke booking site — no booking-app fees, fully owned.</p>
+          <p class="case-lead">A site for a colorist in Pasadena — bespoke booking, zero recurring fees.</p>
           <dl class="case-body">
             <dt>Problem</dt>
             <dd>Service businesses usually rent a generic booking tool — monthly fees, a templated look, and a third party sitting between them and their clients.</dd>
@@ -284,6 +285,10 @@
             <dt>Result</dt>
             <dd>A distinctive site that books clients with zero recurring SaaS fees.<!-- TODO: real metric + testimonial (client: Savannah) --></dd>
           </dl>
+          <div class="case-reveal">
+            <div class="reveal-mount" id="savannah-reveal" data-before="work/reveal/before.jpg" data-after="work/reveal/after.jpg" aria-label="Before and after — drag to reveal a colour transformation"></div>
+            <p class="reveal-caption">Drag to reveal — one of her transformations, carried by the same engine.</p>
+          </div>
           <a class="case-link" href="https://savycolours.com" target="_blank" rel="noopener">View live <span aria-hidden="true">↗</span></a>
         </article>
 
@@ -408,7 +413,8 @@
      dynamic-injects the ~27KB-gz chain only on first activation (or immediately
      for returning pixel-mode users). See pixel/egg-loader.js. -->
 <script defer src="pixel/egg-loader.js?v=1"></script>
-<script type="module" src="fx/engine-hero.js?v=6"></script>
+<script type="module" src="fx/engine-hero.js?v=7"></script>
+<script type="module" src="fx/before-after.js?v=1"></script>
 
 </body>
 </html>

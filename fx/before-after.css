@@ -1,0 +1,49 @@
+/* before-after.css — the ONE drag-to-reveal moment in the Work section (Savannah's
+   case): a small, restrained mount, not a centerpiece. The "after" photo is a CSS
+   background from first paint (never a blank/black box); the WebGL canvas fades in
+   over it once createBeforeAfter mounts, same poster-then-canvas pattern as the hero. */
+
+.case-reveal { margin: 4px 0 18px; }
+
+.reveal-mount {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: ew-resize;
+  touch-action: pan-y;
+  background: color-mix(in srgb, var(--gold) 8%, var(--bg));
+  background-image: url('../work/reveal/after.jpg');
+  background-size: cover;
+  background-position: center;
+  outline-offset: 3px;
+}
+.reveal-mount:focus-visible { outline: 2px solid var(--gold-text); }
+
+.reveal-mount canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+}
+.reveal-mount.is-loaded canvas { opacity: 1; }
+
+/* The WebGL-off fallback: createBeforeAfter drops in a plain <img> — cover-fit it
+   the same as the poster so the box never changes shape. */
+.reveal-mount img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.reveal-caption {
+  margin-top: 8px;
+  font-family: var(--sans); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-mount canvas { transition: none; }
+}
