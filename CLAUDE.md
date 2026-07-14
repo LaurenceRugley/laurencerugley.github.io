@@ -1,5 +1,5 @@
 <!-- LGR-STANDARDS:BEGIN -->
-<!-- Synced from lgr-standards/CLAUDE.base.md — do not edit this block by hand.
+<!-- Synced from lgr-standards v1.0.0 (CLAUDE.base.md) — do not edit this block by hand.
      Re-run sync-into-repo.sh to update. -->
 
 # LGR 14-Rule Agent Standard
