@@ -43,6 +43,7 @@
 <link rel="stylesheet" href="pixel/breakout.css?v=3">
 <link rel="stylesheet" href="fx/hero-gradient.css">
 <link rel="stylesheet" href="fx/engine-hero.css?v=3">
+<link rel="stylesheet" href="fx/look-reel.css">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
 <link rel="stylesheet" href="fx/codec-call.css">
@@ -205,7 +206,30 @@
     <p class="hero-sub reveal">For product brands and service businesses — designed and built in-house in Pasadena, California.</p>
     <div class="hero-actions reveal">
       <a class="btn-primary" href="#start">Start a project</a>
-      <a class="scroll-cue" href="#approach" aria-label="Scroll to learn more"></a>
+      <a class="scroll-cue" href="#recent-work" aria-label="Scroll to learn more"></a>
+    </div>
+  </section>
+
+  <section class="section" id="recent-work">
+    <div class="band reveal">
+      <h2 class="section-label">Recent work</h2>
+      <div
+        id="lookReel"
+        class="look-reel"
+        aria-hidden="true"
+        data-img1="work/reel/alsoknownas.jpg"
+        data-img2="work/reel/savycolours.jpg"
+        data-img3="work/reel/chignon.jpg"
+        aria-label="Recent work — Also Known As, Savy Colours, Chignon"
+      ></div>
+      <!-- The accessible twin: the reel canvas above is aria-hidden decoration,
+           so the same three projects need to exist somewhere a screen reader
+           can actually reach. -->
+      <ul class="look-reel-captions">
+        <li>Also Known As</li>
+        <li>Savy Colours</li>
+        <li>Chignon</li>
+      </ul>
     </div>
   </section>
 
@@ -453,6 +477,7 @@
      for returning pixel-mode users). See pixel/egg-loader.js. -->
 <script defer src="pixel/egg-loader.js?v=1"></script>
 <script type="module" src="fx/engine-hero.js?v=8"></script>
+<script type="module" src="fx/look-reel.js?v=1"></script>
 
 </body>
 </html>

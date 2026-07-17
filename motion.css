@@ -316,6 +316,8 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
    it (reachable + fully visible at the bottom snap) instead of being pushed a
    whole screen below. */
 #start { min-height: auto; }
+/* Recent-work reel: a quick hero-adjacent glance, not another full screen. */
+#recent-work { min-height: auto; padding-top: 48px; padding-bottom: 48px; }
 .section-label {
   font-family: var(--sans); font-size: 10px; font-weight: 500;
   text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold-text);
