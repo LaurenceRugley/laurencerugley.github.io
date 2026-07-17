@@ -210,15 +210,10 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
   .human-copy .section-label::after { margin: 12px auto 0; }
 }
 
-/* ---------- The prove-it slider (2026-07-17, v2 "money" piece E) ----------
-   .reveal-mount is the shared base (fx/before-after.css); this is just a
-   sizing modifier for a wide landscape demo instead of the default portrait
-   photo-reveal proportions. */
-/* Compound selector (not just .prove-mount) — fx/before-after.css loads AFTER
-   motion.css, so equal-specificity single classes would let .reveal-mount's
-   max-width/aspect-ratio win the cascade regardless of source order here. */
-.reveal-mount.prove-mount { max-width: none; aspect-ratio: 2.4 / 1; }
-@media (max-width: 700px) { .reveal-mount.prove-mount { aspect-ratio: 4 / 3; } }
+/* The prove-it slider's own pane/handle styles live in fx/prove-it.css
+   (site-local clip-path version, 2026-07-17 v2 — replaced the engine-based
+   .reveal-mount.prove-mount cut; see fx/prove-it.js for why). This caption
+   row is still shared markup. */
 .ba-caption {
   display: flex; justify-content: space-between; margin-top: 10px;
   font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);

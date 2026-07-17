@@ -1,0 +1,81 @@
+/* prove-it.css — the prove-it slider's two panes + gold divider handle.
+   Site-local clip-path slider (see prove-it.js for why, not createBeforeAfter).
+   Instant, no transition on the clip/handle position — direct-manipulation
+   drags that lag read as broken, not smooth (same principle the engine's own
+   pointer-drive comment makes for createBeforeAfter). */
+
+.prove-slider {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2.4 / 1;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 26px;
+  cursor: ew-resize;
+  touch-action: pan-y;
+  outline-offset: 3px;
+}
+.prove-slider:focus-visible { outline: 2px solid var(--gold-text); }
+@media (max-width: 700px) { .prove-slider { aspect-ratio: 4 / 3; } }
+
+.prove-pane { position: absolute; inset: 0; padding: clamp(20px, 3.5vw, 40px); overflow: hidden; }
+
+/* Template pane — a tasteful parody of a generic template site. No real
+   brand's design or copy reused. Sits as the base layer (unclipped); the
+   hand-built pane is clipped over it, revealing this underneath on the left. */
+.prove-pane-template { background: #ffffff; color: #333; font-family: Arial, Helvetica, sans-serif; }
+.prove-pane-template .prove-nav { display: flex; gap: 18px; font-size: 12px; color: #888; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.prove-pane-template h4 { font-size: clamp(18px, 3vw, 28px); color: #2a6fd6; margin: 18px 0 8px; font-weight: 700; }
+.prove-pane-template p { font-size: 13px; color: #777; max-width: 30ch; line-height: 1.5; }
+.prove-btn-template {
+  display: inline-block; margin-top: 14px; background: #2a6fd6; color: #fff;
+  padding: 8px 16px; border-radius: 4px; font-size: 12px; font-family: Arial, Helvetica, sans-serif;
+}
+.prove-stock {
+  margin-top: 18px; width: 120px; height: 70px;
+  background: repeating-linear-gradient(45deg, #e8e8e8, #e8e8e8 8px, #f4f4f4 8px, #f4f4f4 16px);
+  border-radius: 4px; display: grid; place-items: center; color: #aaa;
+  font-size: 9px; letter-spacing: 0.1em; font-family: Arial, sans-serif;
+}
+
+/* Hand-built pane — the SITE'S OWN real tokens (Rule 11), not the mockup's
+   Georgia/hardcoded hex. Clipped from the left; template shows through on
+   the left of the handle, this shows on the right, per the caption
+   ("made by hand →"), regardless of where the handle currently sits.
+
+   Content is RIGHT-anchored (flex, align-items:flex-end, text-align:right)
+   — not left-padded like the template pane. A left-anchored block sits
+   exactly where inset(0 0 0 50%) clips it away at the default 50% position
+   (found this the hard way: the pane rendered as a solid dark rectangle,
+   no visible text, at first cut). Right-anchoring keeps the copy in the
+   sliver that survives clipping across the 25/50/75% range this was
+   verified at. */
+.prove-pane-handbuilt {
+  background: linear-gradient(160deg, #1c1712, #242019 55%, #2A2218);
+  color: #EDE7D9;
+  clip-path: inset(0 0 0 50%);
+  display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
+  text-align: right;
+}
+.prove-lab { font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em; color: #B89968; text-transform: uppercase; }
+.prove-pane-handbuilt h4 { font-family: var(--serif); font-weight: 500; font-size: clamp(20px, 3.6vw, 36px); line-height: 1.08; margin: 12px 0 8px; }
+.prove-pane-handbuilt h4 em { font-style: italic; color: #B89968; }
+.prove-pane-handbuilt p { font-family: var(--serif); color: #cdc3ac; max-width: 24ch; font-size: clamp(12px, 1.5vw, 15px); line-height: 1.5; }
+.prove-btn-handbuilt {
+  display: inline-block; margin-top: 16px; background: #B89968; color: #2A2218;
+  padding: 10px 20px; border-radius: 4px; font-family: var(--sans); font-size: 11px;
+  font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+}
+
+/* The gold divider + drag pill at the seam. */
+.prove-handle {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
+  background: #B89968; z-index: 3; pointer-events: none;
+}
+.prove-handle-pill {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #B89968; color: #2A2218;
+  font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 7px 10px; border-radius: 999px; white-space: nowrap;
+}
