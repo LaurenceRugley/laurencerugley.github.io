@@ -1,7 +1,11 @@
-/* before-after.css — the ONE drag-to-reveal moment in the Work section (Savannah's
-   case): a small, restrained mount, not a centerpiece. The "after" photo is a CSS
-   background from first paint (never a blank/black box); the WebGL canvas fades in
-   over it once createBeforeAfter mounts, same poster-then-canvas pattern as the hero. */
+/* before-after.css — every createBeforeAfter drag-to-reveal mount on the page
+   (reused for the prove-it slider, 2026-07-17 — was Savannah's case only). A
+   small, restrained mount by default, not a centerpiece — the "after" photo is
+   a CSS background from first paint (never a blank/black box), set per-instance
+   via an inline style="background-image:..." (each mount shows a different
+   photo, so it can't be baked into this shared rule). The WebGL canvas fades in
+   over it once createBeforeAfter mounts, same poster-then-canvas pattern as the
+   hero. */
 
 .case-reveal { margin: 4px 0 18px; }
 
@@ -15,8 +19,7 @@
   overflow: hidden;
   cursor: ew-resize;
   touch-action: pan-y;
-  background: color-mix(in srgb, var(--gold) 8%, var(--bg));
-  background-image: url('../work/reveal/after.jpg');
+  background-color: color-mix(in srgb, var(--gold) 8%, var(--bg));
   background-size: cover;
   background-position: center;
   outline-offset: 3px;

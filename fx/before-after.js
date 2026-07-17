@@ -1,14 +1,16 @@
-/* before-after.js — lazy-mount the ONE createBeforeAfter drag-to-reveal demo, in the
-   Savannah case (Work section): a prospect drags a real colour transformation instead
-   of reading about "engine-driven before/afters".
+/* before-after.js — lazy-mount every createBeforeAfter drag-to-reveal demo on the
+   page (queried generically by [data-before][data-after], not a single hardcoded
+   id — reused for the prove-it slider (2026-07-17); a prospect drags a real
+   before/after instead of reading about "engine-driven before/afters").
 
-   Lazy: only imports the vendor lib (already fetched + cached by the hero at the same
-   ?v=) once the mount nears the viewport — a below-the-fold demo must not compete with
-   the hero's own boot on page load.
+   Lazy per mount: only imports the vendor lib (already fetched + cached by the
+   hero at the same ?v=) once EACH mount nears the viewport — a below-the-fold
+   demo must not compete with the hero's own boot on page load.
 
-   Fallback, a11y (role="slider", keyboard, WCAG-correct reduced-motion), sRGB colour,
-   and off-screen pause are all owned by createBeforeAfter itself (engine-core) — this
-   file only wires the mount and reveals the canvas once it is ready.
+   Fallback, a11y (role="slider", keyboard, WCAG-correct reduced-motion), sRGB
+   colour, and off-screen pause are all owned by createBeforeAfter itself
+   (engine-core) — this file only wires each mount and reveals its canvas once
+   ready.
 */
 
 function boot(mount) {
@@ -17,9 +19,9 @@ function boot(mount) {
       return lib.createBeforeAfter(mount, {
         before: mount.dataset.before,
         after: mount.dataset.after,
-        progress: 0.35,
+        progress: mount.dataset.progress ? parseFloat(mount.dataset.progress) : 0.35,
         label: mount.getAttribute('aria-label') || 'Before and after — drag to reveal',
-        alt: 'A colour transformation by Savannah',
+        alt: mount.dataset.alt || 'Before and after',
       });
     })
     .then(function () {
@@ -30,10 +32,7 @@ function boot(mount) {
     });
 }
 
-function init() {
-  const mount = document.getElementById('savannah-reveal');
-  if (!mount) return;
-
+function initOne(mount) {
   let booted = false;
   function bootOnce() { if (booted) return; booted = true; boot(mount); }
 
@@ -47,6 +46,11 @@ function init() {
   } else {
     bootOnce();
   }
+}
+
+function init() {
+  const mounts = document.querySelectorAll('[data-before][data-after]');
+  mounts.forEach(initOne);
 }
 
 if (document.readyState === 'complete') { init(); }

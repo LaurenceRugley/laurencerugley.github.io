@@ -44,6 +44,7 @@
 <link rel="stylesheet" href="fx/hero-gradient.css">
 <link rel="stylesheet" href="fx/engine-hero.css?v=3">
 <link rel="stylesheet" href="fx/look-reel.css">
+<link rel="stylesheet" href="fx/before-after.css">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
 <link rel="stylesheet" href="fx/codec-call.css">
@@ -378,6 +379,30 @@
     </div>
   </section>
 
+  <section class="section" id="prove-it">
+    <div class="band reveal">
+      <h2 class="section-label">The prove-it moment</h2>
+      <h3 class="index-title">What we do to a website.</h3>
+      <p class="index-dek">Left: the template every competitor has. Right: the same business, made by hand. This is our actual before/after engine component — the demo is the pitch.</p>
+      <!-- createBeforeAfter reveals the "after" image growing from the LEFT edge as
+           progress rises (confirmed empirically, not guessed) — so to match the
+           caption below (template reads left, hand-built reads right), the prop
+           names are wired by ON-SCREEN SIDE, not by narrative "before/after we
+           built it": data-after (renders left) = template, data-before (renders
+           right) = hand-built. Don't "fix" this back to the narrative pairing. -->
+      <div
+        class="reveal-mount prove-mount"
+        style="background-image: url('work/prove-it/handbuilt.jpg')"
+        data-before="work/prove-it/handbuilt.jpg"
+        data-after="work/prove-it/template.jpg"
+        data-progress="0.5"
+        data-alt="A generic template site, and the same business made by hand"
+        aria-label="Drag to compare a generic template site against a hand-built one"
+      ></div>
+      <p class="ba-caption"><span>← their template</span><span>made by hand →</span></p>
+    </div>
+  </section>
+
   <section class="section c-band" id="start">
     <div class="band c-inner">
       <div class="c-copy reveal">
@@ -478,6 +503,7 @@
 <script defer src="pixel/egg-loader.js?v=1"></script>
 <script type="module" src="fx/engine-hero.js?v=8"></script>
 <script type="module" src="fx/look-reel.js?v=1"></script>
+<script type="module" src="fx/before-after.js?v=2"></script>
 
 </body>
 </html>
