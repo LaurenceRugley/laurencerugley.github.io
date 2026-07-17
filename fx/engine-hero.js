@@ -17,7 +17,7 @@
 */
 
 function boot(mount) {
-  import('../vendor/lgr-engine-hero.es.js?v=2')
+  import('../vendor/lgr-engine-hero.es.js?v=3')
     .then(async function (lib) {
       // createEngineCore may be sync or async — await handles both.
       const core = await lib.createEngineCore({ container: mount });

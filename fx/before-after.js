@@ -12,7 +12,7 @@
 */
 
 function boot(mount) {
-  import('../vendor/lgr-engine-hero.es.js?v=2')
+  import('../vendor/lgr-engine-hero.es.js?v=3')
     .then(function (lib) {
       return lib.createBeforeAfter(mount, {
         before: mount.dataset.before,

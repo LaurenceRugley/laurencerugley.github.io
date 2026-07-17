@@ -18844,7 +18844,7 @@ function Qg(e = {}) {
 	function ve() {
 		g.setViewport(n(), r()), i.setSize(n(), r());
 		let e = i.getDrawingBufferSize(new G());
-		S?.setSize(e.x, e.y), C?.setSize(e.x, e.y), w.setSize(e.x, e.y), T?.setSize(e.x, e.y), D?.setSize(e.x, e.y), O = Math.max(1, e.x >> 1), k = Math.max(1, e.y >> 1), A.setSize(O, k), j.setSize(O, k), M?.setSize(O, k), N?.setSize(O, k), ne.uniforms.uResolution.value.set(e.x, e.y), ue.uniforms.uResolution.value.set(e.x, e.y), de.uniforms.uResolution.value.set(e.x, e.y), pe.uniforms.uResolution.value.set(e.x, e.y);
+		S?.setSize(e.x, e.y), C?.setSize(e.x, e.y), w.setSize(e.x, e.y), T?.setSize(e.x, e.y), D?.setSize(e.x, e.y), O = Math.max(1, e.x >> 1), k = Math.max(1, e.y >> 1), A.setSize(O, k), j.setSize(O, k), M?.setSize(O, k), N?.setSize(O, k), ne.uniforms.uResolution.value.set(e.x, e.y), ue.uniforms.uResolution.value.set(e.x, e.y), de.uniforms.uResolution.value.set(e.x, e.y), pe.uniforms.uResolution.value.set(e.x, e.y), s.copy(e);
 		for (let t of ge) t(e);
 		return e;
 	}
@@ -20106,7 +20106,7 @@ function Hv(e, { sharp: t = 14, deep: n = zv, shallow: r = Bv, caustic: i = Vv }
 }
 //#endregion
 //#region src/shaders/image-transition.frag
-var Uv = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uBefore;\nuniform sampler2D uAfter;\nuniform float uProgress;    \nuniform float uTime;        \nuniform vec2  uQuadRes;     \nuniform vec2  uBeforeRes;   \nuniform vec2  uAfterRes;    \nuniform float uMelt;        \nuniform float uWidth;       \n\n/* Cheap value noise — enough to make the front organic; a full fbm would be wasted here. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* object-fit: cover, in UV space. Scale the axis with slack, then recentre. */\nvec2 coverUv(vec2 uv, vec2 imgRes, vec2 boxRes) {\n  float imgA = imgRes.x / max(imgRes.y, 1.0);\n  float boxA = boxRes.x / max(boxRes.y, 1.0);\n  vec2 s = vec2(1.0);\n  if (imgA > boxA) s.x = boxA / imgA;   \n  else             s.y = imgA / boxA;   \n  return (uv - 0.5) * s + 0.5;\n}\n\nvoid main() {\n  /* THE FRONT — a wobbling boundary, not a line. */\n  float n = vnoise(vec2(vUv.y * 3.2, uTime * 0.10)) * 0.5\n          + vnoise(vec2(vUv.y * 8.0 + 4.0, uTime * 0.16)) * 0.25;\n\n  /* Bias the front so progress 0 and 1 are FULLY clean: at the ends the noise must not leave a stray\n     sliver of the other image on screen. Remapping into a slightly over-scanned range does that. */\n  float p = uProgress * (1.0 + uWidth * 2.0) - uWidth;\n  float front = vUv.x + (n - 0.375) * 0.13 - p;\n\n  /* THE BAND — how much of the picture is currently mid-melt. */\n  float m = 1.0 - smoothstep(-uWidth, uWidth, front);   \n\n  /* THE DRAG — strongest inside the band, zero at either end. This is the liquid part: we pull the\n     sampled coordinates sideways (and a little vertically) so the front looks like it is physically\n     pushing the old image out of the way. */\n  float band = 1.0 - abs(front) / max(uWidth, 1e-4);\n  band = clamp(band, 0.0, 1.0);\n  float drag = band * band * uMelt;\n\n  vec2 push = vec2(drag * 0.16, (n - 0.5) * drag * 0.10);\n\n  vec2 uvB = coverUv(vUv + push,        uBeforeRes, uQuadRes);   \n  vec2 uvA = coverUv(vUv - push * 0.45, uAfterRes,  uQuadRes);   \n\n  vec3 before = texture2D(uBefore, clamp(uvB, 0.0, 1.0)).rgb;\n  vec3 after  = texture2D(uAfter,  clamp(uvA, 0.0, 1.0)).rgb;\n\n  vec3 col = mix(before, after, m);\n\n  /* A whisper of brightness right at the melting front — the wet edge where the two liquids meet.\n     Kept subtle: this is a photo, and a glowing seam would look like a filter. (Added in LINEAR, before\n     the encode below, so it behaves like light and not like a paint overlay.) */\n  col += vec3(1.0, 0.98, 0.96) * band * band * 0.10 * uMelt;\n\n  /* ENCODE — see the header. Everything above is LINEAR light; the screen wants sRGB. This is the exact\n     IEC 61966-2-1 transfer curve (not a lazy pow(1/2.2), which is visibly wrong in the deep shadows). */\n  col = mix(col * 12.92,\n            1.055 * pow(max(col, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,\n            step(vec3(0.0031308), col));\n\n  gl_FragColor = vec4(col, 1.0);\n}";
+var Uv = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uBefore;\nuniform sampler2D uAfter;\nuniform float uProgress;    \nuniform float uTime;        \nuniform vec2  uQuadRes;     \nuniform vec2  uBeforeRes;   \nuniform vec2  uAfterRes;    \nuniform float uMelt;        \nuniform float uWidth;       \n\n/* uMeltAmp — the MASTER \"how liquid is this transition at all\" scalar (Lesson Z).\n   ------------------------------------------------------------\n   Why this exists, and why it is a SEPARATE dial from uMelt: a real client finding. The liquid melt is\n   gorgeous on dark, moody sets — but on LIGHT, high-contrast photographs (an elegant salon reel) the\n   sideways UV displacement smears bright/dark edges into harsh HORIZONTAL STREAKING, and the photos never\n   settle enough to read. The melt is not vibe-agnostic; elegant brands need a calm alternative.\n\n   So uMeltAmp collapses the whole liquid apparatus toward a plain opacity crossfade:\n     • 1.0 = the melt EXACTLY as before — every term below is multiplied by 1.0, a true no-op, so the\n       default is byte-identical and no baseline is disturbed.\n     • 0.0 = a pure cross-DISSOLVE: the blend becomes spatially UNIFORM (every pixel at the same opacity,\n       = uProgress) instead of a wobbling wipe front, the drag displacement is scaled to nothing (no\n       streak), and the wet-edge glow is switched off. Two stills fading through each other, nothing more.\n   uMelt still exists and still tunes the drag WITHIN a melt; uMeltAmp decides whether there is a melt at\n   all. When uMeltAmp is 0 the value of uMelt no longer matters — the crossfade overrides it, by design\n   (we layer a master switch on top; we do not average the two into a muddy third thing). */\nuniform float uMeltAmp;\n\n/* Cheap value noise — enough to make the front organic; a full fbm would be wasted here. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* object-fit: cover, in UV space. Scale the axis with slack, then recentre.\n   The max(.,1.0) on BOTH numerators is the last line of defense (Lesson Z2b): if a degenerate box\n   dimension (a 0-width container caught mid-layout) ever reaches boxRes.x, an unclamped 0 makes\n   boxA = 0 → s.x = boxA/imgA = 0 → the whole x axis collapses to a horizontal-streak smear. Clamping\n   to ≥1 turns that into a merely-wrong crop for the one bad frame instead of a full collapse, and is a\n   true no-op for every real photo/box (all ≥1), so no rendered baseline shifts. */\nvec2 coverUv(vec2 uv, vec2 imgRes, vec2 boxRes) {\n  float imgA = max(imgRes.x, 1.0) / max(imgRes.y, 1.0);\n  float boxA = max(boxRes.x, 1.0) / max(boxRes.y, 1.0);\n  vec2 s = vec2(1.0);\n  if (imgA > boxA) s.x = boxA / imgA;   \n  else             s.y = imgA / boxA;   \n  return (uv - 0.5) * s + 0.5;\n}\n\nvoid main() {\n  /* THE FRONT — a wobbling boundary, not a line. */\n  float n = vnoise(vec2(vUv.y * 3.2, uTime * 0.10)) * 0.5\n          + vnoise(vec2(vUv.y * 8.0 + 4.0, uTime * 0.16)) * 0.25;\n\n  /* Bias the front so progress 0 and 1 are FULLY clean: at the ends the noise must not leave a stray\n     sliver of the other image on screen. Remapping into a slightly over-scanned range does that. */\n  float p = uProgress * (1.0 + uWidth * 2.0) - uWidth;\n  float front = vUv.x + (n - 0.375) * 0.13 - p;\n\n  /* THE BAND — how much of the picture is currently mid-melt (the wobbly wipe mask). */\n  float m = 1.0 - smoothstep(-uWidth, uWidth, front);   \n\n  /* THE MASTER LERP. Blend between a UNIFORM opacity (uProgress everywhere — a crossfade) and the wipe\n     mask m, by uMeltAmp. At uMeltAmp = 1.0 this returns m exactly (mix(a,b,1.0) == b, bit-for-bit), so\n     the melt is untouched; at 0.0 it returns uProgress, a flat cross-dissolve with no spatial front. */\n  float mask = mix(uProgress, m, uMeltAmp);\n\n  /* THE DRAG — strongest inside the band, zero at either end. This is the liquid part: we pull the\n     sampled coordinates sideways (and a little vertically) so the front looks like it is physically\n     pushing the old image out of the way. */\n  float band = 1.0 - abs(front) / max(uWidth, 1e-4);\n  band = clamp(band, 0.0, 1.0);\n  /* uMeltAmp gates the drag too: at 1.0 this is band*band*uMelt unchanged; at 0.0 the drag is zero, so\n     push is zero, so both images are sampled at the same cover-fit UV — a crossfade, no sideways smear. */\n  float drag = band * band * uMelt * uMeltAmp;\n\n  vec2 push = vec2(drag * 0.16, (n - 0.5) * drag * 0.10);\n\n  vec2 uvB = coverUv(vUv + push,        uBeforeRes, uQuadRes);   \n  vec2 uvA = coverUv(vUv - push * 0.45, uAfterRes,  uQuadRes);   \n\n  vec3 before = texture2D(uBefore, clamp(uvB, 0.0, 1.0)).rgb;\n  vec3 after  = texture2D(uAfter,  clamp(uvA, 0.0, 1.0)).rgb;\n\n  vec3 col = mix(before, after, mask);\n\n  /* A whisper of brightness right at the melting front — the wet edge where the two liquids meet.\n     Kept subtle: this is a photo, and a glowing seam would look like a filter. (Added in LINEAR, before\n     the encode below, so it behaves like light and not like a paint overlay.) uMeltAmp switches it off in\n     crossfade mode — there is no front for it to trace, so at 1.0 it is times 1.0 (unchanged), at 0.0 gone. */\n  col += vec3(1.0, 0.98, 0.96) * band * band * 0.10 * uMelt * uMeltAmp;\n\n  /* ENCODE — see the header. Everything above is LINEAR light; the screen wants sRGB. This is the exact\n     IEC 61966-2-1 transfer curve (not a lazy pow(1/2.2), which is visibly wrong in the deep shadows). */\n  col = mix(col * 12.92,\n            1.055 * pow(max(col, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,\n            step(vec3(0.0031308), col));\n\n  gl_FragColor = vec4(col, 1.0);\n}";
 //#endregion
 //#region src/photo-path.js
 function Wv() {
@@ -20187,7 +20187,8 @@ async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 			uBeforeRes: { value: new G(1, 1) },
 			uAfterRes: { value: new G(1, 1) },
 			uMelt: { value: r },
-			uWidth: { value: i }
+			uWidth: { value: i },
+			uMeltAmp: { value: 1 }
 		},
 		depthTest: !1,
 		depthWrite: !1
@@ -20227,10 +20228,10 @@ async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 		return t < c ? 0 : t < c + s ? (t - c) / s : t < c * 2 + s ? 1 : 1 - (t - c * 2 - s) / s;
 	}
 	let F = null, ee = !1, te = null, ne = Jv(e);
-	function I(e) {
-		te === null && (te = e);
-		let t = e - te;
-		_.uniforms.uTime.value = t * .001, M && !E && w(P(t)), _.uniforms.uQuadRes.value.set(m.x, m.y), p.setRenderTarget(null), p.render(h, g);
+	function I(t) {
+		te === null && (te = t);
+		let n = t - te;
+		_.uniforms.uTime.value = n * .001, M && !E && w(P(n)), (m.x < 1 || m.y < 1) && e.clientWidth >= 1 && e.clientHeight >= 1 && f.resize(), m.x >= 1 && m.y >= 1 && _.uniforms.uQuadRes.value.set(m.x, m.y), p.setRenderTarget(null), p.render(h, g);
 	}
 	function re(e) {
 		ee || (F = requestAnimationFrame(re), ne.visible && (f.frameStart(), I(e), f.frameEnd()));
@@ -20258,11 +20259,12 @@ async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 //#endregion
 //#region src/createLookReel.js
 var Zv = (e) => e * e * (3 - 2 * e);
-async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt: i = 1, width: a = .18, maxResident: o = 6, alt: s = "", ariaHidden: c = !0 } = {}) {
+async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt: i = 1, width: a = .18, transition: o = "melt", maxResident: s = 6, alt: c = "", ariaHidden: l = !0 } = {}) {
 	if (!e) throw Error("createLookReel: container is required");
 	if (!Array.isArray(t) || t.length === 0) throw Error("createLookReel: images must be a non-empty array of URLs");
+	let u = o === "crossfade" ? 0 : 1;
 	if (!Wv()) {
-		let n = Kv(e, t[0], s);
+		let n = Kv(e, t[0], c);
 		return e.setAttribute("data-look-reel", "fallback-image"), {
 			update() {},
 			pause() {},
@@ -20280,15 +20282,15 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 			fallback: !0
 		};
 	}
-	let l;
+	let d;
 	try {
-		l = await Qg({
+		d = await Qg({
 			container: e,
 			lean: !0
 		});
 	} catch (n) {
 		console.warn("[createLookReel] WebGL unavailable — showing the first image.", n);
-		let r = Kv(e, t[0], s);
+		let r = Kv(e, t[0], c);
 		return e.setAttribute("data-look-reel", "fallback-image"), {
 			update() {},
 			pause() {},
@@ -20306,31 +20308,31 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 			fallback: !0
 		};
 	}
-	let { renderer: u, drawBuffer: d } = l, f = new ql(), p = t.slice(), m = /* @__PURE__ */ new Map(), h = /* @__PURE__ */ new Set();
-	async function g(e) {
-		if (h.has(e)) return null;
-		if (m.has(e)) return m.get(e);
+	let { renderer: f, drawBuffer: p } = d, m = new ql(), h = t.slice(), g = /* @__PURE__ */ new Map(), _ = /* @__PURE__ */ new Set();
+	async function v(e) {
+		if (_.has(e)) return null;
+		if (g.has(e)) return g.get(e);
 		try {
-			let t = await qv(e, f);
-			return m.set(e, t), v(), t;
+			let t = await qv(e, m);
+			return g.set(e, t), b(), t;
 		} catch {
-			console.warn("[createLookReel] image failed to load; skipping it:", e), h.add(e);
-			let t = p.indexOf(e);
-			return t >= 0 && p.splice(t, 1), null;
+			console.warn("[createLookReel] image failed to load; skipping it:", e), _.add(e);
+			let t = h.indexOf(e);
+			return t >= 0 && h.splice(t, 1), null;
 		}
 	}
-	let _ = /* @__PURE__ */ new Set();
-	function v() {
-		if (!(m.size <= o)) for (let [e, t] of m) {
-			if (m.size <= o) break;
-			_.has(e) || (t.dispose(), m.delete(e));
+	let y = /* @__PURE__ */ new Set();
+	function b() {
+		if (!(g.size <= s)) for (let [e, t] of g) {
+			if (g.size <= s) break;
+			y.has(e) || (t.dispose(), g.delete(e));
 		}
 	}
-	let y = 0, b = null;
-	for (; b === null && p.length;) b = await g(p[0]);
-	if (!b) {
-		console.warn("[createLookReel] no image could be loaded — falling back."), l.dispose?.(), e.innerHTML = "";
-		let n = Kv(e, t[0], s);
+	let x = 0, S = null;
+	for (; S === null && h.length;) S = await v(h[0]);
+	if (!S) {
+		console.warn("[createLookReel] no image could be loaded — falling back."), d.dispose?.(), e.innerHTML = "";
+		let n = Kv(e, t[0], c);
 		return {
 			update() {},
 			pause() {},
@@ -20348,100 +20350,104 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 			fallback: !0
 		};
 	}
-	let x = new Cr(), S = new fu(-1, 1, 1, -1, 0, 1), C = new Qc({
+	let C = new Cr(), w = new fu(-1, 1, 1, -1, 0, 1), T = new Qc({
 		vertexShader: Rg,
 		fragmentShader: Uv,
 		uniforms: {
-			uBefore: { value: b },
-			uAfter: { value: b },
+			uBefore: { value: S },
+			uAfter: { value: S },
 			uProgress: { value: 0 },
 			uTime: { value: 0 },
-			uQuadRes: { value: new G(d.x, d.y) },
-			uBeforeRes: { value: new G(b.image.width, b.image.height) },
-			uAfterRes: { value: new G(b.image.width, b.image.height) },
+			uQuadRes: { value: new G(p.x, p.y) },
+			uBeforeRes: { value: new G(S.image.width, S.image.height) },
+			uAfterRes: { value: new G(S.image.width, S.image.height) },
 			uMelt: { value: i },
-			uWidth: { value: a }
+			uWidth: { value: a },
+			uMeltAmp: { value: u }
 		},
 		depthTest: !1,
 		depthWrite: !1
-	}), w = new jc(2, 2), T = new Q(w, C);
-	T.frustumCulled = !1, x.add(T), c && e.setAttribute("aria-hidden", "true"), e.setAttribute("data-look-reel", "webgl");
-	let E = Gv(), D = "hold", O = 0, k = -1, A = null, j = !1;
-	function M() {
-		if (j || E || p.length < 2) return;
-		let e = p[(y + 1) % p.length];
-		j = !0, g(e).then((t) => {
-			j = !1, t && (k = p.indexOf(e), A = t);
+	}), E = new jc(2, 2), D = new Q(E, T);
+	D.frustumCulled = !1, C.add(D), l && e.setAttribute("aria-hidden", "true"), e.setAttribute("data-look-reel", "webgl");
+	let O = Gv(), k = "hold", A = 0, j = -1, M = null, N = !1;
+	function P() {
+		if (N || O || h.length < 2) return;
+		let e = h[(x + 1) % h.length];
+		N = !0, v(e).then((t) => {
+			N = !1, t && (j = h.indexOf(e), M = t);
 		}).catch(() => {
-			j = !1;
+			N = !1;
 		});
 	}
-	M();
-	let N = Jv(e), P = null, F = !1, ee = !1, te = null;
-	function ne(e) {
-		if (O += e, D === "hold") {
-			if (E || p.length < 2 || O < n) return;
-			if (!A) {
-				M();
+	P();
+	let F = Jv(e), ee = null, te = !1, ne = !1, I = null;
+	function re(e) {
+		if (A += e, k === "hold") {
+			if (O || h.length < 2 || A < n) return;
+			if (!M) {
+				P();
 				return;
 			}
-			_ = new Set([p[y], p[k]]), C.uniforms.uAfter.value = A, C.uniforms.uAfterRes.value.set(A.image.width, A.image.height), D = "melt", O = 0;
+			y = new Set([h[x], h[j]]), T.uniforms.uAfter.value = M, T.uniforms.uAfterRes.value.set(M.image.width, M.image.height), k = "melt", A = 0;
 			return;
 		}
-		let t = Math.min(1, O / r);
-		C.uniforms.uProgress.value = Zv(t), !(t < 1) && (y = k, b = A, A = null, k = -1, C.uniforms.uBefore.value = b, C.uniforms.uBeforeRes.value.set(b.image.width, b.image.height), C.uniforms.uProgress.value = 0, _ = new Set([p[y]]), v(), D = "hold", O = 0, M());
+		let t = Math.min(1, A / r);
+		T.uniforms.uProgress.value = Zv(t), !(t < 1) && (x = j, S = M, M = null, j = -1, T.uniforms.uBefore.value = S, T.uniforms.uBeforeRes.value.set(S.image.width, S.image.height), T.uniforms.uProgress.value = 0, y = new Set([h[x]]), b(), k = "hold", A = 0, P());
 	}
-	function I(e) {
-		let t = te === null ? 0 : e - te;
-		te = e, C.uniforms.uTime.value = e * .001, C.uniforms.uQuadRes.value.set(d.x, d.y), ee || ne(t), u.setRenderTarget(null), u.render(x, S);
+	function ie(t) {
+		let n = I === null ? 0 : t - I;
+		I = t, T.uniforms.uTime.value = t * .001, (p.x < 1 || p.y < 1) && e.clientWidth >= 1 && e.clientHeight >= 1 && d.resize(), p.x >= 1 && p.y >= 1 && T.uniforms.uQuadRes.value.set(p.x, p.y), ne || re(n), f.setRenderTarget(null), f.render(C, w);
 	}
-	function re(e) {
-		if (!F) {
-			if (P = requestAnimationFrame(re), !N.visible) {
-				te = null;
+	function ae(e) {
+		if (!te) {
+			if (ee = requestAnimationFrame(ae), !F.visible) {
+				I = null;
 				return;
 			}
-			l.frameStart(), I(e), l.frameEnd();
+			d.frameStart(), ie(e), d.frameEnd();
 		}
 	}
-	P = requestAnimationFrame(re);
-	let ie = () => l.resize();
-	window.addEventListener("resize", ie, { passive: !0 });
-	function ae() {
+	ee = requestAnimationFrame(ae);
+	let oe = () => d.resize();
+	window.addEventListener("resize", oe, { passive: !0 });
+	function L() {
 		let e = 0;
-		for (let t of m.values()) {
+		for (let t of g.values()) {
 			let n = t.image;
 			n && n.width && (e += n.width * n.height * 4);
 		}
 		return e;
 	}
-	function oe() {
-		F = !0, P !== null && cancelAnimationFrame(P), N.dispose(), window.removeEventListener("resize", ie);
-		for (let e of m.values()) e.dispose();
-		m.clear(), C.dispose(), w.dispose(), x.remove(T), l.dispose?.();
+	function se() {
+		te = !0, ee !== null && cancelAnimationFrame(ee), F.dispose(), window.removeEventListener("resize", oe);
+		for (let e of g.values()) e.dispose();
+		g.clear(), T.dispose(), E.dispose(), C.remove(D), d.dispose?.();
 	}
 	return {
-		update: I,
-		dispose: oe,
+		update: ie,
+		dispose: se,
 		pause() {
-			ee = !0;
+			ne = !0;
 		},
 		resume() {
-			ee = !1;
+			ne = !1;
 		},
 		get index() {
-			return y;
+			return x;
 		},
 		get count() {
-			return p.length;
+			return h.length;
 		},
 		get progress() {
-			return C.uniforms.uProgress.value;
+			return T.uniforms.uProgress.value;
 		},
-		isReducedMotion: () => E,
-		residentCount: () => m.size,
-		vram: ae,
-		canvas: u.domElement,
+		get transition() {
+			return u === 0 ? "crossfade" : "melt";
+		},
+		isReducedMotion: () => O,
+		residentCount: () => g.size,
+		vram: L,
+		canvas: f.domElement,
 		fallback: !1
 	};
 }
