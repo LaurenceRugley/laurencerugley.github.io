@@ -81,7 +81,7 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth iframe { pointer-events: none; }
 
 /* ---------- Selected Work — case studies ---------- */
-.cases { display: grid; gap: 18px; margin-top: 22px; }
+.cases { display: grid; gap: 18px; margin-top: 22px; align-items: start; }
 @media (min-width: 760px) {
   .cases { grid-template-columns: 1fr 1fr; }
   .case-cta { grid-column: 1 / -1; }
