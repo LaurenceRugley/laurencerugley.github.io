@@ -168,6 +168,19 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
 .card-cta-ghost { background: transparent; color: var(--gold-text); }
 .card-cta-ghost:hover, .card-cta-ghost:focus-visible { background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold-text); }
 
+/* ---------- The door (closing band, 2026-07-17) ---------- */
+.c-inner { display: grid; gap: 40px; align-items: start; }
+@media (min-width: 800px) { .c-inner { grid-template-columns: 1.2fr 1fr; align-items: center; } }
+/* Section A/B's index-title + index-dek are centered by default; this
+   band sits copy-beside-form, so left-align just within it. */
+.c-copy .index-title, .c-copy .index-dek { text-align: left; margin-left: 0; max-width: none; }
+.ways { display: grid; gap: 12px; margin-top: 24px; }
+.way { display: flex; align-items: baseline; gap: 14px; font-family: var(--sans); font-size: 14px; color: var(--text); }
+.way-k { flex: none; width: 84px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.way a { color: var(--gold-text); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s var(--ease); }
+.way a:hover, .way a:focus-visible { border-color: var(--gold-text); outline: none; }
+.form-note { text-align: center; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--muted); margin-top: 12px; }
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;

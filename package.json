@@ -1,13 +1,18 @@
 {
   "name": "lgrwebstudios-site",
   "private": true,
-  "description": "Dev tooling only — the shipped site is dependency-free, no build step. These scripts guard promotes.",
+  "type": "module",
+  "description": "Dev tooling only — the shipped site is dependency-free, no build step. These scripts guard promotes. src/worker.js is a scaffold (not deployed) — see wrangler.toml.",
   "scripts": {
     "probe": "node tools/site-probe.mjs",
     "probe:neg": "NEG=1 node tools/site-probe.mjs",
-    "budget": "node tools/size-budget.mjs"
+    "budget": "node tools/size-budget.mjs",
+    "test": "node --test",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "playwright-core": "^1.44.0"
+    "playwright-core": "^1.44.0",
+    "wrangler": "^4.82.2"
   }
 }

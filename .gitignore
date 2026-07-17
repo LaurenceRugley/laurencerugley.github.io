@@ -18,3 +18,6 @@ Thumbs.db
 
 # Node tooling deps (dev only — probe/budget)
 node_modules/
+
+# Wrangler local build cache (worker scaffold, not deployed — see wrangler.toml)
+.wrangler/

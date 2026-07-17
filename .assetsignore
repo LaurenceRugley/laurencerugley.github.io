@@ -1,0 +1,20 @@
+# .assetsignore — Cloudflare Workers Assets exclusions (scaffold, 2026-07-17).
+# [assets] directory in wrangler.toml is the repo root (the static site lives
+# there with no build step) — without this file, deploying would also
+# publish the Worker's own source, tests, config, and tooling as downloadable
+# static files. Gitignore-style syntax.
+
+src/
+tests/
+tools/
+docs/
+template-factory/
+node_modules/
+.git/
+.claude/
+wrangler.toml
+package.json
+package-lock.json
+CLAUDE.md
+.gitignore
+.assetsignore

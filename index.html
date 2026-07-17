@@ -94,7 +94,6 @@
     transition: background-color 0.5s var(--ease), border-color 0.5s var(--ease);
   }
   .form-title { font-family: var(--serif); font-size: 26px; font-weight: 500; text-align: center; margin-bottom: 6px; }
-  .form-sub { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--muted); text-align: center; margin-bottom: 26px; }
   .field { margin-bottom: 16px; }
   .field label {
     display: block; font-family: var(--sans); font-size: 10px; font-weight: 500;
@@ -341,32 +340,37 @@
     </div>
   </section>
 
-  <section class="section" id="start">
-    <div class="band">
-      <h2 class="section-label reveal">Start a project</h2>
-      <div class="form-section reveal">
-        <h3 class="form-title">Tell me about it</h3>
-        <p class="form-sub">A few sentences about what you have in mind.</p>
+  <section class="section c-band" id="start">
+    <div class="band c-inner">
+      <div class="c-copy reveal">
+        <h2 class="section-label">The door, always open</h2>
+        <h3 class="index-title">Fifteen minutes. <em>No pitch deck.</em></h3>
+        <p class="index-dek">You talk, I listen, and you leave with an honest read on what your business needs — whether or not we work together. Fixed quote follows in writing.</p>
+        <div class="ways">
+          <div class="way"><span class="way-k">Email</span> <a href="mailto:hello@lgrwebstudios.com">hello@lgrwebstudios.com</a></div>
+          <div class="way"><span class="way-k">Instagram</span> @lgrwebstudios</div>
+          <div class="way"><span class="way-k">Based in</span> Pasadena, California — happy to meet in person</div>
+        </div>
+      </div>
 
-        <form id="contactForm" action="https://formspree.io/f/xvzlaaoo" method="POST">
+      <div class="form-section reveal">
+        <h3 class="form-title">Or just tell me what you need</h3>
+
+        <form id="contactForm">
           <div class="field">
-            <label for="name">Name <span class="req" aria-hidden="true">*</span></label>
-            <input type="text" id="name" name="name" autocomplete="name" required>
+            <label for="message">What do you need?</label>
+            <textarea id="message" name="message" placeholder="&quot;I'm a stylist and my site doesn't book anyone…&quot;" required></textarea>
           </div>
           <div class="field">
             <label for="email">Email <span class="req" aria-hidden="true">*</span></label>
             <input type="email" id="email" name="email" autocomplete="email" required>
           </div>
-          <div class="field">
-            <label for="message">About your project</label>
-            <textarea id="message" name="message" placeholder="A few sentences is plenty"></textarea>
-          </div>
-          <input type="hidden" name="_subject" value="New project inquiry — LGR Web Studio">
-          <button type="submit" class="submit-btn">Send</button>
+          <button type="submit" class="submit-btn">Send it — I reply within a day</button>
         </form>
+        <p class="form-note">Goes straight to me. No list, no spam, no robots.</p>
 
         <div class="success" id="success">
-          Thank you. <em>I'll be in touch within 24 hours.</em>
+          Thank you. <em>I'll be in touch within a day.</em>
         </div>
       </div>
     </div>
@@ -396,16 +400,20 @@
 </footer>
 
 <script>
+  // Posts to /capture-email (src/worker.js) — a scaffold, NOT deployed yet
+  // (see wrangler.toml). Every submission 404s/fails until the owner
+  // provisions D1 + deploys; the catch/else path below is what a visitor
+  // actually sees until then, so it must stay a working, honest fallback.
   const form = document.getElementById('contactForm');
   const success = document.getElementById('success');
   if (form) form.addEventListener('submit', async function(e) {
     e.preventDefault();
     const data = new FormData(form);
     try {
-      const res = await fetch(form.action, {
+      const res = await fetch('/capture-email', {
         method: 'POST',
-        body: data,
-        headers: { 'Accept': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.get('email'), message: data.get('message') })
       });
       if (res.ok) {
         form.style.display = 'none';

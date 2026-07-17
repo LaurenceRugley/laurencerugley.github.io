@@ -1,0 +1,17 @@
+# wrangler.toml — capture-email Worker (scaffold, 2026-07-17).
+# NOT YET DEPLOYED. database_id below is a PLACEHOLDER — run
+# `wrangler d1 create lgrwebstudios_inquiries` and paste the real id
+# before `wrangler deploy`. See src/worker.js for the route it serves.
+
+name = "lgrwebstudios-site"
+main = "src/worker.js"
+compatibility_date = "2026-07-17"
+
+[assets]
+directory = "./"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lgrwebstudios_inquiries"
+database_id = "PLACEHOLDER-run-wrangler-d1-create-first"
