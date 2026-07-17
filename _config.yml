@@ -1,0 +1,18 @@
+# _config.yml — GitHub Pages build config for the staging site.
+#
+# This repo mixes served site source (index.html, motion.css, fx/, work/,
+# vendor/) with local-only dev tooling that happens to live at the repo root
+# (wrangler.toml, src/worker.js, tests/, package.json). Dotfiles/dot-dirs are
+# already excluded from Jekyll's build by default; these plain files are not,
+# and without this list they'd be servable at their raw paths on the public
+# staging site (https://laurencerugley.github.io/wrangler.toml etc.) — no
+# secrets in them, but not something a client-facing site should be serving.
+# promote.sh's rsync excludes cover the separate production-Worker copy path;
+# this covers GitHub Pages, which reads straight from the repo and has no
+# other exclude mechanism.
+exclude:
+  - wrangler.toml
+  - src
+  - tests
+  - package.json
+  - package-lock.json
