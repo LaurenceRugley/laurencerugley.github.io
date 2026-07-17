@@ -127,6 +127,12 @@ html.lenis, html.lenis body { height: auto; }
 .case-body { margin: 0 0 18px; display: grid; gap: 7px; }
 .case-body dt { font-family: var(--sans); font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--gold-text); }
 .case-body dd { margin: 0 0 5px; font-size: 14px; line-height: 1.5; color: var(--text); }
+/* Testimonial slot — fill with quote text (+ optional <cite>) to publish it;
+   :empty keeps it invisible (and out of the a11y tree) until then, so no
+   markup elsewhere has to change when the quote lands. */
+.case-quote { margin: 0 0 18px; padding-left: 14px; border-left: 2px solid var(--line); font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.5; color: var(--text); }
+.case-quote:empty { display: none; }
+.case-quote cite { display: block; margin-top: 6px; font-family: var(--sans); font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .case-link {
   align-self: flex-start; margin-top: auto;
   font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
