@@ -86,8 +86,8 @@ function metaSanity() {
   }
   const idx = readFileSync(join(ROOT, 'index.html'), 'utf8');
   const workImgs = idx.match(/<img[^>]*src="work\/[^>]*>/gi) || [];
-  ok(workImgs.length === 3, `index: found ${workImgs.length}/3 Work <img>`);
-  ok(workImgs.every((t) => /loading="lazy"/.test(t)), 'index: all 3 Work imgs are loading="lazy"');
+  ok(workImgs.length === 2, `index: found ${workImgs.length}/2 Work <img>`);
+  ok(workImgs.every((t) => /loading="lazy"/.test(t)), `index: all ${workImgs.length} Work imgs are loading="lazy"`);
 }
 
 async function run() {

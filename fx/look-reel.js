@@ -1,7 +1,7 @@
 /* look-reel.js — lazy-mount the "recent work" moment (hero-adjacent, 2026-07-17):
-   three real site screenshots (Also Known As, Savy Colours, Chignon) melting into
-   each other via createLookReel(transition:'crossfade') — the calm, no-streak
-   option for this light, editorial page (see the lab's Lesson Z).
+   real site screenshots melting into each other via
+   createLookReel(transition:'crossfade') — the calm, no-streak option for this
+   light, editorial page (see the lab's Lesson Z).
 
    Lazy: only imports the vendor lib (already fetched + cached by the hero at the
    same ?v=) once the mount nears the viewport, same convention as engine-hero.js
@@ -12,10 +12,16 @@
 */
 
 function boot(mount) {
+  // Collect data-img1, data-img2, ... in order — however many are present.
+  // Not hardcoded to a fixed count, so removing/adding a slide is a markup-
+  // only edit; this file doesn't need to change again for that.
+  const images = [];
+  for (let i = 1; mount.dataset['img' + i]; i++) images.push(mount.dataset['img' + i]);
+
   import('../vendor/lgr-engine-hero.es.js?v=3')
     .then(function (lib) {
       return lib.createLookReel(mount, {
-        images: [mount.dataset.img1, mount.dataset.img2, mount.dataset.img3],
+        images: images,
         holdMs: 2400,
         meltMs: 1400,
         transition: 'crossfade',
