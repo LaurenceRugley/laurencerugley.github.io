@@ -181,6 +181,34 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
 .way a:hover, .way a:focus-visible { border-color: var(--gold-text); outline: none; }
 .form-note { text-align: center; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--muted); margin-top: 12px; }
 
+/* ---------- The human (2026-07-17 addition) ----------
+   Small and warm, not a resume — sized to content like #start, not a
+   full viewport screen. */
+#human { min-height: auto; }
+.human-inner { display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap; }
+.human-photo {
+  flex: none; width: 96px; height: 96px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--gold) 8%, var(--bg));
+  font-family: var(--serif); font-style: italic; font-size: 30px; color: var(--gold-text);
+}
+.human-copy { flex: 1; min-width: 260px; max-width: 56ch; }
+.human-copy .section-label, .human-copy .index-title { text-align: left; margin-left: 0; }
+.human-copy .section-label::after { margin: 12px 0 0; }
+.human-bio { font-family: var(--serif); font-size: 15px; line-height: 1.6; color: var(--text); }
+.human-link {
+  display: inline-block; margin-top: 14px;
+  font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
+  color: var(--gold-text); text-decoration: none;
+  border-bottom: 1px solid transparent; transition: border-color 0.2s var(--ease);
+}
+.human-link:hover, .human-link:focus-visible { border-color: var(--gold-text); outline: none; }
+@media (max-width: 560px) {
+  .human-inner { flex-direction: column; text-align: center; }
+  .human-copy .section-label, .human-copy .index-title { text-align: center; }
+  .human-copy .section-label::after { margin: 12px auto 0; }
+}
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
