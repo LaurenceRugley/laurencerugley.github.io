@@ -183,8 +183,9 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
 
 /* ---------- The human (2026-07-17 addition) ----------
    Small and warm, not a resume — sized to content like #start, not a
-   full viewport screen. */
-#human { min-height: auto; }
+   full viewport screen. (min-height:auto lives with .section's own rule
+   below — this file's .section base rule loads AFTER this block, so an
+   override here would silently lose the cascade; see that comment.) */
 .human-inner { display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap; }
 .human-photo {
   flex: none; width: 96px; height: 96px; border-radius: 50%;
@@ -240,9 +241,11 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
   --bg: #171310; --surface: #201a15; --text: #f4edda;
   --muted: #b5ab97; --line: #332b1f; --gold-text: #B89968;
   background: var(--bg); color: var(--text);
-  text-align: center; min-height: auto;
+  text-align: center;
   padding-top: clamp(64px, 10vw, 110px); padding-bottom: clamp(64px, 10vw, 110px);
 }
+/* min-height:auto lives with .section's own rule below, not here — see
+   that comment for why. */
 .finale .index-title { text-align: center; font-size: clamp(2.2rem, 7vw, 4.5rem); }
 .finale .index-dek { color: var(--muted); margin: 18px auto 0; max-width: 40ch; }
 .mag {
@@ -368,6 +371,14 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
 #start { min-height: auto; }
 /* Recent-work reel: a quick hero-adjacent glance, not another full screen. */
 #recent-work { min-height: auto; padding-top: 48px; padding-bottom: 48px; }
+/* The human + the finale: both "small and warm" by design, not full-viewport
+   screens. Belongs here, not next to their own rule blocks above — .section's
+   min-height:100vh is declared in THIS file after those blocks, so an
+   auto-height override placed earlier silently loses the cascade (equal
+   specificity, source order decides). Confirmed the hard way: both sections
+   were rendering at min-height:100vh with their content flex-centered inside
+   it — not blatantly broken-looking, just quietly not what was asked for. */
+#human, .finale { min-height: auto; }
 .section-label {
   font-family: var(--sans); font-size: 10px; font-weight: 500;
   text-transform: uppercase; letter-spacing: 0.32em; color: var(--gold-text);
