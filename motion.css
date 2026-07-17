@@ -80,72 +80,55 @@ html.lenis, html.lenis body { height: auto; }
 .lenis [data-lenis-prevent-horizontal] { overscroll-behavior: contain; }
 .lenis.lenis-smooth iframe { pointer-events: none; }
 
-/* ---------- Selected Work — case studies ---------- */
-.cases { display: grid; gap: 18px; margin-top: 22px; align-items: start; }
-@media (min-width: 760px) {
-  .cases { grid-template-columns: 1fr 1fr; }
-  .case-cta { grid-column: 1 / -1; }
+/* ---------- Selected Work — compact index (2026-07-17 redesign) ----------
+   Rows, not tall cards: every project leads with the outcome instead of a
+   Problem/Approach/Result breakdown. Ratified direction, see
+   ~/lgr-business/mockups/showcase-explore-v1.html — structure matched,
+   rendered in the site's own serif + spaced-caps tokens (not the mockup's
+   Georgia approximation). */
+.index-title { font-family: var(--serif); font-weight: 500; font-size: clamp(26px, 4vw, 38px); line-height: 1.15; text-align: center; }
+.index-title em { font-style: italic; color: var(--gold-text); }
+.index-dek {
+  font-family: var(--serif); font-style: italic; font-size: clamp(15px, 1.8vw, 17px);
+  color: var(--muted); text-align: center; max-width: 46ch; margin: 10px auto 0;
 }
-.case {
-  display: flex; flex-direction: column;
-  padding: clamp(22px, 3vw, 32px);
-  border: 1px solid var(--line); border-radius: 4px;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  transition: transform 0.35s var(--ease), border-color 0.35s var(--ease);
+.index { border-top: 1px solid var(--line); margin-top: 30px; }
+.row {
+  display: flex; gap: 16px; padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  transition: background-color 0.25s var(--ease);
 }
-.case:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
-/* Case visual — a screenshot (or the live WebGL moment) framed above the copy.
-   Full-bleed to the card's rounded top; a tasteful lift + zoom on hover. */
-.case-media {
-  display: block; position: relative; overflow: hidden;
-  margin: calc(-1 * clamp(22px, 3vw, 32px)) calc(-1 * clamp(22px, 3vw, 32px)) clamp(20px, 2.4vw, 26px);
-  aspect-ratio: 3 / 2; border-bottom: 1px solid var(--line);
-  border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--gold) 8%, var(--bg));
+.row:hover { background: color-mix(in srgb, var(--gold) 6%, transparent); }
+.row-media {
+  flex: none; display: block; width: 76px; height: 50px;
+  border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--gold) 8%, var(--bg));
 }
-.case-media img {
-  width: 100%; height: 100%; object-fit: cover; object-position: top center;
-  display: block; transform: scale(1.001); transition: transform 0.6s var(--ease);
+.row-media img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+.row-body { flex: 1; min-width: 0; }
+.row-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.row-name {
+  font-family: var(--serif); font-weight: 500; font-size: clamp(19px, 2.6vw, 24px);
+  color: var(--text); text-decoration: none;
 }
-.case:hover .case-media img, .case:focus-within .case-media img { transform: scale(1.045); }
-/* "Custom WebGL" badge on the studio's own case card (its hero image shows a
-   live engine scene). */
-.case-media-note {
-  position: absolute; top: 10px; right: 10px; z-index: 2;
-  font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--gold); padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
-  border-radius: 999px; background: rgba(20, 16, 10, 0.4); backdrop-filter: blur(3px); pointer-events: none;
+a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: none; }
+.row-name em { font-style: italic; color: var(--gold-text); font-weight: 400; }
+.row-yr { font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; color: var(--muted); white-space: nowrap; margin-left: auto; }
+.row-meta {
+  display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 6px;
+  font-family: var(--sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
 }
-@media (prefers-reduced-motion: reduce) {
-  .case, .case-media img { transition: none; }
-  .case:hover { transform: none; }
-  .case:hover .case-media img, .case:focus-within .case-media img { transform: none; }
-}
-.case-head { margin-bottom: 12px; }
-.case-title { font-family: var(--serif); font-weight: 500; font-size: clamp(20px, 2.6vw, 26px); }
-.case-tags { font-family: var(--sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 4px; }
-.case-lead { font-family: var(--serif); font-style: italic; font-size: clamp(15px, 1.8vw, 18px); color: var(--text); margin-bottom: 14px; }
-.case-body { margin: 0 0 18px; display: grid; gap: 7px; }
-.case-body dt { font-family: var(--sans); font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--gold-text); }
-.case-body dd { margin: 0 0 5px; font-size: 14px; line-height: 1.5; color: var(--text); }
+.row-outcome { font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.5; color: var(--text); margin-top: 8px; }
+.row-outcome b { font-style: normal; font-weight: 500; color: var(--gold-text); }
 /* Testimonial slot — fill with quote text (+ optional <cite>) to publish it;
    :empty keeps it invisible (and out of the a11y tree) until then, so no
    markup elsewhere has to change when the quote lands. */
-.case-quote { margin: 0 0 18px; padding-left: 14px; border-left: 2px solid var(--line); font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.5; color: var(--text); }
+.case-quote { margin: 12px 0 0; padding-left: 14px; border-left: 2px solid var(--line); font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.5; color: var(--text); }
 .case-quote:empty { display: none; }
 .case-quote cite { display: block; margin-top: 6px; font-family: var(--sans); font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-.case-link {
-  align-self: flex-start; margin-top: auto;
-  font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
-  text-decoration: none; color: var(--gold-text);
-  border-bottom: 1px solid transparent; transition: border-color 0.2s var(--ease);
+@media (max-width: 560px) {
+  .row-media { width: 56px; height: 40px; }
 }
-.case-link:hover, .case-link:focus-visible { border-color: var(--gold-text); outline: none; }
-.case-cta { justify-content: center; background: color-mix(in srgb, var(--gold) 12%, transparent); border-style: dashed; }
-.case-link-primary {
-  padding: 12px 22px; border: 1px solid var(--gold-text); border-radius: 999px;
-  transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
-}
-.case-link-primary:hover, .case-link-primary:focus-visible { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
