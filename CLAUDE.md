@@ -1,5 +1,5 @@
 <!-- LGR-STANDARDS:BEGIN -->
-<!-- Synced from lgr-standards v2.0.0 (CLAUDE.base.md) — do not edit this block by hand.
+<!-- Synced from lgr-standards v2.2.0 (CLAUDE.base.md) — do not edit this block by hand.
      Re-run sync-into-repo.sh to update. -->
 
 # LGR 16-Rule Agent Standard
@@ -17,6 +17,11 @@ IN FULL into context every session — it is never truncated — so extra length
 measurably reduces adherence. When one outgrows the budget, don't just trim: move PROCEDURES into
 skills (they load only when used) and PATH-SPECIFIC content into `.claude/rules/` (loads only when
 relevant). Total always-loaded context is worth watching; it is not a pass/fail gate.
+
+**Command shapes (prompt-fatigue killer):** prefer shell commands the permission engine can
+statically analyze — they auto-allow; unanalyzable shapes ALWAYS prompt the owner. Use `git -C <dir>`
+(never `cd X && git`), `find | xargs` (never `find -exec`), the harness's background runner (never
+inline `&`), and split compound one-liners. Same commands, zero prompts.
 
 ## Code-writing discipline (Karpathy 1–4)
 1. Don't assume. Surface confusion and tradeoffs; ask when a requirement is ambiguous.
