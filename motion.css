@@ -223,6 +223,42 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
   font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
 }
 
+/* ---------- Living marquee + magnetic finale (2026-07-17, v2 "money" piece F) ----------
+   Full-bleed strip, not a .section/.band — matches the mockup's own DOM
+   (a plain div sibling before the finale section, not a scroll-snap stop). */
+.marquee { overflow: hidden; background: var(--gold); padding: 13px 0; }
+.marquee-track { display: inline-flex; white-space: nowrap; animation: marquee-slide 32s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+.marquee-item {
+  font-family: var(--sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink);
+}
+@keyframes marquee-slide { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
+
+.finale {
+  --bg: #171310; --surface: #201a15; --text: #f4edda;
+  --muted: #b5ab97; --line: #332b1f; --gold-text: #B89968;
+  background: var(--bg); color: var(--text);
+  text-align: center; min-height: auto;
+  padding-top: clamp(64px, 10vw, 110px); padding-bottom: clamp(64px, 10vw, 110px);
+}
+.finale .index-title { text-align: center; font-size: clamp(2.2rem, 7vw, 4.5rem); }
+.finale .index-dek { color: var(--muted); margin: 18px auto 0; max-width: 40ch; }
+.mag {
+  display: inline-block; margin-top: 34px;
+  background: var(--gold); color: #1b1508; text-decoration: none;
+  font-family: var(--sans); font-size: 13px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 19px 42px; border-radius: 999px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mag:hover, .mag:focus-visible { box-shadow: 0 12px 40px rgba(176, 138, 79, .45); outline: none; }
+.finale-note {
+  display: block; margin-top: 16px;
+  font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) { .mag { transition: none; } }
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
