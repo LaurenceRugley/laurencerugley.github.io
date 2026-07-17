@@ -130,6 +130,44 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
   .row-media { width: 56px; height: 40px; }
 }
 
+/* ---------- Services x proof (2026-07-17 addition) ----------
+   A deliberate dark band between the light Work index and the light
+   booking band — the light/dark/light editorial rhythm the mockup uses.
+   Locally overrides the same semantic custom properties the site's own
+   [data-theme="dark"] block defines, so every token-driven rule below
+   (section-label, index-title, .card, etc.) just works — no new theme
+   system, no hardcoded colors sprinkled through child rules. */
+#services {
+  --bg: #211B12; --surface: #2C2417; --text: #EDE7D9;
+  --muted: #B7A98E; --line: #3A3022; --gold-text: #B89968;
+  background: var(--bg); color: var(--text);
+  transition: background-color 0.5s var(--ease), color 0.5s var(--ease);
+}
+.offer-cards { margin-top: 30px; align-items: stretch; }
+.offer-card { display: flex; flex-direction: column; gap: 10px; }
+.card-for {
+  font-family: var(--sans); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--gold-text);
+}
+.offer-card h3 { margin-bottom: 0; }
+.offer-card ul { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 8px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.offer-card ul li { padding-left: 16px; position: relative; }
+.offer-card ul li::before { content: "—"; position: absolute; left: 0; color: var(--gold-text); }
+.card-proof {
+  margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--line);
+  font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted);
+}
+.card-cta {
+  display: block; text-align: center; margin-top: 4px;
+  background: var(--gold); color: var(--ink); text-decoration: none;
+  font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 13px; border-radius: 4px; border: 1px solid var(--gold);
+  transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+.card-cta:hover, .card-cta:focus-visible { background: color-mix(in srgb, var(--gold) 80%, white); outline: none; }
+.card-cta-ghost { background: transparent; color: var(--gold-text); }
+.card-cta-ghost:hover, .card-cta-ghost:focus-visible { background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold-text); }
+
 /* ---------- NAV (glass, sticky) ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
