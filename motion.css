@@ -492,10 +492,15 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
   padding: 6px 13px; font-family: var(--sans); font-size: 11px; font-weight: 700;
   letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.85;
 }
-/* Narrow phones: the reg line and stamp are absolutely positioned over a
-   single stacked column here (no side column left to float in) — pin them
-   back into normal flow so they can't overlap a long heading or note. */
-@media (max-width: 560px) {
+/* Below the 2-column conviction breakpoint (820px, single stacked column,
+   no side room to float in): pin the reg line and stamp into normal flow so
+   they can't overlap a heading or note. Polish-wave fix (2026-07-18): this
+   used to only kick in at <=560px, leaving a gap from 561–819px where the
+   layout was already single-column but the stamp/reg were still absolutely
+   positioned — at 768px specifically, "APPROVED TO PRESS" landed right on
+   top of the third margin note's text. Tied to the same 820px threshold as
+   .conviction's own breakpoint above so the two can never disagree again. */
+@media (max-width: 819px) {
   .proof-reg { position: static; display: block; margin-bottom: 18px; }
   .proof-stamp { position: static; display: inline-block; margin-top: 20px; transform: rotate(-4deg); }
 }
