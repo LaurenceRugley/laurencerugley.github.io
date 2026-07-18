@@ -48,6 +48,33 @@
 <meta name="twitter:title" content="LGR Web Studio — custom websites, made by hand · Pasadena">
 <meta name="twitter:description" content="Hand-built websites for salons and service businesses in Pasadena — no templates, no monthly platform fees, booking that goes straight to you.">
 <meta name="twitter:image" content="https://lgrwebstudios.com/og-image.jpg">
+<!-- LocalBusiness structured data — honest fields only, sourced straight from what's already
+     published elsewhere on this page (the #start section's contact/location, the footer email,
+     the Selected Work section's client cities). No invented ratings, hours, phone, or price
+     range: none of those are published anywhere on the site, so none are asserted here. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "LGR Web Studio",
+  "url": "https://lgrwebstudios.com/",
+  "image": "https://lgrwebstudios.com/og-image.jpg",
+  "description": "Hand-built websites for service businesses and product brands, designed and built in-house in Pasadena, California.",
+  "email": "hello@lgrwebstudios.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Pasadena",
+    "addressRegion": "CA",
+    "addressCountry": "US"
+  },
+  "areaServed": ["Pasadena, CA", "Los Angeles, CA"],
+  "founder": {
+    "@type": "Person",
+    "name": "Laurence Rugley"
+  },
+  "sameAs": ["https://www.instagram.com/lgrwebstudios"]
+}
+</script>
 <!-- Self-hosted fonts (woff2, latin) — no third-party request, no render block.
      @font-face lives in motion.css; preload the two above-the-fold faces. -->
 <link rel="preload" as="font" type="font/woff2" href="fonts/cormorant-garamond.woff2" crossorigin>
