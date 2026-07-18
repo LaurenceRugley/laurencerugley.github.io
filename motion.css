@@ -440,6 +440,66 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
 .card p { color: var(--muted); font-size: 15px; }
 @media (max-width: 680px) { .cards { grid-template-columns: 1fr; } }
 
+/* ---------- APPROACH: PROOF SHEET (2026-07-17 Wave 2, G) ----------
+   The paragraph nobody reads, reset as a signed proof: oversized convictions
+   with margin notes, crop marks, and a pressman's stamp. Ratified direction,
+   see ~/lgr-business/mockups/showcase-explore-v3.html — copy kept verbatim;
+   colors moved onto the site's own tokens (the mockup used flat hex on a
+   single light theme; this has to hold up in both light and dark). Mobile:
+   the grid collapses to one column by default (the >=820px rule below is
+   the ADDITION), so margin notes already stack under each conviction. */
+.proof-sheet {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: clamp(28px, 5vw, 56px) clamp(20px, 4vw, 40px) clamp(24px, 4vw, 48px);
+  margin-top: 32px;
+  transition: background-color 0.5s var(--ease), border-color 0.5s var(--ease);
+}
+.proof-sheet::before, .proof-sheet::after {
+  content: ""; position: absolute; width: 18px; height: 18px; border-color: var(--gold); border-style: solid;
+}
+.proof-sheet::before { top: -1px; left: -1px; border-width: 1.5px 0 0 1.5px; }
+.proof-sheet::after { bottom: -1px; right: -1px; border-width: 0 1.5px 1.5px 0; }
+.proof-reg {
+  position: absolute; top: 16px; right: 20px;
+  font-family: var(--sans); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+}
+.conviction {
+  display: grid; grid-template-columns: 1fr; gap: 8px 32px;
+  padding: 28px 0; border-bottom: 1px dashed var(--line); align-items: baseline;
+}
+.conviction:first-of-type { padding-top: 6px; }
+.conviction:last-of-type { border-bottom: 0; padding-bottom: 6px; }
+@media (min-width: 820px) { .conviction { grid-template-columns: 1.6fr 1fr; } }
+.conviction h3 {
+  font-family: var(--serif); font-weight: 500; font-size: clamp(28px, 4.6vw, 48px);
+  line-height: 1.08; letter-spacing: -0.01em; color: var(--text);
+}
+.conviction h3 em { font-style: italic; color: var(--gold-text); }
+.margin-note {
+  position: relative; font-family: var(--serif); font-style: italic; font-size: 15px;
+  color: var(--muted); padding-left: 18px; line-height: 1.5;
+}
+.margin-note::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 2px; background: var(--gold); }
+.margin-note b {
+  display: block; margin-bottom: 4px; font-style: normal; font-family: var(--sans);
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-text);
+}
+.proof-stamp {
+  position: absolute; bottom: 20px; right: 22px; transform: rotate(-7deg);
+  border: 2px solid var(--gold-text); color: var(--gold-text); border-radius: 6px;
+  padding: 6px 13px; font-family: var(--sans); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.85;
+}
+/* Narrow phones: the reg line and stamp are absolutely positioned over a
+   single stacked column here (no side column left to float in) — pin them
+   back into normal flow so they can't overlap a long heading or note. */
+@media (max-width: 560px) {
+  .proof-reg { position: static; display: block; margin-bottom: 18px; }
+  .proof-stamp { position: static; display: inline-block; margin-top: 20px; transform: rotate(-4deg); }
+}
+
 /* ---------- PROCESS STEPS ---------- */
 .steps { list-style: none; max-width: 600px; margin: 0 auto; }
 .step {
@@ -523,6 +583,8 @@ html.js-reveal .reveal.is-visible { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: no-preference) {
   html.js-reveal .cards .card:nth-child(2)        { transition-delay: 90ms; }
   html.js-reveal .cards .card:nth-child(3)        { transition-delay: 180ms; }
+  html.js-reveal .proof-sheet .conviction:nth-of-type(2) { transition-delay: 90ms; }
+  html.js-reveal .proof-sheet .conviction:nth-of-type(3) { transition-delay: 180ms; }
   html.js-reveal .steps .step:nth-child(2)        { transition-delay: 70ms; }
   html.js-reveal .steps .step:nth-child(3)        { transition-delay: 140ms; }
   html.js-reveal .steps .step:nth-child(4)        { transition-delay: 210ms; }
