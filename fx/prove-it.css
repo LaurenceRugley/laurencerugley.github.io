@@ -90,17 +90,39 @@
   padding: 7px 10px; border-radius: 999px; white-space: nowrap;
 }
 
-/* Liquid seam — Wave 2 (I): SVG feTurbulence ribbon laid over the flat
-   handle line. Ripple energy follows drag velocity and settles at rest;
-   ambient shimmer while on-screen — all driven from fx/prove-it.js, which
-   also skips every bit of this under prefers-reduced-motion (the filter's
-   displacement scale then just never leaves 0 — a flat line, same as
-   what reduced-motion users already saw before this wave). */
+/* Liquid seam — Wave 2 (I), widened + strengthened in the Polish wave
+   (2026-07-18) after "too subtle to read as liquid on the live site":
+   an SVG feTurbulence ribbon laid over the flat handle line, ~3.5x wider
+   than the original 26px band so the distortion actually reads at a
+   glance, plus a soft warm CSS glow underneath standing in for the
+   shader melt's "wet edge" (see image-transition.frag in the lab — the
+   design reference named for this pass). Ripple energy follows drag
+   velocity, a gentle idle breathing keeps it visibly alive at rest (never
+   perfectly still), and the glow pulses with the same energy — all driven
+   from fx/prove-it.js, which also skips every bit of this under
+   prefers-reduced-motion (the filter's displacement scale then stays at
+   its static HTML default, no glow opacity ever set — a flat seam, same
+   as what reduced-motion users always saw). Content stays crisp-clipped:
+   this whole layer sits ONLY in the thin seam strip, never over the
+   panels' text (the text-mush lesson from the original createBeforeAfter
+   evaluation — see fx/prove-it.js's header — stands). */
 .prove-seam {
-  position: absolute; top: 0; bottom: 0; left: 50%; width: 26px;
-  transform: translateX(-13px); z-index: 3; pointer-events: none;
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 90px;
+  transform: translateX(-45px); z-index: 3; pointer-events: none;
 }
-.prove-seam svg { width: 100%; height: 100%; display: block; }
+.prove-seam svg { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
+/* The meniscus glow: a soft warm bloom behind the liquid ribbon, standing
+   in for the shader's wet-edge highlight. --seam-glow-a (0–~0.7) is set by
+   fx/prove-it.js each frame; static (never set) under reduced-motion, so
+   this radial gradient just never appears for those users. */
+.prove-seam-glow {
+  position: absolute; inset: -4% -60%; z-index: 0;
+  background: radial-gradient(closest-side,
+    rgba(247, 236, 216, var(--seam-glow-a, 0)) 0%,
+    rgba(184, 153, 104, calc(var(--seam-glow-a, 0) * 0.55)) 45%,
+    transparent 75%);
+  filter: blur(9px);
+}
 
 /* Stat ticker + footnote beneath the slider. */
 .prove-ticker {
