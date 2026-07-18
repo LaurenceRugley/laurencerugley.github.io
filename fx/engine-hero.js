@@ -1,10 +1,27 @@
-/* engine-hero.js — lazy-mount the 4-scene WebGL hero carousel after LCP.
+/* engine-hero.js — lazy-mount the 7-scene WebGL hero carousel after LCP.
    ------------------------------------------------------------------------
-   The hero is a carousel of bespoke shader scenes (Dusk Silk · Constellation ·
-   Aurora · Product Moment) driven by the engine's createHeroDirector, running on
-   the hero-only one-file lib (lgr-engine-hero.es.js, ~216 KB gz — no city, no
-   editor/pilot/cockpit/terrain/catalog/audio/tracer; same createEngineCore + the
-   4 scene packs + createHeroDirector exports as the slim core, 76 KB lighter).
+   The hero is a carousel of bespoke shader scenes driven by the engine's
+   createHeroDirector, running on the hero-only one-file lib
+   (lgr-engine-hero.es.js, ~241 KB gz — no city, no editor/pilot/cockpit/
+   terrain/catalog/audio/tracer; same createEngineCore + the 7 scene packs +
+   createHeroDirector exports as the slim core).
+
+   Polish wave (2026-07-18): re-vendored from the lab's certified dist-lib
+   build (sha256 dee0c68208e9272e07bc70ed8963fa3a62f9595f188e6bb42527045741691192
+   — hash-verified byte-for-byte against the copy in vendor/, the same
+   artifact the template used for Emma) and added the three new scenes —
+   Letterpress (bright), Cathedral Light (dark, warm), First Light (dark,
+   the "minute before sunrise" dawn tone) — into the ring below, alongside
+   the original four (Dusk Silk · Constellation · Aurora · Product Moment).
+
+   SEQUENCE (tonal alternation — see each scene's own tone: field, sourced
+   from the engine's own pack contract, not eyeballed here): only 2 of the
+   7 scenes are 'bright' (Letterpress, Product Moment), so a perfect
+   alternation isn't possible — spread the two bright beats as evenly as
+   the ring allows instead of clumping them, and open on First Light
+   (dawn) rather than mid-cycle so the ring reads as one loose day-cycle:
+   dawn -> bright morning -> dusk -> night -> a bright product beat ->
+   night (aurora) -> a warm dark close, looping back to dawn.
 
    Rules:
    - Never blocks LCP: waits for window 'load', then an IntersectionObserver so the
@@ -17,7 +34,7 @@
 */
 
 function boot(mount) {
-  import('../vendor/lgr-engine-hero.es.js?v=3')
+  import('../vendor/lgr-engine-hero.es.js?v=4')
     .then(async function (lib) {
       // createEngineCore may be sync or async — await handles both.
       const core = await lib.createEngineCore({ container: mount });
@@ -25,12 +42,16 @@ function boot(mount) {
       // Beauty mode (2): full filmic pipeline — HDR beautyRT, bloom, ACES, dither.
       core.setPostMode(2);
 
-      // The 4 bespoke scenes, in ring order.
+      // The 7 bespoke scenes, in ring order — see the header comment above
+      // for the tonal-alternation reasoning behind this sequence.
       const scenes = [
-        lib.createDuskSilk(core),
-        lib.createConstellation(core),
-        lib.createAurora(core),
-        lib.createProductMoment(core),
+        lib.createFirstLight(core),      // dark, dawn
+        lib.createLetterpress(core),     // bright
+        lib.createDuskSilk(core),        // dark
+        lib.createConstellation(core),   // dark
+        lib.createProductMoment(core),   // bright
+        lib.createAurora(core),          // dark
+        lib.createCathedralLight(core),  // dark, warm
       ];
 
       // The director owns the RAF loop, crossfades, dwell timer, visibilitychange

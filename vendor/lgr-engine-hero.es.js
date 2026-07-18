@@ -20105,11 +20105,161 @@ function Hv(e, { sharp: t = 14, deep: n = zv, shallow: r = Bv, caustic: i = Vv }
 	};
 }
 //#endregion
+//#region src/shaders/letterpress.frag
+var Uv = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float     uTime;         \nuniform vec2      uResolution;   \nuniform sampler2D uText;         \nuniform vec2      uTextAspect;   \nuniform float     uTextScale;    \nuniform float     uMaxWidth;     \nuniform vec3      uPaper;        \nuniform vec3      uInk;          \nuniform float     uGrain;        \nuniform float     uInkFill;      \nuniform float     uInkEdge;      \nuniform float     uRelief;       \nuniform float     uSweepAmp;     \nuniform float     uSweepSpeed;   \n\n/* Value noise — the same cheap hash+vnoise the other engine shaders inline (image-transition.frag). A\n   full fbm would be wasted on paper tooth; one octave of value noise is the grain. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* Map a fullscreen uv into the letterform's own texture space, preserving its aspect and centring it.\n   Returns the text-space uv; the caller tests whether it landed inside [0,1] (outside = open sheet). */\nvec2 toTextUv(vec2 uv) {\n  float screenA = uResolution.x / max(uResolution.y, 1.0);\n  float textA   = uTextAspect.x / max(uTextAspect.y, 1.0);\n  /* Height-driven scale, but CONTAINED: at uTextScale of the height the glyph is uTextScale*textA wide in\n     screen-HEIGHT units, i.e. uTextScale*textA/screenA of the WIDTH — which blows past 1.0 on a portrait\n     phone (a huge cropped '&'). Cap the scale so that width stays ≤ uMaxWidth; min() picks the axis that\n     fits. On a wide desktop the cap is slack, so s == uTextScale and the settled desktop frame is unchanged. */\n  float s = min(uTextScale, uMaxWidth * screenA / textA);\n  vec2 c = uv - 0.5;\n  c.x *= screenA;                                   \n  vec2 t;\n  t.y = c.y / s + 0.5;                              \n  t.x = c.x / (s * textA) + 0.5;                    \n  return t;\n}\n\n/* Coverage of the letterform at a text-space uv: 0 on the open sheet (outside the tile), the mask's red\n   channel inside. Sampled several times to build the relief gradient, so it is its own function. */\nfloat cov(vec2 t) {\n  if (t.x < 0.0 || t.x > 1.0 || t.y < 0.0 || t.y > 1.0) return 0.0;\n  return texture2D(uText, t).r;\n}\n\nvoid main() {\n  vec2 t = toTextUv(vUv);\n\n  /* Sample the coverage and its gradient. The step is a small fraction of the tile — big enough to span a\n     couple of baked texels (a soft wall the light can rake), small enough to stay crisp. */\n  float e = 0.0035;\n  float m  = cov(t);\n  float gx = cov(t + vec2(e, 0.0)) - cov(t - vec2(e, 0.0));\n  float gy = cov(t + vec2(0.0, e)) - cov(t - vec2(0.0, e));\n  float edge = clamp(length(vec2(gx, gy)) * 6.0, 0.0, 1.0);   \n\n  /* THE DEBOSS NORMAL. The glyph is pressed IN, so the surface tilts down into it: the gradient (paper→ink)\n     is the outward slope. Flatter uRelief → steeper walls → a deeper-looking press. */\n  vec3 N = normalize(vec3(-gx, -gy, uRelief));\n\n  /* THE RAKING LIGHT. Low azimuth, grazing elevation, azimuth breathing on uTime — the whole point. */\n  float a = uTime * uSweepSpeed;\n  float az = 0.9 + sin(a) * uSweepAmp;              \n  vec3 L = normalize(vec3(cos(az), sin(az), 0.55)); \n  float lit = dot(N, L);                            \n\n  /* THE SHEET. Kraft cream + a whisper of tooth, plus a broad soft gradient that reads as one low lamp\n     washing across the paper from the light's direction (makes the flat areas feel lit, not printed-flat). */\n  float grain = (vnoise(vUv * vec2(220.0, 220.0)) - 0.5) * uGrain;\n  vec3 col = uPaper * (1.0 + grain);\n  float lamp = 0.5 + 0.5 * dot(normalize(vec2(cos(az), sin(az))), (vUv - 0.5));\n  col *= mix(0.94, 1.05, lamp);\n\n  /* INK. A little in the body of the impression (kept low so copy stays legible on top), more concentrated\n     at the bitten edges where real ink pools. */\n  col = mix(col, uInk, clamp(m * uInkFill + edge * uInkEdge, 0.0, 1.0));\n\n  /* THE DEBOSS LIPS. The wall facing the light catches a warm highlight; the far wall drops into shadow.\n     Both live on the edge term (the walls), and both track the sweeping azimuth — this is the breathing. */\n  col += edge * max(lit, 0.0)  * 0.42 * vec3(1.0, 0.985, 0.95);   \n  col -= edge * max(-lit, 0.0) * 0.34 * vec3(1.0, 1.0, 1.0);      \n  col  = max(col, vec3(0.0));\n\n  /* LINEAR out — the post-filmic pass tonemaps (ACES), grades, dithers and sRGB-encodes downstream. */\n  gl_FragColor = vec4(col, 1.0);\n}", Wv = new Y(.91, .84, .71), Gv = new Y(.045, .038, .03), Kv = {
+	tint: new Y(.98, .95, .92),
+	lift: new Y(0, 0, 0),
+	sat: 1,
+	contrast: 1.12
+};
+function qv(e, t, n) {
+	let r = document.createElement("canvas").getContext("2d");
+	r.font = `${n} 820px ${t}`;
+	let i = r.measureText(e), a = i.actualBoundingBoxAscent || 820 * .72, o = i.actualBoundingBoxDescent || 820 * .24, c = (i.actualBoundingBoxLeft || 0) + (i.actualBoundingBoxRight || i.width), l = 820 * .16, u = Math.max(2, Math.ceil(c + l * 2)), d = Math.max(2, Math.ceil(a + o + l * 2)), f = document.createElement("canvas");
+	f.width = u, f.height = d;
+	let p = f.getContext("2d");
+	p.fillStyle = "#000", p.fillRect(0, 0, u, d), p.fillStyle = "#fff", p.textAlign = "center", p.textBaseline = "alphabetic", p.font = `${n} 820px ${t}`, p.fillText(e, u / 2, l + a);
+	let h = new Jo(f);
+	return h.colorSpace = "", h.minFilter = m, h.magFilter = m, h.generateMipmaps = !1, h.wrapS = s, h.wrapT = s, h.needsUpdate = !0, {
+		tex: h,
+		w: u,
+		h: d
+	};
+}
+function Jv(e, { text: t = "&", fontStack: n = "Georgia, \"Times New Roman\", \"Times\", serif", weight: r = 700, textScale: i = .62, maxWidth: a = .82, paper: o = Wv, ink: s = Gv, grain: c = .05, inkFill: l = .3, inkEdge: u = .55, relief: d = .32, sweepAmp: f = .55, sweepSpeed: p = .16, filmic: m = Kv } = {}) {
+	let h = new Cr(), g = new fu(-1, 1, 1, -1, 0, 1), _ = qv(t, n, r), v = {
+		uTime: { value: 0 },
+		uResolution: { value: new G(e.drawBuffer.x, e.drawBuffer.y) },
+		uText: { value: _.tex },
+		uTextAspect: { value: new G(_.w, _.h) },
+		uTextScale: { value: i },
+		uMaxWidth: { value: a },
+		uPaper: { value: new Y().copy(o) },
+		uInk: { value: new Y().copy(s) },
+		uGrain: { value: c },
+		uInkFill: { value: l },
+		uInkEdge: { value: u },
+		uRelief: { value: d },
+		uSweepAmp: { value: f },
+		uSweepSpeed: { value: p }
+	}, y = new Qc({
+		vertexShader: Rg,
+		fragmentShader: Uv,
+		uniforms: v,
+		depthTest: !1,
+		depthWrite: !1
+	}), b = new jc(2, 2), x = new Q(b, y);
+	x.frustumCulled = !1, h.add(x);
+	function S(t, n) {
+		v.uTime.value = n, v.uResolution.value.set(e.drawBuffer.x, e.drawBuffer.y);
+	}
+	function C() {
+		b.dispose(), y.dispose(), _.tex.dispose(), h.remove(x);
+	}
+	return {
+		scene: h,
+		camera: g,
+		update: S,
+		dispose: C,
+		usesBloom: !1,
+		tone: "bright",
+		filmic: m
+	};
+}
+//#endregion
+//#region src/shaders/cathedral-light.frag
+var Yv = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uResolution;   \nuniform vec2  uSource;       \nuniform vec2  uWindow;       \nuniform vec3  uShadow;       \nuniform vec3  uLight;        \nuniform float uRayFreq;      \nuniform float uDensity;      \nuniform float uFalloff;      \nuniform float uDust;         \n\n/* hash + value noise + a little fbm — the inline pattern the other engine shaders use (no shared lib). */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\nfloat fbm(vec2 p) {\n  float v = 0.0, a = 0.5;\n  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.02; a *= 0.5; }\n  return v;\n}\n\nvoid main() {\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n  vec2 auv = vec2(vUv.x * aspect, vUv.y);          \n  vec2 asrc = vec2(uSource.x * aspect, uSource.y);\n  vec2 awin = vec2(uWindow.x * aspect, uWindow.y);\n\n  /* THE RAY BACK TO THE SOURCE. Its angle indexes the shaft noise; its length drives the falloff. */\n  vec2 back = auv - asrc;\n  float dist = length(back);\n  float ang  = atan(back.y, back.x);\n\n  /* SHAFTS — noise on the angle = streaks fanning from the source; the second axis drifts slowly along the\n     beam so the shafts breathe rather than sit frozen. Two octaves at different angular scales = fine rays\n     inside broad ones. */\n  float s1 = fbm(vec2(ang * uRayFreq,        dist * 1.5 - uTime * 0.04));\n  float s2 = fbm(vec2(ang * uRayFreq * 2.7,  dist * 2.5 + uTime * 0.02));\n  float shaftNoise = s1 * 0.7 + s2 * 0.3;\n  float shaft = smoothstep(0.35, 0.95, shaftNoise);\n\n  /* FALLOFF — bright at the window, scattering away into the dark. */\n  float fall = exp(-dist * uFalloff);\n  float beams = shaft * fall * uDensity;\n\n  /* DIRECTIONAL BIAS — this is what makes it CATHEDRAL light and not a sunburst. Favour rays that pour\n     DOWN into the nave; dim the ones firing sideways/up. The back vector points from source to pixel, so a\n     downward shaft has a negative y; -normalize(back).y is 1 straight down, 0 sideways. */\n  float down = clamp(-normalize(back).y, 0.0, 1.0);\n  beams *= mix(0.12, 1.0, smoothstep(0.15, 0.9, down));\n\n  /* THE WINDOW — a warm glow where the light enters. Kept tight + mostly at the frame's top edge (the\n     source sits just above the frame) so it reads as light ENTERING from a high opening, not a sun. */\n  float wd = length(auv - awin);\n  float glow = exp(-wd * wd * 44.0) * 1.7 + exp(-wd * 9.0) * 0.28;\n\n  /* DUST — a few drifting motes, only visible where a shaft lights them. Cheap: hashed cells scrolled down\n     slowly, a soft dot per cell, gated by the local beam intensity so they twinkle inside the light only. */\n  vec2 dcell = auv * 26.0 + vec2(0.0, uTime * 0.5);\n  vec2 gi = floor(dcell), gf = fract(dcell);\n  float h = hash(gi);\n  vec2 motePos = vec2(h, fract(h * 41.7));\n  float mote = smoothstep(0.16, 0.0, length(gf - motePos)) * step(0.82, h);\n  float dust = mote * (beams + glow * 0.2) * uDust;\n\n  /* AMBIENT BOUNCE — a faint warm wash spilling from the opening into the nave. It reads as a lit interior\n     rather than a black void, and (measured) it lifts the frame's MEAN warm enough to keep the scene mean-RGB\n     DISTINCT from the ring's other near-black scenes (Aurora/Observatory) — a downscaled mean is blind to the\n     bright-but-small shafts, so the dark scenes collapse together without this. It stays a WASH, not a fill:\n     strongest near the opening, gone by the lower nave, so the drama (dark below, light above) survives. */\n  float amb = exp(-dist * 0.8) * 0.16 + (1.0 - vUv.y) * 0.02;\n\n  /* COMPOSE (LINEAR). Warm light scaled past 1 in the core so the director's bloom blooms it. */\n  vec3 col = uShadow;\n  col += uLight * (beams * 1.6 + glow + amb);\n  col += uLight * dust * 3.0;\n\n  gl_FragColor = vec4(max(col, 0.0), 1.0);\n}", Xv = new Y(.006, .008, .013), Zv = new Y(1, .66, .34), Qv = {
+	tint: new Y(1, .9, .74),
+	lift: new Y(0, 0, 0),
+	sat: 1.08,
+	contrast: 1.15
+};
+function $v(e, { shadow: t = Xv, light: n = Zv, source: r = new G(.42, 1.34), windowPos: i = new G(.44, 1.02), rayFreq: a = 7, density: o = 1, falloff: s = 1.2, dust: c = 1, filmic: l = Qv } = {}) {
+	let u = new Cr(), d = new fu(-1, 1, 1, -1, 0, 1), f = {
+		uTime: { value: 0 },
+		uResolution: { value: new G(e.drawBuffer.x, e.drawBuffer.y) },
+		uSource: { value: r.clone() },
+		uWindow: { value: i.clone() },
+		uShadow: { value: new Y().copy(t) },
+		uLight: { value: new Y().copy(n) },
+		uRayFreq: { value: a },
+		uDensity: { value: o },
+		uFalloff: { value: s },
+		uDust: { value: c }
+	}, p = new Qc({
+		vertexShader: Rg,
+		fragmentShader: Yv,
+		uniforms: f,
+		depthTest: !1,
+		depthWrite: !1
+	}), m = new jc(2, 2), h = new Q(m, p);
+	h.frustumCulled = !1, u.add(h);
+	function g(t, n) {
+		f.uTime.value = n, f.uResolution.value.set(e.drawBuffer.x, e.drawBuffer.y);
+	}
+	function _() {
+		m.dispose(), p.dispose(), u.remove(h);
+	}
+	return {
+		scene: u,
+		camera: d,
+		update: g,
+		dispose: _,
+		usesBloom: !0,
+		tone: "dark",
+		filmic: l
+	};
+}
+//#endregion
+//#region src/shaders/first-light.frag
+var ey = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uResolution;   \nuniform float uSpeed;        \nuniform float uHorizon;      \nuniform vec3  uNightZenith;  \nuniform vec3  uNightHorizon; \nuniform vec3  uRose;         \nuniform vec3  uGold;         \nuniform vec3  uDayZenith;    \nuniform vec3  uLand;         \n\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\nfloat fbm(vec2 p) {\n  float v = 0.0, a = 0.5;\n  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; }\n  return v;\n}\n\nconst float PI = 3.14159265;\n\nvoid main() {\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n\n  /* THE SCALAR. sin(phase*PI) is 0 at phase 0 and 1 (seamless loop) and 1 at the middle. A gentle power\n     shape holds the blue hour a touch longer and makes the gold peak brief — restraint. */\n  float phase = fract(uTime * uSpeed);\n  float sunH  = pow(sin(phase * PI), 2.2);           \n                                                     \n                                                     \n\n  /* Mood terms derived from the one scalar. Warmth kicks in LATE (only as the limb nears breaking). */\n  float warm  = smoothstep(0.34, 0.95, sunH);        \n  float rise  = smoothstep(0.16, 0.62, sunH);        \n  float sunY  = uHorizon - 0.06 + sunH * 0.20;       \n\n  /* ── SKY ── a vertical gradient, zenith→horizon, warming + lifting with sunH. */\n  float sky = smoothstep(uHorizon, 1.0, vUv.y);       \n  vec3 zenith  = mix(uNightZenith, uDayZenith, sunH * 0.6);\n  vec3 horizonC = mix(uNightHorizon, uRose, rise);\n  horizonC = mix(horizonC, uGold, smoothstep(0.55, 1.0, sunH));\n  vec3 col = mix(horizonC, zenith, pow(sky, 0.8));\n\n  /* A soft warm glow pooled at the horizon where the light comes from — widens + warms as dawn breaks. */\n  float glowBand = exp(-max(vUv.y - uHorizon, 0.0) * mix(9.0, 3.5, warm));\n  col += uGold * glowBand * (0.10 + 0.9 * warm) * (0.4 + 0.6 * rise);\n\n  /* ── STARS ── faint points high in the sky, fading as it brightens. Cheap hashed cells. */\n  float starFade = (1.0 - smoothstep(0.12, 0.5, sunH)) * smoothstep(uHorizon + 0.1, 0.6, vUv.y);\n  vec2 sc = vec2(vUv.x * aspect, vUv.y) * 90.0;\n  vec2 si = floor(sc);\n  float sh = hash(si);\n  float star = step(0.985, sh) * smoothstep(0.09, 0.0, length(fract(sc) - 0.5));\n  float twinkle = 0.6 + 0.4 * sin(uTime * 2.0 + sh * 40.0);\n  col += vec3(0.7, 0.8, 1.0) * star * starFade * twinkle * 0.6;\n\n  /* ── SUN ── a warm disc rising through the horizon; one soft HDR core for the bloom. Aspect-corrected\n     so it stays round. Only contributes near/after the limb break. */\n  vec2 sunP = vec2((vUv.x - 0.5) * aspect, vUv.y - sunY);\n  float sd = length(sunP);\n  float disc = smoothstep(0.045, 0.030, sd);          \n  float halo = exp(-sd * 7.0);                        \n  float reveal = smoothstep(0.18, 0.5, sunH);         \n  col += uGold * halo * 0.7 * reveal;\n  col += vec3(1.5, 1.05, 0.6) * disc * reveal;        \n\n  /* ── HILLS ── a low, minimal rolling silhouette (a couple of smooth undulations + a little noise). NOT\n     dunes: gentle sine swells, not sharp crests. Everything below the profile is the dark land. */\n  float hills = uHorizon\n              + sin(vUv.x * 3.1 + 1.3) * 0.018\n              + sin(vUv.x * 6.7 + 4.0) * 0.010\n              + (fbm(vec2(vUv.x * 4.0, 0.0)) - 0.5) * 0.030;\n  float land = smoothstep(hills + 0.004, hills - 0.004, vUv.y);   \n  vec3 landC = mix(uLand, uLand + uGold * 0.06, warm);            \n  col = mix(col, landC, land);\n\n  /* ── MIST ── a low soft band drifting just above the land; thick + cool in the blue hour, thinning and\n     glowing gold as the light floods. Sits over the ridge line so the land reads as behind it. */\n  float mband = exp(-abs(vUv.y - (uHorizon + 0.03)) * 16.0);\n  float drift = fbm(vec2(vUv.x * 2.2 - uTime * 0.03, uTime * 0.02 + 3.0));\n  float mist  = mband * (0.35 + 0.4 * drift) * mix(0.9, 0.5, warm);\n  vec3 mistC  = mix(mix(uNightHorizon, uRose, rise), uGold, warm * 0.7) + vec3(0.02);\n  col = mix(col, mistC, clamp(mist, 0.0, 0.85));\n\n  gl_FragColor = vec4(max(col, 0.0), 1.0);\n}", ty = new Y(.025, .045, .12), ny = new Y(.09, .15, .3), ry = new Y(.32, .14, .15), iy = new Y(.9, .52, .21), ay = new Y(.14, .22, .36), oy = new Y(.008, .012, .022), sy = {
+	tint: new Y(1, .98, .95),
+	lift: new Y(0, 0, 0),
+	sat: 1,
+	contrast: 1.06
+};
+function cy(e, { speed: t = .02, horizon: n = .3, nightZenith: r = ty, nightHorizon: i = ny, rose: a = ry, gold: o = iy, dayZenith: s = ay, land: c = oy, filmic: l = sy } = {}) {
+	let u = new Cr(), d = new fu(-1, 1, 1, -1, 0, 1), f = {
+		uTime: { value: 0 },
+		uResolution: { value: new G(e.drawBuffer.x, e.drawBuffer.y) },
+		uSpeed: { value: t },
+		uHorizon: { value: n },
+		uNightZenith: { value: new Y().copy(r) },
+		uNightHorizon: { value: new Y().copy(i) },
+		uRose: { value: new Y().copy(a) },
+		uGold: { value: new Y().copy(o) },
+		uDayZenith: { value: new Y().copy(s) },
+		uLand: { value: new Y().copy(c) }
+	}, p = new Qc({
+		vertexShader: Rg,
+		fragmentShader: ey,
+		uniforms: f,
+		depthTest: !1,
+		depthWrite: !1
+	}), m = new jc(2, 2), h = new Q(m, p);
+	h.frustumCulled = !1, u.add(h);
+	function g(t, n) {
+		f.uTime.value = n, f.uResolution.value.set(e.drawBuffer.x, e.drawBuffer.y);
+	}
+	function _() {
+		m.dispose(), p.dispose(), u.remove(h);
+	}
+	return {
+		scene: u,
+		camera: d,
+		update: g,
+		dispose: _,
+		usesBloom: !0,
+		tone: "dark",
+		filmic: l
+	};
+}
+//#endregion
 //#region src/shaders/image-transition.frag
-var Uv = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uBefore;\nuniform sampler2D uAfter;\nuniform float uProgress;    \nuniform float uTime;        \nuniform vec2  uQuadRes;     \nuniform vec2  uBeforeRes;   \nuniform vec2  uAfterRes;    \nuniform float uMelt;        \nuniform float uWidth;       \n\n/* uMeltAmp — the MASTER \"how liquid is this transition at all\" scalar (Lesson Z).\n   ------------------------------------------------------------\n   Why this exists, and why it is a SEPARATE dial from uMelt: a real client finding. The liquid melt is\n   gorgeous on dark, moody sets — but on LIGHT, high-contrast photographs (an elegant salon reel) the\n   sideways UV displacement smears bright/dark edges into harsh HORIZONTAL STREAKING, and the photos never\n   settle enough to read. The melt is not vibe-agnostic; elegant brands need a calm alternative.\n\n   So uMeltAmp collapses the whole liquid apparatus toward a plain opacity crossfade:\n     • 1.0 = the melt EXACTLY as before — every term below is multiplied by 1.0, a true no-op, so the\n       default is byte-identical and no baseline is disturbed.\n     • 0.0 = a pure cross-DISSOLVE: the blend becomes spatially UNIFORM (every pixel at the same opacity,\n       = uProgress) instead of a wobbling wipe front, the drag displacement is scaled to nothing (no\n       streak), and the wet-edge glow is switched off. Two stills fading through each other, nothing more.\n   uMelt still exists and still tunes the drag WITHIN a melt; uMeltAmp decides whether there is a melt at\n   all. When uMeltAmp is 0 the value of uMelt no longer matters — the crossfade overrides it, by design\n   (we layer a master switch on top; we do not average the two into a muddy third thing). */\nuniform float uMeltAmp;\n\n/* Cheap value noise — enough to make the front organic; a full fbm would be wasted here. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* object-fit: cover, in UV space. Scale the axis with slack, then recentre.\n   The max(.,1.0) on BOTH numerators is the last line of defense (Lesson Z2b): if a degenerate box\n   dimension (a 0-width container caught mid-layout) ever reaches boxRes.x, an unclamped 0 makes\n   boxA = 0 → s.x = boxA/imgA = 0 → the whole x axis collapses to a horizontal-streak smear. Clamping\n   to ≥1 turns that into a merely-wrong crop for the one bad frame instead of a full collapse, and is a\n   true no-op for every real photo/box (all ≥1), so no rendered baseline shifts. */\nvec2 coverUv(vec2 uv, vec2 imgRes, vec2 boxRes) {\n  float imgA = max(imgRes.x, 1.0) / max(imgRes.y, 1.0);\n  float boxA = max(boxRes.x, 1.0) / max(boxRes.y, 1.0);\n  vec2 s = vec2(1.0);\n  if (imgA > boxA) s.x = boxA / imgA;   \n  else             s.y = imgA / boxA;   \n  return (uv - 0.5) * s + 0.5;\n}\n\nvoid main() {\n  /* THE FRONT — a wobbling boundary, not a line. */\n  float n = vnoise(vec2(vUv.y * 3.2, uTime * 0.10)) * 0.5\n          + vnoise(vec2(vUv.y * 8.0 + 4.0, uTime * 0.16)) * 0.25;\n\n  /* Bias the front so progress 0 and 1 are FULLY clean: at the ends the noise must not leave a stray\n     sliver of the other image on screen. Remapping into a slightly over-scanned range does that. */\n  float p = uProgress * (1.0 + uWidth * 2.0) - uWidth;\n  float front = vUv.x + (n - 0.375) * 0.13 - p;\n\n  /* THE BAND — how much of the picture is currently mid-melt (the wobbly wipe mask). */\n  float m = 1.0 - smoothstep(-uWidth, uWidth, front);   \n\n  /* THE MASTER LERP. Blend between a UNIFORM opacity (uProgress everywhere — a crossfade) and the wipe\n     mask m, by uMeltAmp. At uMeltAmp = 1.0 this returns m exactly (mix(a,b,1.0) == b, bit-for-bit), so\n     the melt is untouched; at 0.0 it returns uProgress, a flat cross-dissolve with no spatial front. */\n  float mask = mix(uProgress, m, uMeltAmp);\n\n  /* THE DRAG — strongest inside the band, zero at either end. This is the liquid part: we pull the\n     sampled coordinates sideways (and a little vertically) so the front looks like it is physically\n     pushing the old image out of the way. */\n  float band = 1.0 - abs(front) / max(uWidth, 1e-4);\n  band = clamp(band, 0.0, 1.0);\n  /* uMeltAmp gates the drag too: at 1.0 this is band*band*uMelt unchanged; at 0.0 the drag is zero, so\n     push is zero, so both images are sampled at the same cover-fit UV — a crossfade, no sideways smear. */\n  float drag = band * band * uMelt * uMeltAmp;\n\n  vec2 push = vec2(drag * 0.16, (n - 0.5) * drag * 0.10);\n\n  vec2 uvB = coverUv(vUv + push,        uBeforeRes, uQuadRes);   \n  vec2 uvA = coverUv(vUv - push * 0.45, uAfterRes,  uQuadRes);   \n\n  vec3 before = texture2D(uBefore, clamp(uvB, 0.0, 1.0)).rgb;\n  vec3 after  = texture2D(uAfter,  clamp(uvA, 0.0, 1.0)).rgb;\n\n  vec3 col = mix(before, after, mask);\n\n  /* A whisper of brightness right at the melting front — the wet edge where the two liquids meet.\n     Kept subtle: this is a photo, and a glowing seam would look like a filter. (Added in LINEAR, before\n     the encode below, so it behaves like light and not like a paint overlay.) uMeltAmp switches it off in\n     crossfade mode — there is no front for it to trace, so at 1.0 it is times 1.0 (unchanged), at 0.0 gone. */\n  col += vec3(1.0, 0.98, 0.96) * band * band * 0.10 * uMelt * uMeltAmp;\n\n  /* ENCODE — see the header. Everything above is LINEAR light; the screen wants sRGB. This is the exact\n     IEC 61966-2-1 transfer curve (not a lazy pow(1/2.2), which is visibly wrong in the deep shadows). */\n  col = mix(col * 12.92,\n            1.055 * pow(max(col, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,\n            step(vec3(0.0031308), col));\n\n  gl_FragColor = vec4(col, 1.0);\n}";
+var ly = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uBefore;\nuniform sampler2D uAfter;\nuniform float uProgress;    \nuniform float uTime;        \nuniform vec2  uQuadRes;     \nuniform vec2  uBeforeRes;   \nuniform vec2  uAfterRes;    \nuniform float uMelt;        \nuniform float uWidth;       \n\n/* uMeltAmp — the MASTER \"how liquid is this transition at all\" scalar (Lesson Z).\n   ------------------------------------------------------------\n   Why this exists, and why it is a SEPARATE dial from uMelt: a real client finding. The liquid melt is\n   gorgeous on dark, moody sets — but on LIGHT, high-contrast photographs (an elegant salon reel) the\n   sideways UV displacement smears bright/dark edges into harsh HORIZONTAL STREAKING, and the photos never\n   settle enough to read. The melt is not vibe-agnostic; elegant brands need a calm alternative.\n\n   So uMeltAmp collapses the whole liquid apparatus toward a plain opacity crossfade:\n     • 1.0 = the melt EXACTLY as before — every term below is multiplied by 1.0, a true no-op, so the\n       default is byte-identical and no baseline is disturbed.\n     • 0.0 = a pure cross-DISSOLVE: the blend becomes spatially UNIFORM (every pixel at the same opacity,\n       = uProgress) instead of a wobbling wipe front, the drag displacement is scaled to nothing (no\n       streak), and the wet-edge glow is switched off. Two stills fading through each other, nothing more.\n   uMelt still exists and still tunes the drag WITHIN a melt; uMeltAmp decides whether there is a melt at\n   all. When uMeltAmp is 0 the value of uMelt no longer matters — the crossfade overrides it, by design\n   (we layer a master switch on top; we do not average the two into a muddy third thing). */\nuniform float uMeltAmp;\n\n/* Cheap value noise — enough to make the front organic; a full fbm would be wasted here. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* object-fit: cover, in UV space. Scale the axis with slack, then recentre.\n   The max(.,1.0) on BOTH numerators is the last line of defense (Lesson Z2b): if a degenerate box\n   dimension (a 0-width container caught mid-layout) ever reaches boxRes.x, an unclamped 0 makes\n   boxA = 0 → s.x = boxA/imgA = 0 → the whole x axis collapses to a horizontal-streak smear. Clamping\n   to ≥1 turns that into a merely-wrong crop for the one bad frame instead of a full collapse, and is a\n   true no-op for every real photo/box (all ≥1), so no rendered baseline shifts. */\nvec2 coverUv(vec2 uv, vec2 imgRes, vec2 boxRes) {\n  float imgA = max(imgRes.x, 1.0) / max(imgRes.y, 1.0);\n  float boxA = max(boxRes.x, 1.0) / max(boxRes.y, 1.0);\n  vec2 s = vec2(1.0);\n  if (imgA > boxA) s.x = boxA / imgA;   \n  else             s.y = imgA / boxA;   \n  return (uv - 0.5) * s + 0.5;\n}\n\nvoid main() {\n  /* THE FRONT — a wobbling boundary, not a line. */\n  float n = vnoise(vec2(vUv.y * 3.2, uTime * 0.10)) * 0.5\n          + vnoise(vec2(vUv.y * 8.0 + 4.0, uTime * 0.16)) * 0.25;\n\n  /* Bias the front so progress 0 and 1 are FULLY clean: at the ends the noise must not leave a stray\n     sliver of the other image on screen. Remapping into a slightly over-scanned range does that. */\n  float p = uProgress * (1.0 + uWidth * 2.0) - uWidth;\n  float front = vUv.x + (n - 0.375) * 0.13 - p;\n\n  /* THE BAND — how much of the picture is currently mid-melt (the wobbly wipe mask). */\n  float m = 1.0 - smoothstep(-uWidth, uWidth, front);   \n\n  /* THE MASTER LERP. Blend between a UNIFORM opacity (uProgress everywhere — a crossfade) and the wipe\n     mask m, by uMeltAmp. At uMeltAmp = 1.0 this returns m exactly (mix(a,b,1.0) == b, bit-for-bit), so\n     the melt is untouched; at 0.0 it returns uProgress, a flat cross-dissolve with no spatial front. */\n  float mask = mix(uProgress, m, uMeltAmp);\n\n  /* THE DRAG — strongest inside the band, zero at either end. This is the liquid part: we pull the\n     sampled coordinates sideways (and a little vertically) so the front looks like it is physically\n     pushing the old image out of the way. */\n  float band = 1.0 - abs(front) / max(uWidth, 1e-4);\n  band = clamp(band, 0.0, 1.0);\n  /* uMeltAmp gates the drag too: at 1.0 this is band*band*uMelt unchanged; at 0.0 the drag is zero, so\n     push is zero, so both images are sampled at the same cover-fit UV — a crossfade, no sideways smear. */\n  float drag = band * band * uMelt * uMeltAmp;\n\n  vec2 push = vec2(drag * 0.16, (n - 0.5) * drag * 0.10);\n\n  vec2 uvB = coverUv(vUv + push,        uBeforeRes, uQuadRes);   \n  vec2 uvA = coverUv(vUv - push * 0.45, uAfterRes,  uQuadRes);   \n\n  vec3 before = texture2D(uBefore, clamp(uvB, 0.0, 1.0)).rgb;\n  vec3 after  = texture2D(uAfter,  clamp(uvA, 0.0, 1.0)).rgb;\n\n  vec3 col = mix(before, after, mask);\n\n  /* A whisper of brightness right at the melting front — the wet edge where the two liquids meet.\n     Kept subtle: this is a photo, and a glowing seam would look like a filter. (Added in LINEAR, before\n     the encode below, so it behaves like light and not like a paint overlay.) uMeltAmp switches it off in\n     crossfade mode — there is no front for it to trace, so at 1.0 it is times 1.0 (unchanged), at 0.0 gone. */\n  col += vec3(1.0, 0.98, 0.96) * band * band * 0.10 * uMelt * uMeltAmp;\n\n  /* ENCODE — see the header. Everything above is LINEAR light; the screen wants sRGB. This is the exact\n     IEC 61966-2-1 transfer curve (not a lazy pow(1/2.2), which is visibly wrong in the deep shadows). */\n  col = mix(col * 12.92,\n            1.055 * pow(max(col, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,\n            step(vec3(0.0031308), col));\n\n  gl_FragColor = vec4(col, 1.0);\n}";
 //#endregion
 //#region src/photo-path.js
-function Wv() {
+function uy() {
 	try {
 		let e = document.createElement("canvas");
 		return !!(e.getContext("webgl2") || e.getContext("webgl"));
@@ -20117,14 +20267,14 @@ function Wv() {
 		return !1;
 	}
 }
-function Gv() {
+function dy() {
 	return typeof window < "u" && window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : !1;
 }
-function Kv(e, t, n) {
+function fy(e, t, n) {
 	let r = document.createElement("img");
 	return r.src = t, r.alt = n || "", r.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;", e.appendChild(r), e.setAttribute("data-photo-path", "fallback-image"), r;
 }
-function qv(e, t) {
+function py(e, t) {
 	let n = t || new ql();
 	return n.setCrossOrigin("anonymous"), new Promise((t, r) => {
 		n.load(e, (e) => {
@@ -20132,7 +20282,7 @@ function qv(e, t) {
 		}, void 0, r);
 	});
 }
-function Jv(e) {
+function my(e) {
 	let t = !0, n = typeof IntersectionObserver < "u" ? new IntersectionObserver((e) => {
 		t = e.some((e) => e.isIntersecting);
 	}) : null;
@@ -20147,8 +20297,8 @@ function Jv(e) {
 }
 //#endregion
 //#region src/createBeforeAfter.js
-function Yv(e, t, n) {
-	let r = Kv(e, t, n);
+function hy(e, t, n) {
+	let r = fy(e, t, n);
 	return e.setAttribute("data-before-after", "fallback-image"), {
 		setProgress() {},
 		getProgress() {
@@ -20162,22 +20312,22 @@ function Yv(e, t, n) {
 		fallback: !0
 	};
 }
-async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progress: a = 0, mode: o = "pointer", autoMs: s = 4200, holdMs: c = 1400, label: l = "Before and after", alt: u = "", step: d = .05 } = {}) {
+async function gy(e, { before: t, after: n, melt: r = 1, width: i = .18, progress: a = 0, mode: o = "pointer", autoMs: s = 4200, holdMs: c = 1400, label: l = "Before and after", alt: u = "", step: d = .05 } = {}) {
 	if (!e) throw Error("createBeforeAfter: container is required");
 	if (!t || !n) throw Error("createBeforeAfter: before and after image URLs are required");
 	let f;
 	try {
-		if (!Wv()) return Yv(e, n, u);
+		if (!uy()) return hy(e, n, u);
 		f = await Qg({
 			container: e,
 			lean: !0
 		});
 	} catch (t) {
-		return console.warn("[createBeforeAfter] WebGL unavailable — showing the after image.", t), Yv(e, n, u);
+		return console.warn("[createBeforeAfter] WebGL unavailable — showing the after image.", t), hy(e, n, u);
 	}
 	let { renderer: p, drawBuffer: m } = f, h = new Cr(), g = new fu(-1, 1, 1, -1, 0, 1), _ = new Qc({
 		vertexShader: Rg,
-		fragmentShader: Uv,
+		fragmentShader: ly,
 		uniforms: {
 			uBefore: { value: null },
 			uAfter: { value: null },
@@ -20196,9 +20346,9 @@ async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 	y.frustumCulled = !1, h.add(y);
 	let b = new ql(), x, S;
 	try {
-		[x, S] = await Promise.all([qv(t, b), qv(n, b)]);
+		[x, S] = await Promise.all([py(t, b), py(n, b)]);
 	} catch (t) {
-		return console.warn("[createBeforeAfter] an image failed to load — showing the after image.", t), f.dispose?.(), e.innerHTML = "", Yv(e, n, u);
+		return console.warn("[createBeforeAfter] an image failed to load — showing the after image.", t), f.dispose?.(), e.innerHTML = "", hy(e, n, u);
 	}
 	_.uniforms.uBefore.value = x, _.uniforms.uAfter.value = S, _.uniforms.uBeforeRes.value.set(x.image.width, x.image.height), _.uniforms.uAfterRes.value.set(S.image.width, S.image.height), e.setAttribute("role", "slider"), e.setAttribute("tabindex", "0"), e.setAttribute("aria-label", l), e.setAttribute("aria-valuemin", "0"), e.setAttribute("aria-valuemax", "100"), e.setAttribute("data-before-after", "webgl"), e.style.touchAction = "pan-y";
 	let C = Math.min(1, Math.max(0, a));
@@ -20222,12 +20372,12 @@ async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 		(e.key === "ArrowRight" || e.key === "ArrowUp") && (t = C + d), (e.key === "ArrowLeft" || e.key === "ArrowDown") && (t = C - d), e.key === "Home" && (t = 0), e.key === "End" && (t = 1), t !== null && (e.preventDefault(), w(t, !0));
 	};
 	e.addEventListener("keydown", A);
-	let j = Gv(), M = o === "auto" && !j, N = (s + c) * 2;
+	let j = dy(), M = o === "auto" && !j, N = (s + c) * 2;
 	function P(e) {
 		let t = e % N;
 		return t < c ? 0 : t < c + s ? (t - c) / s : t < c * 2 + s ? 1 : 1 - (t - c * 2 - s) / s;
 	}
-	let F = null, ee = !1, te = null, ne = Jv(e);
+	let F = null, ee = !1, te = null, ne = my(e);
 	function I(t) {
 		te === null && (te = t);
 		let n = t - te;
@@ -20258,13 +20408,13 @@ async function Xv(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 }
 //#endregion
 //#region src/createLookReel.js
-var Zv = (e) => e * e * (3 - 2 * e);
-async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt: i = 1, width: a = .18, transition: o = "melt", maxResident: s = 6, alt: c = "", ariaHidden: l = !0 } = {}) {
+var _y = (e) => e * e * (3 - 2 * e);
+async function vy(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt: i = 1, width: a = .18, transition: o = "melt", maxResident: s = 6, alt: c = "", ariaHidden: l = !0 } = {}) {
 	if (!e) throw Error("createLookReel: container is required");
 	if (!Array.isArray(t) || t.length === 0) throw Error("createLookReel: images must be a non-empty array of URLs");
 	let u = o === "crossfade" ? 0 : 1;
-	if (!Wv()) {
-		let n = Kv(e, t[0], c);
+	if (!uy()) {
+		let n = fy(e, t[0], c);
 		return e.setAttribute("data-look-reel", "fallback-image"), {
 			update() {},
 			pause() {},
@@ -20290,7 +20440,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		});
 	} catch (n) {
 		console.warn("[createLookReel] WebGL unavailable — showing the first image.", n);
-		let r = Kv(e, t[0], c);
+		let r = fy(e, t[0], c);
 		return e.setAttribute("data-look-reel", "fallback-image"), {
 			update() {},
 			pause() {},
@@ -20313,7 +20463,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		if (_.has(e)) return null;
 		if (g.has(e)) return g.get(e);
 		try {
-			let t = await qv(e, m);
+			let t = await py(e, m);
 			return g.set(e, t), b(), t;
 		} catch {
 			console.warn("[createLookReel] image failed to load; skipping it:", e), _.add(e);
@@ -20332,7 +20482,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 	for (; S === null && h.length;) S = await v(h[0]);
 	if (!S) {
 		console.warn("[createLookReel] no image could be loaded — falling back."), d.dispose?.(), e.innerHTML = "";
-		let n = Kv(e, t[0], c);
+		let n = fy(e, t[0], c);
 		return {
 			update() {},
 			pause() {},
@@ -20352,7 +20502,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 	}
 	let C = new Cr(), w = new fu(-1, 1, 1, -1, 0, 1), T = new Qc({
 		vertexShader: Rg,
-		fragmentShader: Uv,
+		fragmentShader: ly,
 		uniforms: {
 			uBefore: { value: S },
 			uAfter: { value: S },
@@ -20369,7 +20519,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		depthWrite: !1
 	}), E = new jc(2, 2), D = new Q(E, T);
 	D.frustumCulled = !1, C.add(D), l && e.setAttribute("aria-hidden", "true"), e.setAttribute("data-look-reel", "webgl");
-	let O = Gv(), k = "hold", A = 0, j = -1, M = null, N = !1;
+	let O = dy(), k = "hold", A = 0, j = -1, M = null, N = !1;
 	function P() {
 		if (N || O || h.length < 2) return;
 		let e = h[(x + 1) % h.length];
@@ -20380,7 +20530,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		});
 	}
 	P();
-	let F = Jv(e), ee = null, te = !1, ne = !1, I = null;
+	let F = my(e), ee = null, te = !1, ne = !1, I = null;
 	function re(e) {
 		if (A += e, k === "hold") {
 			if (O || h.length < 2 || A < n) return;
@@ -20392,7 +20542,7 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 			return;
 		}
 		let t = Math.min(1, A / r);
-		T.uniforms.uProgress.value = Zv(t), !(t < 1) && (x = j, S = M, M = null, j = -1, T.uniforms.uBefore.value = S, T.uniforms.uBeforeRes.value.set(S.image.width, S.image.height), T.uniforms.uProgress.value = 0, y = new Set([h[x]]), b(), k = "hold", A = 0, P());
+		T.uniforms.uProgress.value = _y(t), !(t < 1) && (x = j, S = M, M = null, j = -1, T.uniforms.uBefore.value = S, T.uniforms.uBeforeRes.value.set(S.image.width, S.image.height), T.uniforms.uProgress.value = 0, y = new Set([h[x]]), b(), k = "hold", A = 0, P());
 	}
 	function ie(t) {
 		let n = I === null ? 0 : t - I;
@@ -20452,4 +20602,4 @@ async function Qv(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 	};
 }
 //#endregion
-export { kf as THREE, k_ as createAurora, Xv as createBeforeAfter, Hv as createCaustics, S_ as createConstellation, u_ as createDuskSilk, v_ as createEdgeField, Qg as createEngineCore, i_ as createHeroDirector, wv as createLattice, Av as createLiquidMetal, Lv as createLivingInk, Qv as createLookReel, vv as createMaterialStudy, J_ as createObservatory, ov as createPixelMorph, F_ as createProductMoment, Zg as showWebGLUnsupported, Eg as validateSunKeyframes };
+export { kf as THREE, k_ as createAurora, gy as createBeforeAfter, $v as createCathedralLight, Hv as createCaustics, S_ as createConstellation, u_ as createDuskSilk, v_ as createEdgeField, Qg as createEngineCore, cy as createFirstLight, i_ as createHeroDirector, wv as createLattice, Jv as createLetterpress, Av as createLiquidMetal, Lv as createLivingInk, vy as createLookReel, vv as createMaterialStudy, J_ as createObservatory, ov as createPixelMorph, F_ as createProductMoment, Zg as showWebGLUnsupported, Eg as validateSunKeyframes };
