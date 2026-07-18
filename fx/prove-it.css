@@ -17,7 +17,16 @@
   outline-offset: 3px;
 }
 .prove-slider:focus-visible { outline: 2px solid var(--gold-text); }
-@media (max-width: 700px) { .prove-slider { aspect-ratio: 4 / 3; } }
+@media (max-width: 700px) {
+  .prove-slider { aspect-ratio: 4 / 3; }
+  /* Narrow phones: the pane's flex layout doesn't shrink this single-line,
+     right-anchored label below its natural width (flex items default to
+     min-width:auto), so at the default 50% cut the label's own left edge
+     runs past the clip line and reads as truncated ("ELIER · PASADENA")
+     instead of wrapping. Cap it to less than the visible half so it wraps
+     onto two lines and stays clear of the clip at rest. */
+  .prove-lab { max-width: 42%; }
+}
 
 .prove-pane { position: absolute; inset: 0; padding: clamp(20px, 3.5vw, 40px); overflow: hidden; }
 
