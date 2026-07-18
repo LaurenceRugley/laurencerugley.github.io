@@ -500,31 +500,51 @@ a.row-name:hover, a.row-name:focus-visible { color: var(--gold-text); outline: n
   .proof-stamp { position: static; display: inline-block; margin-top: 20px; transform: rotate(-4deg); }
 }
 
-/* ---------- PROCESS STEPS ---------- */
-.steps { list-style: none; max-width: 600px; margin: 0 auto; }
-.step {
-  display: flex; gap: 20px; padding: 22px 4px;
-  border-bottom: 1px solid var(--line); align-items: center;
+/* ---------- PROCESS: PRESS RUN (2026-07-17 Wave 2, H) ----------
+   Night-ground section (forced-dark token override — same pattern as
+   #services/.finale below) — four stations on a vertical rail that fills as
+   you scroll. Ratified direction, see the same v3 mockup; rail-fill JS lives
+   in fx/process-rail.js. Reduced motion: CSS alone renders the rail full and
+   static (see the reduced-motion media query near the end of this file) —
+   the JS file checks the same media query and never attaches its scroll
+   listener, so there is nothing to override that default. */
+#process {
+  --bg: #171310; --surface: #201a15; --text: #f4edda;
+  --muted: #b5ab97; --line: #332b1f; --gold-text: #B89968;
+  background: var(--bg); color: var(--text);
+  transition: background-color 0.5s var(--ease), color 0.5s var(--ease);
 }
-.step:first-child { border-top: 1px solid var(--line); }
-/* Numbered steps as hairline plates (atelier "drawn list" motif). */
-.step-n {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 42px; height: 42px; min-width: 42px;
-  border: 1px solid var(--line); border-radius: 50%;
-  font-family: var(--serif); font-style: italic; font-size: 16px;
-  color: var(--gold-text); transition: border-color 0.3s var(--ease);
+#process .index-dek { max-width: 46ch; }
+.rail { position: relative; max-width: 600px; margin: 40px auto 0; padding-left: 22px; }
+.rail::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.rail-fill { position: absolute; left: 0; top: 8px; width: 2px; background: var(--gold); height: 0%; }
+@media (prefers-reduced-motion: no-preference) { .rail-fill { transition: height 0.3s var(--ease); } }
+.station { position: relative; padding: 26px 0 30px; border-bottom: 1px dashed var(--line); }
+.station:first-child { padding-top: 4px; }
+.station:last-child { border-bottom: 0; padding-bottom: 4px; }
+.station::before {
+  content: ""; position: absolute; left: -22px; top: 30px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--bg); border: 2px solid var(--gold); transform: translateX(-4.5px);
 }
-.step:hover .step-n { border-color: var(--gold); }
-.step h3 { font-family: var(--serif); font-weight: 500; font-size: 21px; margin-bottom: 4px; }
-.step p { color: var(--muted); font-size: 15px; }
+.station-k { font-family: var(--sans); font-size: 10px; letter-spacing: 0.2em; color: var(--gold-text); text-transform: uppercase; }
+.station h4 { font-family: var(--serif); font-weight: 500; font-size: clamp(22px, 3.4vw, 30px); margin: 6px 0 8px; color: var(--text); }
+.station h4 em { font-style: italic; color: var(--gold-text); }
+.station p { color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 34rem; }
+.artifact {
+  display: inline-block; margin-top: 12px; border: 1px solid var(--line); background: var(--surface);
+  border-radius: 999px; padding: 8px 16px; font-family: var(--sans); font-size: 12px; letter-spacing: 0.05em; color: var(--text);
+}
+.artifact b { color: var(--gold-text); font-weight: 700; }
 
 /* ---------- SECTION FRAMING (editorial "spec-sheet" treatment) ----------
    Numbered plate + hairline rule turns each label into an editorial masthead
-   (CSS counters — no HTML change). The barest sections (Process, Work) sit on
-   a faint framed panel with corner registration ticks (a print/atelier motif)
-   so the "cute statements" read as composed, not floating. Additive + fully
-   reversible: delete this block to restore the bare sections. */
+   (CSS counters — no HTML change). The barest section (Work) sits on a faint
+   framed panel with corner registration ticks (a print/atelier motif) so the
+   "cute statements" read as composed, not floating. Additive + fully
+   reversible: delete this block to restore the bare section.
+   (Process dropped out of this shared selector in Wave 2 (H) — its new
+   press-run station design is a full-bleed night-ground section, not a
+   framed panel; see the PROCESS: PRESS RUN block above.) */
 main { counter-reset: sec; }
 .section .section-label { counter-increment: sec; }
 .section .section-label::before {
@@ -536,7 +556,7 @@ main { counter-reset: sec; }
   content: ""; display: block; width: 44px; height: 1px;
   margin: 12px auto 0; background: var(--line);
 }
-#process .band, #work .band {
+#work .band {
   position: relative;
   padding: clamp(28px, 4vw, 52px);
   background: color-mix(in srgb, var(--surface) 50%, transparent);
@@ -544,20 +564,17 @@ main { counter-reset: sec; }
   transition: border-color 0.5s var(--ease);
 }
 @supports not (background: color-mix(in srgb, white 50%, transparent)) {
-  #process .band, #work .band { background: var(--surface); }
+  #work .band { background: var(--surface); }
 }
-#process .band::before, #work .band::before,
-#process .band::after,  #work .band::after {
+#work .band::before, #work .band::after {
   content: ""; position: absolute; width: 9px; height: 9px;
   border: 1px solid var(--gold); pointer-events: none;
   transition: width 0.5s var(--ease), height 0.5s var(--ease);
 }
-#process .band::before, #work .band::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-#process .band::after,  #work .band::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+#work .band::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+#work .band::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
 /* Ticks "ink in" (draw from the corner) as the panel reveals — like a plate
    being registered on a press. Static immediately if no JS / reduced motion. */
-html.js-reveal #process .band:not(.is-visible)::before,
-html.js-reveal #process .band:not(.is-visible)::after,
 html.js-reveal #work .band:not(.is-visible)::before,
 html.js-reveal #work .band:not(.is-visible)::after { width: 0; height: 0; }
 
@@ -585,9 +602,9 @@ html.js-reveal .reveal.is-visible { opacity: 1; transform: none; }
   html.js-reveal .cards .card:nth-child(3)        { transition-delay: 180ms; }
   html.js-reveal .proof-sheet .conviction:nth-of-type(2) { transition-delay: 90ms; }
   html.js-reveal .proof-sheet .conviction:nth-of-type(3) { transition-delay: 180ms; }
-  html.js-reveal .steps .step:nth-child(2)        { transition-delay: 70ms; }
-  html.js-reveal .steps .step:nth-child(3)        { transition-delay: 140ms; }
-  html.js-reveal .steps .step:nth-child(4)        { transition-delay: 210ms; }
+  html.js-reveal .rail .station:nth-of-type(2)    { transition-delay: 70ms; }
+  html.js-reveal .rail .station:nth-of-type(3)    { transition-delay: 140ms; }
+  html.js-reveal .rail .station:nth-of-type(4)    { transition-delay: 210ms; }
   html.js-reveal .work-list li:nth-child(2) .work-item { transition-delay: 90ms; }
 }
 
@@ -635,4 +652,8 @@ html.js-reveal .split.reveal-done .char {
   .scroll-cue::after { animation: none; }
   .scroll-progress { display: none; }
   body, .card, .theme-toggle, .theme-toggle-icon { transition: none; }
+  /* Process rail: full and static — fx/process-rail.js checks this same
+     media query and never attaches its scroll listener, so this is the
+     only thing that sets the rail's height for these users. */
+  .rail-fill { height: 100%; }
 }
