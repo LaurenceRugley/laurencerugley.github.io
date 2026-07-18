@@ -1,0 +1,14 @@
+{
+  "name": "LGR Web Studio",
+  "short_name": "LGR Web Studio",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#211B12",
+  "background_color": "#211B12",
+  "display": "browser"
+}

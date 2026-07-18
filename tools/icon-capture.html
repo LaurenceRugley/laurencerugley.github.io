@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- tools/icon-capture.html — dev-only capture page for the favicon/touch-
+     icon raster set. Renders the SAME 8x8 pixel-mark glyph already inlined
+     as index.html's SVG favicon (gold #B89968 on night #211B12) — not a new
+     mark, just real files at the sizes browsers/OSes actually need instead
+     of only a data-URI SVG. image-rendering:pixelated keeps the pixel-art
+     edges crisp instead of blurring them at raster sizes. Sized via a query
+     string (?px=180) so one page serves all three targets;
+     tools/capture-icons.mjs drives it. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  svg { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+<script>
+  const px = Number(new URLSearchParams(location.search).get('px')) || 512;
+  document.body.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" width="${px}" height="${px}">
+      <rect width="8" height="8" fill="#211B12"/>
+      <g fill="#B89968">
+        <rect x="2" y="1" width="4" height="1"/>
+        <rect x="1" y="2" width="6" height="1"/>
+        <rect x="1" y="3" width="2" height="1"/>
+        <rect x="5" y="3" width="2" height="1"/>
+        <rect x="1" y="4" width="6" height="1"/>
+        <rect x="2" y="5" width="4" height="1"/>
+        <rect x="2" y="6" width="1" height="1"/>
+        <rect x="5" y="6" width="1" height="1"/>
+      </g>
+    </svg>`;
+  window.__iconReady = true;
+</script>
+</body>
+</html>

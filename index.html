@@ -21,8 +21,15 @@
 <link rel="canonical" href="https://lgrwebstudios.com/">
 <meta name="theme-color" content="#EDE7D9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#211B12" media="(prefers-color-scheme: dark)">
-<!-- Favicon: the same pixel mark used in the footer toggle, inlined (no extra request). -->
+<!-- Favicon: the same pixel mark used in the footer toggle, inlined (no extra request) — the
+     modern scalable icon most browsers use directly. The PNG/apple-touch-icon below are that
+     same mark rendered as real raster files (tools/capture-icons.mjs) for the clients that don't
+     resolve an inline SVG data-URI favicon: some link-preview crawlers, older browsers, iOS
+     "Add to Home Screen". Outreach-readiness pass, 2026-07-18 — this used to be SVG-only. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23211B12'/%3E%3Cg fill='%23B89968'%3E%3Crect x='2' y='1' width='4' height='1'/%3E%3Crect x='1' y='2' width='6' height='1'/%3E%3Crect x='1' y='3' width='2' height='1'/%3E%3Crect x='5' y='3' width='2' height='1'/%3E%3Crect x='1' y='4' width='6' height='1'/%3E%3Crect x='2' y='5' width='4' height='1'/%3E%3Crect x='2' y='6' width='1' height='1'/%3E%3Crect x='5' y='6' width='1' height='1'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
 <!-- Social sharing -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="LGR Web Studio — Custom websites, made by hand">
