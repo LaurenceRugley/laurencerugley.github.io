@@ -68,14 +68,49 @@
   font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
 }
 
-/* The gold divider + drag pill at the seam. */
+/* The gold divider + drag pill at the seam. z-index 4, above the liquid
+   seam ribbon (z-index 3, below) so the pill/line stay crisp on top. */
 .prove-handle {
   position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
-  background: #B89968; z-index: 3; pointer-events: none;
+  background: #B89968; z-index: 4; pointer-events: none;
 }
 .prove-handle-pill {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   background: #B89968; color: #2A2218;
   font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
   padding: 7px 10px; border-radius: 999px; white-space: nowrap;
+}
+
+/* Liquid seam — Wave 2 (I): SVG feTurbulence ribbon laid over the flat
+   handle line. Ripple energy follows drag velocity and settles at rest;
+   ambient shimmer while on-screen — all driven from fx/prove-it.js, which
+   also skips every bit of this under prefers-reduced-motion (the filter's
+   displacement scale then just never leaves 0 — a flat line, same as
+   what reduced-motion users already saw before this wave). */
+.prove-seam {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 26px;
+  transform: translateX(-13px); z-index: 3; pointer-events: none;
+}
+.prove-seam svg { width: 100%; height: 100%; display: block; }
+
+/* Stat ticker + footnote beneath the slider. */
+.prove-ticker {
+  display: flex; flex-wrap: wrap; gap: 10px 20px; justify-content: center;
+  margin-top: 22px; font-family: var(--sans);
+}
+.stat {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px;
+  padding: 10px 18px; min-width: 10.5rem; text-align: center;
+  transition: background-color 0.5s var(--ease), border-color 0.5s var(--ease);
+}
+.stat-k { display: block; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.stat-v {
+  display: block; font-size: 18px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; margin-top: 3px;
+}
+@media (prefers-reduced-motion: no-preference) { .stat-v { transition: color 0.2s var(--ease); } }
+.stat-v.flip { color: var(--gold-text); }
+.prove-footnote {
+  margin-top: 14px; text-align: center; font-family: var(--serif); font-style: italic;
+  font-size: 13px; color: var(--muted);
 }

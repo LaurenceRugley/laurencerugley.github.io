@@ -421,9 +421,49 @@
           <p>Hand-built, engine-lit, found on Google — with booking that routes straight to you.</p>
           <span class="prove-btn prove-btn-handbuilt">Book Now</span>
         </div>
+        <div class="prove-seam" aria-hidden="true">
+          <svg viewBox="0 0 26 600" preserveAspectRatio="none">
+            <defs>
+              <filter id="proveLiquid" x="-60%" y="-10%" width="220%" height="120%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="7" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+              </filter>
+            </defs>
+            <rect x="11" y="0" width="4" height="600" fill="#B89968" filter="url(#proveLiquid)"/>
+            <rect x="12.2" y="0" width="1.6" height="600" fill="#EDE7D9" opacity=".35" filter="url(#proveLiquid)"/>
+          </svg>
+        </div>
         <div class="prove-handle" aria-hidden="true"><span class="prove-handle-pill">◂ drag ▸</span></div>
       </div>
       <p class="ba-caption"><span>← their template</span><span>made by hand →</span></p>
+
+      <!-- Stat ticker (Wave 2, I) — every number is measured or cited, never
+           invented:
+           · Page weight — OURS: 0.8 MB, measured 2026-07-17 via
+             `curl --compressed` against every asset the live production page
+             (lgrwebstudios.com) pulls on a real visit: index.html + every
+             eager <link>/<script>, the dynamically-imported hero engine lib,
+             and the four hero/work photos (833,508 bytes total). TYPICAL:
+             2.8 MB — HTTP Archive Web Almanac 2025 median DESKTOP page
+             weight, July 2025 crawl (mobile median was 2.6 MB):
+             https://almanac.httparchive.org/en/2025/page-weight
+           · Monthly tool fees — TYPICAL: $25/mo, Squarespace's cheapest
+             published plan (Basic, monthly billing), squarespace.com/pricing,
+             viewed 2026-07-17. OURS: $0/mo — the static sites we ship carry
+             no recurring platform fee (Savy Colours, a live client site,
+             runs on this today).
+           · Booking — qualitative, no citation needed: a phone-tag intake
+             form vs. a two-tap booking flow.
+           · DROPPED from the v3 mockup: "Found on Google" (page 4 → top
+             result) — not a number honestly measurable/citable for an
+             arbitrary visitor. Three honest chips beat four with one
+             invented one. -->
+      <div class="prove-ticker" id="proveTicker">
+        <span class="stat"><span class="stat-k">Page weight</span><span class="stat-v" data-b="2.8 MB" data-a="0.8 MB">2.8 MB</span></span>
+        <span class="stat"><span class="stat-k">Monthly tool fees</span><span class="stat-v" data-b="$25/mo" data-a="$0">$25/mo</span></span>
+        <span class="stat"><span class="stat-k">Booking</span><span class="stat-v" data-b="phone tag" data-a="two taps">phone tag</span></span>
+      </div>
+      <p class="prove-footnote">Numbers flip as the curtain crosses — never invented. "Typical site" is the industry median (HTTP Archive); tool fees are checked against a real template platform's list price.</p>
     </div>
   </section>
 
