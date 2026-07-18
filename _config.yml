@@ -14,5 +14,6 @@ exclude:
   - wrangler.toml
   - src
   - tests
+  - tools
   - package.json
   - package-lock.json
