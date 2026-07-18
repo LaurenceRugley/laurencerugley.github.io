@@ -31,10 +31,15 @@
      scene with no auto-advance and no RAF (the director handles the policy itself).
    - ONE-THREE rule: everything (incl. THREE) comes from the lib, never a CDN copy.
    - Silent failure: any error leaves the gradient poster in place; console.warn only.
+   - VENDOR IMPORT: always via VENDOR_ENGINE_URL (fx/vendor-engine-url.js), never a
+     hardcoded path+version here — see that file for why (a real double-fetch bug,
+     found live via Lighthouse, was exactly this file and fx/look-reel.js drifting
+     to two different query strings for the same engine file).
 */
+import { VENDOR_ENGINE_URL } from './vendor-engine-url.js';
 
 function boot(mount) {
-  import('../vendor/lgr-engine-hero.es.js?v=4')
+  import(VENDOR_ENGINE_URL)
     .then(async function (lib) {
       // createEngineCore may be sync or async — await handles both.
       const core = await lib.createEngineCore({ container: mount });
