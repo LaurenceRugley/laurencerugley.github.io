@@ -1,0 +1,72 @@
+<!doctype html>
+<!-- tools/og-image-capture.html — dev-only capture page for the homepage's
+     social-card image. NOT part of the shipped site (tools/ is excluded from
+     both Jekyll and promote.sh). Mounts the real hero engine (same boot
+     sequence as fx/engine-hero.js: createEngineCore + setPostMode(2) +
+     createHeroDirector) locked to a single scene — no rotation needed for a
+     still — then overlays the wordmark + tagline using the site's own actual
+     tokens/typography (Cormorant Garamond serif, Inter sans, the real
+     --gold-text/--cream values), not an approximation. Captured at exactly
+     1200x630 by tools/capture-og-image.mjs. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23211B12'/%3E%3C/svg%3E">
+<style>
+  @font-face {
+    font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400 500;
+    font-display: block; src: url('../fonts/cormorant-garamond.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 400;
+    font-display: block; src: url('../fonts/cormorant-garamond-italic.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter'; font-style: normal; font-weight: 300 500;
+    font-display: block; src: url('../fonts/inter.woff2') format('woff2');
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #171310; }
+  #mount { position: absolute; inset: 0; }
+  #mount canvas { display: block; width: 1200px; height: 630px; }
+  .overlay {
+    position: absolute; inset: 0; padding: 56px 64px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-family: 'Inter', -apple-system, sans-serif;
+    pointer-events: none;
+  }
+  .wordmark {
+    font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 27px;
+    letter-spacing: 0.02em; color: #f4edda;
+  }
+  .eyebrow {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.32em;
+    color: #B89968; margin-bottom: 18px;
+  }
+  .headline {
+    font-family: 'Cormorant Garamond', serif; font-weight: 500; line-height: 1.1;
+    font-size: 52px; color: #f4edda;
+  }
+  .headline em { font-style: italic; color: #cda86a; }
+</style>
+</head>
+<body>
+<div id="mount"></div>
+<div class="overlay">
+  <div class="wordmark">LGR Web Studio</div>
+  <div>
+    <div class="eyebrow">A Digital Atelier &middot; Pasadena</div>
+    <div class="headline">Custom websites,<br>made <em>by hand</em>.</div>
+  </div>
+</div>
+<script type="module">
+  const mount = document.getElementById('mount');
+  const lib = await import('../vendor/lgr-engine-hero.es.js?v=4');
+  const core = await lib.createEngineCore({ container: mount });
+  core.setPostMode(2);
+  const scenes = [lib.createFirstLight(core)];
+  lib.createHeroDirector(core, { scenes, dwell: 999999, transitionMs: 0 });
+  window.__ogCaptureReady = true;
+</script>
+</body>
+</html>

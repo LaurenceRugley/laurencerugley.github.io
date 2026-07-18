@@ -30,16 +30,24 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
-<!-- Social sharing -->
+<!-- Social sharing — og:image is a real 1200x630 asset (og-image.jpg): a still of the live
+     First Light hero scene with the site's own actual wordmark/typography composited
+     (tools/og-image-capture.html + tools/capture-og-image.mjs), not a data URI or a generic
+     placeholder. Outreach-readiness pass, 2026-07-18 — this used to point at a stale card image
+     with an outdated (bold-sans) wordmark treatment that no longer matched the live nav. -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="LGR Web Studio — Custom websites, made by hand">
-<meta property="og:description" content="A Digital Atelier in Pasadena. Custom websites with hand-built motion and live WebGL — made by hand for product brands and service businesses.">
+<meta property="og:site_name" content="LGR Web Studio">
+<meta property="og:title" content="LGR Web Studio — custom websites, made by hand · Pasadena">
+<meta property="og:description" content="Hand-built websites for salons and service businesses in Pasadena — no templates, no monthly platform fees, booking that goes straight to you.">
 <meta property="og:url" content="https://lgrwebstudios.com/">
-<meta property="og:image" content="https://lgrwebstudios.com/card-preview-2.png">
+<meta property="og:image" content="https://lgrwebstudios.com/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LGR Web Studio — custom websites, made by hand.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="LGR Web Studio — Custom websites, made by hand">
-<meta name="twitter:description" content="A Digital Atelier in Pasadena. Custom websites with hand-built motion and live WebGL — made by hand for product brands and service businesses.">
-<meta name="twitter:image" content="https://lgrwebstudios.com/card-preview-2.png">
+<meta name="twitter:title" content="LGR Web Studio — custom websites, made by hand · Pasadena">
+<meta name="twitter:description" content="Hand-built websites for salons and service businesses in Pasadena — no templates, no monthly platform fees, booking that goes straight to you.">
+<meta name="twitter:image" content="https://lgrwebstudios.com/og-image.jpg">
 <!-- Self-hosted fonts (woff2, latin) — no third-party request, no render block.
      @font-face lives in motion.css; preload the two above-the-fold faces. -->
 <link rel="preload" as="font" type="font/woff2" href="fonts/cormorant-garamond.woff2" crossorigin>
