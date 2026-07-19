@@ -1,5 +1,5 @@
 /* ============================================================
-   motion.js — LGR Web Studio site motion logic.
+   motion.js — LGR Web Studios site motion logic.
    Pure progressive enhancement. Does NOT touch pixel-mode state;
    the pixel companion runs independently in pixel/pixel.js.
    ============================================================ */

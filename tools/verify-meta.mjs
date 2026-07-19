@@ -32,7 +32,7 @@ try {
 
   // ---------- 1: title + description ----------
   const title = await page.title();
-  ok(title === 'LGR Web Studio — custom websites, made by hand · Pasadena', `title exact match: "${title}"`);
+  ok(title === 'LGR Web Studios — custom websites, made by hand · Pasadena', `title exact match: "${title}"`);
   ok(title.length <= 60, `title length OK for search display (${title.length} chars)`);
   const desc = await page.locator('meta[name="description"]').getAttribute('content');
   ok(!!desc && desc.length > 50 && desc.length <= 160, `meta description present, reasonable length (${desc ? desc.length : 0} chars)`);
@@ -98,7 +98,7 @@ try {
   if (ld) {
     ok(ld['@context'] === 'https://schema.org', 'JSON-LD @context is schema.org');
     ok(ld['@type'] === 'LocalBusiness', 'JSON-LD @type is LocalBusiness');
-    ok(ld.name === 'LGR Web Studio', 'JSON-LD name matches');
+    ok(ld.name === 'LGR Web Studios', 'JSON-LD name matches');
     ok(ld.url === 'https://lgrwebstudios.com/', 'JSON-LD url matches canonical');
     ok(!('aggregateRating' in ld) && !('review' in ld), 'no invented aggregateRating/review fields');
     ok(!('openingHoursSpecification' in ld) && !('openingHours' in ld), 'no invented openingHours fields');
