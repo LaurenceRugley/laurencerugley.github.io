@@ -1,36 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
+<!-- tools/card-preview-capture.html — dev-only capture page for card-preview.png
+     (the og:image/twitter:image used by card.html, start.html, contact.html,
+     and atelier.html). NOT part of the shipped site (tools/ is excluded from
+     both Jekyll and promote.sh). Reuses card.html's own markup/CSS verbatim —
+     this is a static composition (no WebGL engine involved), so unlike
+     og-image-capture.html there's no boot sequence to wait on, just a fixed
+     1200x630 frame with the card centered. Captured by
+     tools/capture-card-preview.mjs. -->
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laurence A. Rugley — LGR Web Studios</title>
-<meta name="description" content="Laurence A. Rugley — Web Developer at LGR Web Studios, A Digital Atelier in Pasadena. Tap to start your project.">
-
-<!-- iMessage / WhatsApp / SMS rich preview -->
-<meta property="og:title" content="Laurence A. Rugley — LGR Web Studios">
-<meta property="og:description" content="A Digital Atelier in Pasadena. Tap to start your site.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://lgrwebstudios.com/card">
-<meta property="og:image" content="https://lgrwebstudios.com/card-preview.png?v=2">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Laurence A. Rugley — LGR Web Studios">
-<meta name="twitter:description" content="A Digital Atelier in Pasadena. Tap to start your site.">
-<meta name="twitter:image" content="https://lgrwebstudios.com/card-preview.png?v=2">
-
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23211B12'/%3E%3C/svg%3E">
 <style>
-  /* Self-hosted fonts (fonts/, root-absolute so they resolve at /card too) —
-     no third-party Google Fonts request. Mirrors index.html's @font-face set. */
   @font-face {
     font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400 500;
-    font-display: swap; src: url('/fonts/cormorant-garamond.woff2') format('woff2');
+    font-display: block; src: url('../fonts/cormorant-garamond.woff2') format('woff2');
   }
   @font-face {
     font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 400;
-    font-display: swap; src: url('/fonts/cormorant-garamond-italic.woff2') format('woff2');
+    font-display: block; src: url('../fonts/cormorant-garamond-italic.woff2') format('woff2');
   }
   @font-face {
     font-family: 'Inter'; font-style: normal; font-weight: 300 500;
-    font-display: swap; src: url('/fonts/inter.woff2') format('woff2');
+    font-display: block; src: url('../fonts/inter.woff2') format('woff2');
   }
   :root {
     --ink: #2A2218;
@@ -42,23 +34,22 @@
     --sans: 'Inter', -apple-system, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { -webkit-font-smoothing: antialiased; }
-  body {
+  html, body {
+    width: 1200px; height: 630px; overflow: hidden;
     background: var(--limestone);
     color: var(--ink);
     font-family: var(--sans);
     font-weight: 300;
     line-height: 1.5;
-    min-height: 100vh;
+  }
+  body {
     display: flex;
-    flex-direction: column;
-    padding: 24px 20px;
+    align-items: center;
+    justify-content: center;
   }
 
   .card {
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
+    width: 420px;
     background: var(--limestone);
     border: 1px solid var(--line);
     padding: 40px 28px 32px;
@@ -68,8 +59,6 @@
       0 12px 36px rgba(42, 34, 24, 0.08);
     position: relative;
   }
-
-  /* Top gold accent line */
   .card::before {
     content: '';
     position: absolute;
@@ -80,7 +69,6 @@
     height: 2px;
     background: var(--gold);
   }
-
   .name {
     font-family: var(--serif);
     font-size: 30px;
@@ -89,7 +77,6 @@
     color: var(--ink);
     margin-bottom: 4px;
   }
-
   .role {
     font-family: var(--serif);
     font-style: italic;
@@ -97,14 +84,12 @@
     color: var(--slate);
     margin-bottom: 18px;
   }
-
   .rule {
     width: 50px;
     height: 1px;
     background: var(--gold);
     margin: 0 auto 24px;
   }
-
   .studio-mark {
     font-family: var(--sans);
     font-size: 10px;
@@ -114,7 +99,6 @@
     color: var(--gold);
     margin-bottom: 8px;
   }
-
   .pitch {
     font-family: var(--serif);
     font-size: 19px;
@@ -124,8 +108,6 @@
     margin-bottom: 32px;
     padding: 0 8px;
   }
-
-  /* CTA — primary tap target */
   .cta {
     display: block;
     width: 100%;
@@ -140,14 +122,7 @@
     letter-spacing: 0.32em;
     text-align: center;
     margin-bottom: 12px;
-    transition: background 0.25s ease, transform 0.15s ease;
-    -webkit-tap-highlight-color: transparent;
   }
-  .cta:active { transform: scale(0.98); background: var(--gold); }
-  @media (hover: hover) {
-    .cta:hover { background: var(--gold); }
-  }
-
   .cta-secondary {
     display: block;
     width: 100%;
@@ -163,15 +138,7 @@
     letter-spacing: 0.28em;
     text-align: center;
     margin-bottom: 12px;
-    transition: border-color 0.25s ease, color 0.25s ease;
-    -webkit-tap-highlight-color: transparent;
   }
-  .cta-secondary:active { border-color: var(--gold); color: var(--gold); }
-  @media (hover: hover) {
-    .cta-secondary:hover { border-color: var(--gold); color: var(--gold); }
-  }
-
-  /* Direct contact links */
   .quick-contact {
     margin-top: 28px;
     padding-top: 20px;
@@ -186,11 +153,7 @@
     color: var(--slate);
     text-decoration: none;
     padding: 6px 0;
-    transition: color 0.2s ease;
   }
-  .quick-contact a:active,
-  .quick-contact a:hover { color: var(--gold); }
-
   .quick-contact .label {
     font-family: var(--sans);
     font-size: 9px;
@@ -199,31 +162,9 @@
     color: var(--gold);
     margin-right: 8px;
   }
-
-  /* Footer */
-  footer {
-    text-align: center;
-    margin-top: 32px;
-    font-family: var(--sans);
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.28em;
-    color: var(--slate);
-  }
-  footer .dot { color: var(--gold); margin: 0 6px; }
-
-  /* Subtle entrance animation */
-  .card {
-    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
 </style>
 </head>
 <body>
-
 <div class="card">
   <div class="name">Laurence A. Rugley</div>
   <div class="role">Web Developer</div>
@@ -232,23 +173,14 @@
   <div class="studio-mark">LGR Web Studios</div>
   <p class="pitch">Custom websites for product brands and service businesses. A digital atelier in Pasadena.</p>
 
-  <a class="cta" href="/#start">Start a Project</a>
-  <a class="cta-secondary" href="/">View Recent Work</a>
+  <a class="cta">Start a Project</a>
+  <a class="cta-secondary">View Recent Work</a>
 
   <div class="quick-contact">
-    <a href="tel:+19097532601"><span class="label">Call</span>(909) 753-2601</a>
-    <a href="sms:+19097532601"><span class="label">Text</span>(909) 753-2601</a>
-    <a href="mailto:lrugley@gmail.com"><span class="label">Email</span>lrugley@gmail.com</a>
+    <a><span class="label">Call</span>(909) 753-2601</a>
+    <a><span class="label">Text</span>(909) 753-2601</a>
+    <a><span class="label">Email</span>lrugley@gmail.com</a>
   </div>
 </div>
-
-<footer>
-  LGR Web Studios
-  <span class="dot">·</span>
-  Pasadena, CA
-  <span class="dot">·</span>
-  EST · MMXXVI
-</footer>
-
 </body>
 </html>

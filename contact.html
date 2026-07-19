@@ -3,23 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laurence A. Rugley — LGR Web Studios</title>
-<meta name="description" content="Laurence A. Rugley — Web Developer at LGR Web Studios, A Digital Atelier in Pasadena. Tap to start your project.">
+<title>Book a free website consult — LGR Web Studios, Pasadena</title>
+<meta name="description" content="Free 15-minute website consult with LGR Web Studios. We'll look at your current site together and tell you exactly what we'd change — no pitch, no obligation.">
 
 <!-- iMessage / WhatsApp / SMS rich preview -->
-<meta property="og:title" content="Laurence A. Rugley — LGR Web Studios">
-<meta property="og:description" content="A Digital Atelier in Pasadena. Tap to start your site.">
+<meta property="og:title" content="Book a free website consult — LGR Web Studios">
+<meta property="og:description" content="We'll look at your current site together and tell you exactly what we'd change — no pitch, no obligation.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://lgrwebstudios.com/card">
+<meta property="og:url" content="https://lgrwebstudios.com/contact">
 <meta property="og:image" content="https://lgrwebstudios.com/card-preview.png?v=2">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Laurence A. Rugley — LGR Web Studios">
-<meta name="twitter:description" content="A Digital Atelier in Pasadena. Tap to start your site.">
+<meta name="twitter:title" content="Book a free website consult — LGR Web Studios">
+<meta name="twitter:description" content="We'll look at your current site together and tell you exactly what we'd change — no pitch, no obligation.">
 <meta name="twitter:image" content="https://lgrwebstudios.com/card-preview.png?v=2">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23211B12'/%3E%3Cg fill='%23B89968'%3E%3Crect x='2' y='1' width='4' height='1'/%3E%3Crect x='1' y='2' width='6' height='1'/%3E%3Crect x='1' y='3' width='2' height='1'/%3E%3Crect x='5' y='3' width='2' height='1'/%3E%3Crect x='1' y='4' width='6' height='1'/%3E%3Crect x='2' y='5' width='4' height='1'/%3E%3Crect x='2' y='6' width='1' height='1'/%3E%3Crect x='5' y='6' width='1' height='1'/%3E%3C/g%3E%3C/svg%3E">
 
 <style>
-  /* Self-hosted fonts (fonts/, root-absolute so they resolve at /card too) —
-     no third-party Google Fonts request. Mirrors index.html's @font-face set. */
+  /* Self-hosted fonts (fonts/, root-absolute so they resolve at /contact too) —
+     no third-party Google Fonts request. Mirrors card.html's @font-face set. */
   @font-face {
     font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400 500;
     font-display: swap; src: url('/fonts/cormorant-garamond.woff2') format('woff2');
@@ -67,6 +68,11 @@
       0 1px 3px rgba(42, 34, 24, 0.04),
       0 12px 36px rgba(42, 34, 24, 0.08);
     position: relative;
+    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   /* Top gold accent line */
@@ -81,30 +87,6 @@
     background: var(--gold);
   }
 
-  .name {
-    font-family: var(--serif);
-    font-size: 30px;
-    font-weight: 500;
-    letter-spacing: 0.005em;
-    color: var(--ink);
-    margin-bottom: 4px;
-  }
-
-  .role {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 16px;
-    color: var(--slate);
-    margin-bottom: 18px;
-  }
-
-  .rule {
-    width: 50px;
-    height: 1px;
-    background: var(--gold);
-    margin: 0 auto 24px;
-  }
-
   .studio-mark {
     font-family: var(--sans);
     font-size: 10px;
@@ -112,17 +94,24 @@
     text-transform: uppercase;
     letter-spacing: 0.32em;
     color: var(--gold);
-    margin-bottom: 8px;
+    margin-bottom: 18px;
   }
 
-  .pitch {
+  .h1 {
     font-family: var(--serif);
-    font-size: 19px;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+
+  .lead {
+    font-family: var(--serif);
     font-style: italic;
-    line-height: 1.4;
-    color: var(--ink);
+    font-size: 17px;
+    color: var(--slate);
     margin-bottom: 32px;
-    padding: 0 8px;
+    padding: 0 4px;
   }
 
   /* CTA — primary tap target */
@@ -139,13 +128,40 @@
     text-transform: uppercase;
     letter-spacing: 0.32em;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     transition: background 0.25s ease, transform 0.15s ease;
     -webkit-tap-highlight-color: transparent;
   }
   .cta:active { transform: scale(0.98); background: var(--gold); }
   @media (hover: hover) {
     .cta:hover { background: var(--gold); }
+  }
+
+  /* Plain selectable email — IG's in-app webview can swallow mailto: taps,
+     so the address also has to exist as ordinary copyable text, not just
+     inside a link. user-select: all makes one tap/click select the whole
+     address instead of a single word. */
+  .mail-plain {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 10px 14px;
+    margin-bottom: 24px;
+    user-select: all;
+    -webkit-user-select: all;
+    word-break: break-all;
+  }
+  .mail-plain-label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    color: var(--slate);
+    margin-bottom: 20px;
   }
 
   .cta-secondary {
@@ -162,42 +178,12 @@
     text-transform: uppercase;
     letter-spacing: 0.28em;
     text-align: center;
-    margin-bottom: 12px;
     transition: border-color 0.25s ease, color 0.25s ease;
     -webkit-tap-highlight-color: transparent;
   }
   .cta-secondary:active { border-color: var(--gold); color: var(--gold); }
   @media (hover: hover) {
     .cta-secondary:hover { border-color: var(--gold); color: var(--gold); }
-  }
-
-  /* Direct contact links */
-  .quick-contact {
-    margin-top: 28px;
-    padding-top: 20px;
-    border-top: 1px solid var(--line);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .quick-contact a {
-    font-family: var(--sans);
-    font-size: 13px;
-    color: var(--slate);
-    text-decoration: none;
-    padding: 6px 0;
-    transition: color 0.2s ease;
-  }
-  .quick-contact a:active,
-  .quick-contact a:hover { color: var(--gold); }
-
-  .quick-contact .label {
-    font-family: var(--sans);
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.28em;
-    color: var(--gold);
-    margin-right: 8px;
   }
 
   /* Footer */
@@ -211,35 +197,24 @@
     color: var(--slate);
   }
   footer .dot { color: var(--gold); margin: 0 6px; }
-
-  /* Subtle entrance animation */
-  .card {
-    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  footer a { color: var(--slate); text-decoration: none; }
+  footer a:hover, footer a:active { color: var(--gold); }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <div class="name">Laurence A. Rugley</div>
-  <div class="role">Web Developer</div>
-  <div class="rule"></div>
-
   <div class="studio-mark">LGR Web Studios</div>
-  <p class="pitch">Custom websites for product brands and service businesses. A digital atelier in Pasadena.</p>
 
-  <a class="cta" href="/#start">Start a Project</a>
-  <a class="cta-secondary" href="/">View Recent Work</a>
+  <h1 class="h1">Book a free 15-min consult</h1>
+  <p class="lead">We'll look at your current site together and tell you exactly what we'd change — no pitch, no obligation.</p>
 
-  <div class="quick-contact">
-    <a href="tel:+19097532601"><span class="label">Call</span>(909) 753-2601</a>
-    <a href="sms:+19097532601"><span class="label">Text</span>(909) 753-2601</a>
-    <a href="mailto:lrugley@gmail.com"><span class="label">Email</span>lrugley@gmail.com</a>
-  </div>
+  <a class="cta" href="mailto:hello@lgrwebstudios.com?subject=Free%2015-min%20consult">Email us</a>
+
+  <span class="mail-plain-label">Or copy the address directly</span>
+  <p class="mail-plain">hello@lgrwebstudios.com</p>
+
+  <a class="cta-secondary" href="https://www.instagram.com/lgrwebstudios" target="_blank" rel="noopener">Instagram @lgrwebstudios</a>
 </div>
 
 <footer>
@@ -247,7 +222,7 @@
   <span class="dot">·</span>
   Pasadena, CA
   <span class="dot">·</span>
-  EST · MMXXVI
+  <a href="/atelier">How we build</a>
 </footer>
 
 </body>
