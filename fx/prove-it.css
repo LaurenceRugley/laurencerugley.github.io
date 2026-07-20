@@ -145,7 +145,16 @@
 }
 .prove-slider.is-dragging .prove-handle,
 .prove-slider.is-sweeping .prove-handle {
-  animation-play-state: paused;
+  /* animation: none (not animation-play-state: paused) — a paused CSS
+     animation freezes at whatever value the keyframe happened to be mid-
+     breath, and an animated property always wins over a plain opacity
+     declaration in the same rule regardless of specificity, so opacity:1
+     below would otherwise lose to e.g. opacity:0.74 frozen mid-pulse.
+     Removing the animation outright lets the static opacity apply cleanly
+     — also a more deliberate "solid" feedback state than an arbitrary
+     paused mid-tone, and resuming after (animation re-added) restarts the
+     breathe fresh rather than resuming an odd phase. */
+  animation: none;
   opacity: 1;
 }
 .prove-handle-pill {

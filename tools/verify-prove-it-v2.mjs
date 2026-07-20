@@ -58,9 +58,13 @@ try {
   const startX = box.x + box.width * 0.5;
   await page.mouse.move(startX, midY);
   await page.mouse.down();
-  const playStateDuringDrag = await page.locator('.prove-handle').evaluate((el) => getComputedStyle(el).animationPlayState);
+  // animation: none (not animation-play-state: paused) is the actual
+  // mechanism — see prove-it.css's comment on .is-dragging/.is-sweeping for
+  // why a merely-paused animation would freeze at whatever opacity the
+  // keyframe was mid-breath and win over a plain opacity:1 override.
+  const animNameDuringDrag = await page.locator('.prove-handle').evaluate((el) => getComputedStyle(el).animationName);
   const opacityDuringDrag = await page.locator('.prove-handle').evaluate((el) => parseFloat(getComputedStyle(el).opacity));
-  ok(playStateDuringDrag === 'paused', `pulse animation-play-state is "paused" while dragging (found "${playStateDuringDrag}")`);
+  ok(animNameDuringDrag === 'none', `pulse animation fully disabled (not just paused) while dragging (found "${animNameDuringDrag}")`);
   ok(opacityDuringDrag >= 0.99, `divider forced fully opaque while dragging (found ${opacityDuringDrag})`);
 
   // ---------- motion ramp: drag past 0.6 reveal fraction (pct < 40) ----------
