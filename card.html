@@ -106,6 +106,7 @@
   }
 
   .studio-mark {
+    display: inline-block;
     font-family: var(--sans);
     font-size: 10px;
     font-weight: 500;
@@ -113,7 +114,11 @@
     letter-spacing: 0.32em;
     color: var(--gold);
     margin-bottom: 8px;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
   }
+  .studio-mark:hover, .studio-mark:focus-visible { border-color: var(--gold); outline: none; }
 
   .pitch {
     font-family: var(--serif);
@@ -235,7 +240,7 @@
   <div class="role">Web Developer</div>
   <div class="rule"></div>
 
-  <div class="studio-mark">LGR Web Studios</div>
+  <a class="studio-mark" href="/" aria-label="LGR Web Studios — back to the homepage">LGR Web Studios</a>
   <p class="pitch">Custom websites for product brands and service businesses. A digital atelier in Pasadena.</p>
 
   <a class="cta" href="/#start">Start a Project</a>
