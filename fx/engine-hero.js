@@ -7,12 +7,16 @@
    createHeroDirector exports as the slim core).
 
    Polish wave (2026-07-18): re-vendored from the lab's certified dist-lib
-   build (sha256 dee0c68208e9272e07bc70ed8963fa3a62f9595f188e6bb42527045741691192
-   — hash-verified byte-for-byte against the copy in vendor/, the same
-   artifact the template used for Emma) and added the three new scenes —
-   Letterpress (bright), Cathedral Light (dark, warm), First Light (dark,
-   the "minute before sunrise" dawn tone) — into the ring below, alongside
-   the original four (Dusk Silk · Constellation · Aurora · Product Moment).
+   build and added the three new scenes — Letterpress (bright), Cathedral
+   Light (dark, warm), First Light (dark, the "minute before sunrise" dawn
+   tone) — into the ring below, alongside the original four (Dusk Silk ·
+   Constellation · Aurora · Product Moment).
+
+   Re-vendored again 2026-07-21 (sha256 758eafe5775da76058eddd4a1702d04c1bb5e27904591fb1f9eea99c3ec18169,
+   md5-matched against the lab's current dist-lib — see tools/size-budget.mjs's
+   own drift check; the lab rebuilt mid-session, so this was re-copied a
+   second time to stay current) for the new createFirstLight starBrightness
+   pack option.
 
    SEQUENCE (tonal alternation — see each scene's own tone: field, sourced
    from the engine's own pack contract, not eyeballed here): only 2 of the
@@ -50,7 +54,10 @@ function boot(mount) {
       // The 7 bespoke scenes, in ring order — see the header comment above
       // for the tonal-alternation reasoning behind this sequence.
       const scenes = [
-        lib.createFirstLight(core),      // dark, dawn
+        // starBrightness: 1.05 (engine default 0.85) — owner wants the
+        // night-sky stars a touch more prominent on our site specifically,
+        // "nothing crazy." Re-vendored 2026-07-21 for this pack option.
+        lib.createFirstLight(core, { starBrightness: 1.05 }), // dark, dawn
         lib.createLetterpress(core),     // bright
         lib.createDuskSilk(core),        // dark
         lib.createConstellation(core),   // dark

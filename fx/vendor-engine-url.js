@@ -21,4 +21,4 @@
    consumer gets the identical resolved absolute URL regardless of where
    IT lives, which is what actually matters for the browser to dedupe the
    module. */
-export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=4', import.meta.url).href;
+export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=5', import.meta.url).href;
