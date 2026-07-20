@@ -32,7 +32,7 @@ try {
 
     await page.locator('#prove-it').scrollIntoViewIfNeeded();
     await page.waitForTimeout(2000);
-    ok(worldReqs.length > 0, `world-loop request fires once section is in view + past reveal threshold (found ${worldReqs.length})`);
+    ok(worldReqs.length > 0, `world-loop request(s) fire on approach, no drag needed (found ${worldReqs.length})`);
     ok(worldReqs.some((u) => u.includes('firstlight')), `first world loaded is firstlight (${worldReqs[0]})`);
 
     const video = page.locator('.prove-world-video');

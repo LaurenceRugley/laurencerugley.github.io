@@ -58,14 +58,31 @@
    changes; only the video behind it does. NOT live WebGL — these are short
    (~9s), pre-captured, seamlessly-looped clips (see tools/capture-world-
    loop.mjs), muted/looping/playsinline <video>, webm-first with an mp4
-   fallback source. Lazy: nothing loads until the slider is in view AND the
-   reveal fraction has crossed ~0.35 (checked from the same setCut() calls
-   and the same IntersectionObserver already used for the attract-loop
-   below — no new observer). Cycles every ~8s, PAUSED (the countdown itself,
-   not just skipped ticks) while actually dragging or off-screen, and
-   restarted fresh on release/re-entry. prefers-reduced-motion: shows a
-   single static poster frame of the first world, no <source> ever set (zero
-   video bytes), never cycles.
+   fallback source. Cycles every ~8s, PAUSED (the countdown itself, not just
+   skipped ticks) while actually dragging or off-screen, and restarted fresh
+   on release/re-entry. prefers-reduced-motion: shows a single static poster
+   frame of the first world, no <source> ever set (zero video bytes), never
+   cycles.
+
+   MOBILE FIX (2026-07-21): the original lazy-load gate was "in view AND
+   reveal fraction > 0.35," checked from setCut() and the pause/resume
+   observer — reasonable on paper (the default 50/50 position already
+   clears 0.35, so it should have fired on scroll-into-view with no drag
+   needed), but the owner's live, hands-on diagnosis on a real phone found
+   it wasn't reliably reaching that path on touch devices: the world simply
+   never loaded until a drag happened, which is a chicken-and-egg — nothing
+   entices a first drag if the world is never visible to hint at it. Fixed
+   by dropping the reveal-fraction condition entirely and replacing it with
+   a separate, one-shot, approach-based IntersectionObserver (rootMargin
+   ~200px) — deliberately a SECOND observer from the threshold:0.4 one
+   below, since "genuinely visible enough to load" and "visible enough to
+   pause/resume cycling" are different questions. Also: mobile autoplay
+   policies can reject play() even with muted+playsinline set; every source
+   swap now sets the video's poster to that exact world's own real frame
+   BEFORE calling play(), so a rejected autoplay attempt just leaves the
+   correct poster showing rather than a blank box — "catch fallback to
+   poster" turned out to mean "make sure the poster was already there,"
+   not new recovery logic.
 */
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -101,7 +118,15 @@ function init() {
   let worldActivated = false, worldIndex = 0, cycleTimer = null;
   let worldOnScreen = false; // updated by the shared IntersectionObserver below
 
+  // poster is set BEFORE sources/play() every time (initial activation and
+  // every cycle transition) — not just as a reduced-motion special case.
+  // That way, if play() is ever rejected (mobile autoplay policy, a flaky
+  // connection, whatever), the video element is already showing this
+  // world's own real poster frame instead of a blank/black box — the
+  // "catch fallback to poster" is really just "the poster was already
+  // there," native <video> behavior, not extra recovery code.
   function setWorldSource(key) {
+    worldVideo.setAttribute('poster', WORLD_BASE + key + '-poster.jpg');
     while (worldVideo.firstChild) worldVideo.removeChild(worldVideo.firstChild);
     const webm = document.createElement('source');
     webm.type = 'video/webm'; webm.src = WORLD_BASE + key + '.webm';
@@ -110,6 +135,16 @@ function init() {
     worldVideo.appendChild(webm);
     worldVideo.appendChild(mp4);
     worldVideo.load();
+  }
+
+  // Explicit play() + .catch, per the mobile fix brief. muted+playsinline
+  // (set in the HTML) are what actually make iOS Safari/Android Chrome
+  // allow this without a user gesture; the .catch just means a rejected
+  // autoplay attempt never throws — the poster (already set by
+  // setWorldSource above) is what the user sees instead.
+  function tryPlay() {
+    const p = worldVideo.play();
+    if (p && typeof p.catch === 'function') p.catch(function () {});
   }
 
   function scheduleCycle() {
@@ -128,7 +163,7 @@ function init() {
     worldVideo.classList.add('is-transitioning'); // dither texture peaks over 0.6s (css)
     setTimeout(function () {
       setWorldSource(WORLDS[worldIndex]);
-      worldVideo.play().catch(function () { /* autoplay policies — muted+playsinline should always allow this, but never throw */ });
+      tryPlay();
       worldVideo.classList.add('is-visible'); // fade back in
     }, 300);
     setTimeout(function () {
@@ -136,9 +171,13 @@ function init() {
     }, 620);
   }
 
-  // One-time activation once the lazy-load gate is satisfied. Reduced-motion
-  // gets a single static poster (no <source>, zero video bytes) and never
-  // cycles; everyone else gets the first world playing + the cycle timer.
+  // One-time activation, triggered by the approach-based observer further
+  // down (2026-07-21 mobile fix: no longer gated on reveal fraction/an
+  // actual drag — waiting for an interaction before ever loading was a
+  // chicken-and-egg on touch devices, since there's nothing to entice a
+  // drag until the world is already visible). Reduced-motion gets a single
+  // static poster (no <source>, zero video bytes) and never cycles;
+  // everyone else gets the first world loaded + played + the cycle timer.
   function activateWorldCycle() {
     if (worldActivated) return;
     worldActivated = true;
@@ -152,13 +191,8 @@ function init() {
       worldVideo.removeEventListener('loadeddata', onReady);
       worldVideo.classList.add('is-visible');
     });
-    worldVideo.play().catch(function () {});
+    tryPlay();
     if (worldOnScreen) scheduleCycle();
-  }
-
-  function checkWorldGate(pct) {
-    if (worldActivated || !worldOnScreen) return;
-    if (revealFraction(pct) > 0.35) activateWorldCycle();
   }
 
   function setCut(pct) {
@@ -167,7 +201,6 @@ function init() {
     handle.style.left = pct + '%';
     pane.style.setProperty('--reveal-ramp', revealRamp(pct).toFixed(3));
     root.setAttribute('aria-valuenow', String(Math.round(pct)));
-    checkWorldGate(pct);
 
     // The handcrafted pane's visible share grows as pct shrinks (see the
     // clip-path math above) — flip the ticker at the same midline the pane
@@ -321,9 +354,8 @@ function init() {
       entries.forEach(function (en) {
         worldOnScreen = en.isIntersecting;
         if (worldOnScreen) {
-          checkWorldGate(parseFloat(root.getAttribute('aria-valuenow') || '50'));
           resumeCycle();
-          if (worldActivated && !reduce) worldVideo.play().catch(function () {});
+          if (worldActivated && !reduce) tryPlay();
           if (!reduce) scheduleIdleWatch();
         } else {
           pauseCycle();
@@ -336,6 +368,33 @@ function init() {
         }
       });
     }, { threshold: 0.4 }).observe(root);
+
+    // Approach-based, ONE-SHOT trigger for the world-cycle's initial lazy
+    // load (2026-07-21 mobile fix) — deliberately separate from the
+    // threshold:0.4 "genuinely visible" observer above, which governs
+    // pause/resume, not the initial decision to load at all. rootMargin
+    // ~200px means this fires as the section approaches, not gated on any
+    // reveal fraction or a drag ever happening — the old gate ("in view AND
+    // reveal fraction > 0.35") technically already had a path to fire
+    // without a drag, but the owner's live phone diagnosis found it wasn't
+    // reliably reaching that path on touch devices; this is a strictly
+    // simpler, more permissive trigger that removes the ambiguity entirely.
+    // #prove-it sits far enough down the page that even firing 200px early
+    // is still always well after LCP is already recorded — verified via
+    // network capture (0 requests before scroll) and matched before/after
+    // Lighthouse LCP.
+    const approachObserver = new IntersectionObserver(function (entries) {
+      if (entries.some(function (en) { return en.isIntersecting; })) {
+        activateWorldCycle();
+        approachObserver.disconnect();
+      }
+    }, { rootMargin: '200px 0px' });
+    approachObserver.observe(root);
+  } else {
+    // No IntersectionObserver support at all — fail open rather than never
+    // loading anything (matches fx/engine-hero.js's own fallback pattern).
+    worldOnScreen = true;
+    activateWorldCycle();
   }
 }
 
