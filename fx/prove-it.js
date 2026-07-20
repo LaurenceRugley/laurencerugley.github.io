@@ -21,36 +21,36 @@
    aria-valuenow. Both panes are real DOM/CSS, not photos — a clip-path
    edge through live text is crisp by construction, no shader involved.
 
-   Wave 2 (I) additions, same file (both bind to the position this module
-   already computes — no new coupling, no vendored-engine involvement):
-   · LIQUID SEAM — an SVG feTurbulence ribbon overlaying the flat handle
-     line (markup/CSS in index.html / prove-it.css). Ripple energy follows
-     drag velocity and settles at rest; a subtle idle shimmer runs only
-     while the slider is on-screen. Entirely skipped under reduced-motion —
-     the filter's displacement scale simply stays 0, i.e. visually a flat
-     line, same as what reduced-motion users already saw before this wave.
-   · STAT TICKER — three honest chips (#proveTicker in index.html) flip
-     between their data-b/data-a values at the same pct<50 "handcrafted
-     side is winning" threshold the seam and pane already use.
+   Wave 2 (I) additions, same file: STAT TICKER — three honest chips
+   (#proveTicker in index.html) flip between their data-b/data-a values at
+   the same pct<50 "handcrafted side is winning" threshold the pane already
+   uses.
 
-   Polish wave (2026-07-18) additions, same file:
-   · LIQUID SEAM, FOR REAL — the settle-timer approach above read as too
-     subtle live. Replaced with one continuous per-frame energy model (see
-     the single rAF loop near the bottom of init()): a decaying "velocity
-     energy" value that pointer/keyboard moves bump up and that drains a
-     little every frame, added on top of an always-on idle "breathing"
-     floor so the seam is never perfectly still even at rest. The same
-     energy value drives the glow's opacity. Design reference: the engine's
-     shader melt (image-transition.frag in the lab — its uMeltAmp band/drag/
-     wet-edge-glow model) and the savycolours createBeforeAfter usage,
-     mined for visual language only — nothing here touches the vendored
-     engine or the panels' text, per the standing text-mush lesson.
-   · AUTO-PREVIEW ("attract loop") — after ~4s idle and in-viewport, a
-     gentle scripted sweep to 70% and back, so a visitor who hasn't found
-     the drag affordance yet sees it demonstrated. Cancels permanently on
-     the first real interaction, runs at most twice, never under reduced-
-     motion, never while off-screen (see the block after the keydown
-     handler for the exact rules).
+   REDESIGN (2026-07-20, owner-ratified): the liquid feTurbulence seam from
+   the two waves after this one — an SVG displacement ribbon whose energy
+   followed drag velocity plus an always-on idle rAF loop driving it — is
+   gone. Direction: "the divider was doing too much; restraint on the
+   mechanism, drama in the revealed content." Replaced with:
+   · a plain straight bar (prove-it.css), idle-pulsing via a CSS @keyframes
+     animation (no JS driving it frame-by-frame) — paused here only via a
+     class toggle at drag start/end, not a rAF loop.
+   · a "reveal ramp" — 0..1, computed inline inside the EXISTING setCut()
+     call (which pointer/keyboard already invoke on every move; no new
+     per-frame loop, no new allocations) — written to a CSS custom property
+     that prove-it.css uses to ease in a brightness/saturation lift + a
+     sheen sweep on the handbuilt pane as it crosses ~60% revealed.
+   · release-settle: past ~85% revealed, easing the rest of the way to full
+     reveal on release (a short, one-off CSS transition class, removed right
+     after) instead of leaving it wherever the pointer let go.
+   The WebGL hero engine itself is NOT touched by any of this — the site's
+   own public API surface (createEngineCore/setPostMode/setActive/resize,
+   createHeroDirector/currentTone — see fx/engine-hero.js) has no exposed
+   continuous time-scale/intensity dial, and this section has stayed
+   deliberately clear of the vendored engine since the createBeforeAfter
+   evaluation above (the "text-mush lesson") — reaching into the engine's
+   internals for an undocumented lever would be exactly the kind of fragile
+   coupling that lesson was about. The "comes alive" drama lives entirely in
+   this pane's own CSS instead.
 */
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -60,24 +60,30 @@ function init() {
   if (!root) return;
   const pane = root.querySelector('.prove-pane-handbuilt');
   const handle = root.querySelector('.prove-handle');
-  const seam = root.querySelector('.prove-seam');
-  const turb = seam && seam.querySelector('feTurbulence');
-  const disp = seam && seam.querySelector('feDisplacementMap');
   const ticker = document.getElementById('proveTicker');
   const tickerVals = ticker ? [].slice.call(ticker.querySelectorAll('.stat-v')) : [];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const STEP = 4;
 
+  // Reveal ramp: 0 until the handbuilt pane's visible share crosses ~60%,
+  // then eases linearly to 1 at full reveal (pct 0). Written as a CSS custom
+  // property so prove-it.css's filter/sheen do the actual animating — this
+  // function only ever computes one number, no allocation.
+  function revealRamp(pct) {
+    const revealFraction = (100 - pct) / 100;
+    return clamp((revealFraction - 0.6) / 0.4, 0, 1);
+  }
+
   function setCut(pct) {
     pct = clamp(pct, 0, 100);
     pane.style.clipPath = 'inset(0 0 0 ' + pct + '%)';
     handle.style.left = pct + '%';
-    if (seam) seam.style.left = pct + '%';
+    pane.style.setProperty('--reveal-ramp', revealRamp(pct).toFixed(3));
     root.setAttribute('aria-valuenow', String(Math.round(pct)));
 
     // The handcrafted pane's visible share grows as pct shrinks (see the
     // clip-path math above) — flip the ticker at the same midline the pane
-    // and seam already treat as "handcrafted is winning".
+    // already treats as "handcrafted is winning".
     if (tickerVals.length) {
       const after = pct < 50;
       tickerVals.forEach(function (el) {
@@ -96,39 +102,37 @@ function init() {
     return ((clientX - r.left) / Math.max(r.width, 1)) * 100;
   }
 
-  // Liquid seam: a single decaying "velocity energy" value (0..1-ish, no
-  // ceiling enforced here — the per-frame loop below clamps what it does
-  // with it) that pointer/keyboard moves bump up; the loop drains it a
-  // little every frame and adds it on top of an always-on idle floor, so
-  // the seam is never perfectly flat even when nobody's touching it.
-  // Skipped entirely under reduced-motion — velEnergy is written but
-  // nothing ever reads it, since the loop that would is never started.
-  let lastX = null, velEnergy = 0;
-  function pumpSeam(clientX) {
-    if (reduce || !disp) return;
-    if (lastX !== null) {
-      velEnergy = Math.max(velEnergy, Math.min(1, Math.abs(clientX - lastX) / 34));
-    }
-    lastX = clientX;
+  // Release-settle: only when released past ~85% revealed (pct < 15) —
+  // ease the rest of the way to full reveal (pct 0). Below that threshold,
+  // stays exactly where dropped (today's existing behavior, untouched).
+  // Reduced-motion: same end state, no eased transition — snaps straight to
+  // 0 so the result is identical, just without the glide.
+  function settleIfPastThreshold() {
+    const current = parseFloat(root.getAttribute('aria-valuenow') || '50');
+    if (current >= 15) return;
+    if (reduce) { setCut(0); return; }
+    root.classList.add('is-settling');
+    setCut(0);
+    setTimeout(function () { root.classList.remove('is-settling'); }, 420);
   }
 
   let dragging = false;
   root.addEventListener('pointerdown', function (e) {
     dragging = true;
+    root.classList.add('is-dragging');
     try { root.setPointerCapture(e.pointerId); } catch (_) { /* unsupported pointer type — fine */ }
     setCut(xToPct(e.clientX));
-    pumpSeam(e.clientX);
   });
   root.addEventListener('pointermove', function (e) {
     if (!dragging) return;
     setCut(xToPct(e.clientX));
-    pumpSeam(e.clientX);
   });
   ['pointerup', 'pointercancel'].forEach(function (t) {
     root.addEventListener(t, function (e) {
       if (dragging) setCut(xToPct(e.clientX));
       dragging = false;
-      lastX = null; // next drag starts fresh, no stale-position velocity spike
+      root.classList.remove('is-dragging');
+      settleIfPastThreshold();
     });
   });
 
@@ -142,37 +146,7 @@ function init() {
     if (next === null) return;
     e.preventDefault();
     setCut(next);
-    velEnergy = Math.max(velEnergy, 0.4); // a gentle pulse so keyboard moves ripple too
   });
-
-  // Liquid seam energy loop: one continuous rAF, only while the slider is
-  // actually on-screen, only when motion is allowed. Every frame: drain
-  // velEnergy a little, add it on top of a slow idle "breathing" floor
-  // (never zero — this is the fix for "too subtle to read as liquid at
-  // rest"), push the result into the displacement scale + the turbulence
-  // frequency + the glow's opacity. Reduced-motion: this whole block never
-  // runs, so disp/turb/glow stay at their static HTML defaults (scale 4,
-  // no glow) — a fixed, non-animating seam.
-  if (!reduce && disp && 'IntersectionObserver' in window) {
-    const glow = seam && seam.querySelector('.prove-seam-glow');
-    let raf = null, t = 0;
-    function tick() {
-      t += 0.008;
-      velEnergy *= 0.90; // decays every frame — no settle-timer needed
-      const idle = 5 + Math.sin(t) * 3;         // 2–8: always some motion
-      const scale = idle + velEnergy * 90;      // drag/keyboard adds up to +90
-      disp.setAttribute('scale', scale.toFixed(1));
-      if (turb) turb.setAttribute('baseFrequency', (0.012 + Math.sin(t * 0.7) * 0.006).toFixed(4) + ' 0.045');
-      if (glow) glow.style.setProperty('--seam-glow-a', Math.min(0.7, 0.1 + velEnergy * 0.75).toFixed(2));
-      raf = requestAnimationFrame(tick);
-    }
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (en.isIntersecting && raf === null) tick();
-        else if (!en.isIntersecting && raf !== null) { cancelAnimationFrame(raf); raf = null; }
-      });
-    }, { threshold: 0 }).observe(root);
-  }
 
   // Auto-preview ("attract loop"): after ~4s idle + in-viewport, a gentle
   // scripted sweep toward the handbuilt side and back so a visitor who
@@ -193,6 +167,9 @@ function init() {
   // ever start from pct 50 — any real interaction sets userInteracted and
   // that's permanent, so the slider's position is still untouched whenever
   // an attract run is still eligible to fire.
+  //
+  // is-sweeping mirrors is-dragging for the idle-pulse pause (prove-it.css)
+  // — a moving bar shouldn't also be visibly breathing during the demo.
   if (!reduce && 'IntersectionObserver' in window) {
     let onScreen = false, userInteracted = false, attractRuns = 0;
     let idleTimer = null, sweepRaf = null;
@@ -200,7 +177,7 @@ function init() {
     function stopAttract() {
       userInteracted = true;
       clearTimeout(idleTimer); idleTimer = null;
-      if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; }
+      if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; root.classList.remove('is-sweeping'); }
     }
     ['pointerdown', 'keydown'].forEach(function (t) { root.addEventListener(t, stopAttract); });
 
@@ -216,11 +193,11 @@ function init() {
 
     function runSweep() {
       attractRuns++;
+      root.classList.add('is-sweeping');
       const OUT_MS = 900, PAUSE_MS = 650, BACK_MS = 900;
-      const r = root.getBoundingClientRect();
       const t0 = performance.now();
       function frame(now) {
-        if (userInteracted || !onScreen) { sweepRaf = null; return; } // interrupted — leave as-is
+        if (userInteracted || !onScreen) { sweepRaf = null; root.classList.remove('is-sweeping'); return; } // interrupted — leave as-is
         const el = now - t0;
         let pct;
         if (el < OUT_MS) {
@@ -232,11 +209,11 @@ function init() {
         } else {
           setCut(50);
           sweepRaf = null;
+          root.classList.remove('is-sweeping');
           if (attractRuns < 2) scheduleIdleWatch();
           return;
         }
         setCut(pct);
-        pumpSeam(r.left + (pct / 100) * r.width); // ripples the seam gently along the sweep
         sweepRaf = requestAnimationFrame(frame);
       }
       sweepRaf = requestAnimationFrame(frame);
@@ -250,7 +227,7 @@ function init() {
         } else {
           // never while off-screen: abort any in-flight sweep and snap back
           clearTimeout(idleTimer); idleTimer = null;
-          if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; setCut(50); }
+          if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; root.classList.remove('is-sweeping'); setCut(50); }
         }
       });
     }, { threshold: 0.4 }).observe(root);

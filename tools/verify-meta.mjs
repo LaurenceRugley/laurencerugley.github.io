@@ -128,7 +128,8 @@ try {
   ok(lum > 6, `hero canvas still renders non-black (luminance ${lum.toFixed(1)}/255)`);
   ok(await page.locator('.proof-sheet .conviction').count() === 3, 'G: proof-sheet still intact (3 convictions)');
   ok(await page.locator('.station').count() === 4, 'H: press-run stations still intact (4 stations)');
-  ok(await page.locator('.prove-seam').count() === 1, 'I: liquid seam still present');
+  ok(await page.locator('.prove-handle').count() === 1, 'I: prove-it straight-bar divider still intact');
+  ok(await page.locator('.prove-seam').count() === 0, 'I: liquid seam confirmed removed (2026-07-20 redesign)');
   ok(errors.length === 0, `0 console/page errors across the whole pass` + (errors.length ? `  <- ${errors.slice(0, 5).join(' | ')}` : ''));
 
   await page.screenshot({ path: 'og-image-render-check.png', clip: { x: 0, y: 0, width: 1280, height: 900 } });

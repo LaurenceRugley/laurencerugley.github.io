@@ -2,7 +2,14 @@
    Site-local clip-path slider (see prove-it.js for why, not createBeforeAfter).
    Instant, no transition on the clip/handle position — direct-manipulation
    drags that lag read as broken, not smooth (same principle the engine's own
-   pointer-drive comment makes for createBeforeAfter). */
+   pointer-drive comment makes for createBeforeAfter).
+
+   REDESIGN (2026-07-20, owner-ratified): the liquid feTurbulence/feDisplacement
+   seam ribbon was "doing too much" — removed entirely. Restraint on the
+   mechanism (a thin straight bar, idle-pulsing when not touched, still when
+   it is); drama moved into the revealed content instead — see
+   .prove-pane-handbuilt below for the motion ramp / tonal contrast / edge
+   glow that replace it. */
 
 .prove-slider {
   position: relative;
@@ -32,8 +39,12 @@
 
 /* Template pane — a tasteful parody of a generic template site. No real
    brand's design or copy reused. Sits as the base layer (unclipped); the
-   hand-built pane is clipped over it, revealing this underneath on the left. */
-.prove-pane-template { background: #ffffff; color: #333; font-family: Arial, Helvetica, sans-serif; }
+   hand-built pane is clipped over it, revealing this underneath on the left.
+   Slightly desaturated/flattened (constant, not reveal-dependent) — the
+   tonal half of this redesign's "drama in the content, not the mechanism"
+   direction: the template side reads a shade duller next to the handbuilt
+   side's full color, even before anyone touches the slider. */
+.prove-pane-template { background: #ffffff; color: #333; font-family: Arial, Helvetica, sans-serif; filter: saturate(0.55) contrast(0.94); }
 .prove-pane-template .prove-nav { display: flex; gap: 18px; font-size: 12px; color: #888; border-bottom: 1px solid #eee; padding-bottom: 10px; }
 .prove-pane-template h4 { font-size: clamp(18px, 3vw, 28px); color: #2a6fd6; margin: 18px 0 8px; font-weight: 700; }
 .prove-pane-template p { font-size: 13px; color: #777; max-width: 30ch; line-height: 1.5; }
@@ -59,13 +70,26 @@
    (found this the hard way: the pane rendered as a solid dark rectangle,
    no visible text, at first cut). Right-anchoring keeps the copy in the
    sliver that survives clipping across the 25/50/75% range this was
-   verified at. */
+   verified at.
+
+   --reveal-ramp (0–1, set by fx/prove-it.js's existing setCut() — no new
+   per-frame loop) is 0 until the reveal fraction crosses ~0.6, then eases to
+   1 at full reveal. It drives a small extra brightness/saturation lift on
+   top of the constant baseline lift below, plus the sheen sweep further
+   down — "our side comes alive as it's unveiled." Filter transition is
+   short and only smooths the 4%-per-keystroke keyboard steps; pointer drags
+   already fire setCut() many times a second, so this never reads as lag on
+   the thing that actually matters (the clip/handle position itself, which
+   stays untransitioned per the file-level rule above). */
 .prove-pane-handbuilt {
+  --reveal-ramp: 0;
   background: linear-gradient(160deg, #1c1712, #242019 55%, #2A2218);
   color: #EDE7D9;
   clip-path: inset(0 0 0 50%);
   display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
   text-align: right;
+  filter: saturate(calc(1.05 + var(--reveal-ramp) * 0.3)) brightness(calc(1.04 + var(--reveal-ramp) * 0.14));
+  transition: filter 0.15s linear;
 }
 .prove-lab { font-family: var(--sans); font-size: 11px; letter-spacing: 0.24em; color: #B89968; text-transform: uppercase; }
 .prove-pane-handbuilt h4 { font-family: var(--serif); font-weight: 500; font-size: clamp(20px, 3.6vw, 36px); line-height: 1.08; margin: 12px 0 8px; }
@@ -77,11 +101,52 @@
   font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
 }
 
-/* The gold divider + drag pill at the seam. z-index 4, above the liquid
-   seam ribbon (z-index 3, below) so the pill/line stay crisp on top. */
+/* The "comes alive" sheen — a soft diagonal gold sweep, invisible until
+   --reveal-ramp rises past 0 (i.e. reveal fraction > ~0.6), fading in as it
+   climbs to 1. Purely decorative/ambient, so it's the one piece gated
+   behind prefers-reduced-motion; the brightness/saturation lift above is a
+   static color value tied to slider position (not autonomous motion) and
+   stays for reduced-motion users. */
+.prove-pane-handbuilt::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(247, 236, 216, 0.16) 48%, transparent 66%);
+  background-size: 220% 100%;
+  background-position: 0 0;
+  opacity: var(--reveal-ramp, 0);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prove-pane-handbuilt::before { animation: proveSheen 2.6s ease-in-out infinite; }
+}
+@keyframes proveSheen {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: -20% 0; }
+}
+
+/* The gold divider + drag pill at the seam — a thin straight bar, full
+   height, small grabbable handle. Idle pulse: a slow ~2s opacity breathe
+   inviting the drag, paused (and forced solid) while actually being
+   dragged or during the auto-preview sweep, since a moving pulse fighting a
+   moving handle reads as noise, not feedback. Base opacity is 1 (solid) so
+   reduced-motion users — who never get the animation — see a plain, fully
+   legible bar, never stuck at the pulse's dim trough. */
 .prove-handle {
   position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
   background: #B89968; z-index: 4; pointer-events: none;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prove-handle { animation: proveHandlePulse 2s ease-in-out infinite; }
+}
+@keyframes proveHandlePulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.prove-slider.is-dragging .prove-handle,
+.prove-slider.is-sweeping .prove-handle {
+  animation-play-state: paused;
+  opacity: 1;
 }
 .prove-handle-pill {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -90,39 +155,24 @@
   padding: 7px 10px; border-radius: 999px; white-space: nowrap;
 }
 
-/* Liquid seam — Wave 2 (I), widened + strengthened in the Polish wave
-   (2026-07-18) after "too subtle to read as liquid on the live site":
-   an SVG feTurbulence ribbon laid over the flat handle line, ~3.5x wider
-   than the original 26px band so the distortion actually reads at a
-   glance, plus a soft warm CSS glow underneath standing in for the
-   shader melt's "wet edge" (see image-transition.frag in the lab — the
-   design reference named for this pass). Ripple energy follows drag
-   velocity, a gentle idle breathing keeps it visibly alive at rest (never
-   perfectly still), and the glow pulses with the same energy — all driven
-   from fx/prove-it.js, which also skips every bit of this under
-   prefers-reduced-motion (the filter's displacement scale then stays at
-   its static HTML default, no glow opacity ever set — a flat seam, same
-   as what reduced-motion users always saw). Content stays crisp-clipped:
-   this whole layer sits ONLY in the thin seam strip, never over the
-   panels' text (the text-mush lesson from the original createBeforeAfter
-   evaluation — see fx/prove-it.js's header — stands). */
-.prove-seam {
-  position: absolute; top: 0; bottom: 0; left: 50%; width: 90px;
-  transform: translateX(-45px); z-index: 3; pointer-events: none;
+/* Faint gold edge-glow trailing the divider onto the handbuilt side only —
+   a soft, low-alpha gradient starting right at the bar's own right edge and
+   fading out within ~46px. Always present at this same low intensity
+   (not reveal-ramp-gated) — a constant, subtle marker of "this side is
+   ours," not a dynamic effect competing with the sheen above. */
+.prove-handle::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: 2px; width: 46px;
+  background: linear-gradient(to right, rgba(184, 153, 104, 0.22), transparent);
+  pointer-events: none;
 }
-.prove-seam svg { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
-/* The meniscus glow: a soft warm bloom behind the liquid ribbon, standing
-   in for the shader's wet-edge highlight. --seam-glow-a (0–~0.7) is set by
-   fx/prove-it.js each frame; static (never set) under reduced-motion, so
-   this radial gradient just never appears for those users. */
-.prove-seam-glow {
-  position: absolute; inset: -4% -60%; z-index: 0;
-  background: radial-gradient(closest-side,
-    rgba(247, 236, 216, var(--seam-glow-a, 0)) 0%,
-    rgba(184, 153, 104, calc(var(--seam-glow-a, 0) * 0.55)) 45%,
-    transparent 75%);
-  filter: blur(9px);
-}
+
+/* Release-settle: applied only briefly (by fx/prove-it.js, on pointerup,
+   only when released past ~85% reveal) so the clip/handle glide the rest of
+   the way to full reveal instead of snapping. Everywhere else — including
+   mid-drag — the file-level "no transition on position" rule stands. */
+.prove-slider.is-settling .prove-pane-handbuilt { transition: clip-path 0.4s cubic-bezier(.2,.7,.3,1), filter 0.15s linear; }
+.prove-slider.is-settling .prove-handle { transition: left 0.4s cubic-bezier(.2,.7,.3,1); }
 
 /* Stat ticker + footnote beneath the slider. */
 .prove-ticker {

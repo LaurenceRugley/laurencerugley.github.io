@@ -86,7 +86,7 @@
 <link rel="stylesheet" href="fx/hero-gradient.css">
 <link rel="stylesheet" href="fx/engine-hero.css?v=3">
 <link rel="stylesheet" href="fx/look-reel.css">
-<link rel="stylesheet" href="fx/prove-it.css?v=2">
+<link rel="stylesheet" href="fx/prove-it.css?v=3">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
 <link rel="stylesheet" href="fx/codec-call.css">
@@ -463,19 +463,10 @@
           <p>Hand-built, engine-lit, found on Google — with booking that routes straight to you.</p>
           <span class="prove-btn prove-btn-handbuilt">Book Now</span>
         </div>
-        <div class="prove-seam" aria-hidden="true">
-          <span class="prove-seam-glow"></span>
-          <svg viewBox="0 0 100 600" preserveAspectRatio="none">
-            <defs>
-              <filter id="proveLiquid" x="-50%" y="-8%" width="200%" height="116%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.045" numOctaves="3" seed="7" result="n"/>
-                <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
-              </filter>
-            </defs>
-            <rect x="35" y="0" width="30" height="600" fill="#B89968" filter="url(#proveLiquid)"/>
-            <rect x="46" y="0" width="8" height="600" fill="#F7ECD8" opacity=".55" filter="url(#proveLiquid)"/>
-          </svg>
-        </div>
+        <!-- Straight gold divider bar (2026-07-20 redesign) — the liquid
+             feTurbulence seam that used to sit here is gone; see
+             fx/prove-it.css/.js for the idle-pulse + reveal-drama that
+             replaced it. -->
         <div class="prove-handle" aria-hidden="true"><span class="prove-handle-pill">◂ drag ▸</span></div>
       </div>
       <p class="ba-caption"><span>← their template</span><span>made by hand →</span></p>
@@ -627,7 +618,7 @@
 <script defer src="pixel/egg-loader.js?v=1"></script>
 <script type="module" src="fx/engine-hero.js?v=10"></script>
 <script type="module" src="fx/look-reel.js?v=3"></script>
-<script defer src="fx/prove-it.js?v=3"></script>
+<script defer src="fx/prove-it.js?v=4"></script>
 <script defer src="fx/process-rail.js?v=1"></script>
 <script defer src="fx/finale.js?v=1"></script>
 
