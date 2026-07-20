@@ -88,6 +88,7 @@
   }
 
   .studio-mark {
+    display: inline-block;
     font-family: var(--sans);
     font-size: 10px;
     font-weight: 500;
@@ -95,7 +96,11 @@
     letter-spacing: 0.32em;
     color: var(--gold);
     margin-bottom: 18px;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
   }
+  .studio-mark:hover, .studio-mark:focus-visible { border-color: var(--gold); outline: none; }
 
   .h1 {
     font-family: var(--serif);
@@ -211,7 +216,7 @@
 <body>
 
 <div class="card">
-  <div class="studio-mark">LGR Web Studios</div>
+  <a class="studio-mark" href="/" aria-label="LGR Web Studios — back to the homepage">LGR Web Studios</a>
 
   <h1 class="h1">Book a free 15-min consult</h1>
   <p class="lead">We'll look at your current site together and tell you exactly what we'd change — no pitch, no obligation.</p>

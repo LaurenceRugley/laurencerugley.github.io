@@ -139,8 +139,20 @@
     .field-row .field:last-child { margin-top: 18px; margin-bottom: 0; }
   }
 
-  .field label,
-  .field legend {
+  /* Direct-child combinator (2026-07-22 fix) — was ".field label", a
+     descendant selector that also matched every nested <label class="option">
+     radio/checkbox row two levels down (.field > .options > label.option).
+     Its specificity (1 class + 1 type = 0,1,1) beat .option's display:flex
+     (1 class = 0,1,0), so every option row silently computed to
+     display:block — gap:10px still "applied" per getComputedStyle (gap is
+     valid on any display, just inert outside flex/grid), but with no
+     flex layout the option's own input and .option-text collapsed together
+     with zero visual space ("○EMAIL"). Scoping to the field's own direct
+     label/legend fixes every option row across the whole form without
+     touching .option itself — verified every real .field label in this
+     file (name/business/email/phone/each question) IS a direct child. */
+  .field > label,
+  .field > legend {
     display: block;
     font-family: var(--sans);
     font-size: 10px;

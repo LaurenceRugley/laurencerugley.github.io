@@ -60,6 +60,7 @@
 
   .header { text-align: center; margin-bottom: 44px; }
   .studio-mark {
+    display: inline-block;
     font-family: var(--sans);
     font-size: 10px;
     font-weight: 500;
@@ -67,7 +68,11 @@
     letter-spacing: 0.32em;
     color: var(--gold);
     margin-bottom: 18px;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
   }
+  .studio-mark:hover, .studio-mark:focus-visible { border-color: var(--gold); outline: none; }
   .rule {
     width: 40px;
     height: 1px;
@@ -168,7 +173,7 @@
 <div class="wrap">
 
   <header class="header">
-    <div class="studio-mark">LGR Web Studios</div>
+    <a class="studio-mark" href="/" aria-label="LGR Web Studios — back to the homepage">LGR Web Studios</a>
     <div class="rule"></div>
     <h1 class="h1">How we build</h1>
     <p class="lead">No templates. No page builders. Every project is hand-built from scratch.</p>
