@@ -101,15 +101,66 @@
   font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
 }
 
+/* World cycle (2026-07-20) — recorded loops of real engine scenes cycling
+   behind the constant content above. Stacking (back to front, all explicit
+   z-index so this never depends on DOM-order stacking quirks): base
+   gradient (.prove-pane-handbuilt's own background, always there as an
+   instant "poster" before/without video) -> video (0) -> scrim (1) ->
+   comes-alive sheen (2, unchanged from before) -> content (3). */
+.prove-world-video {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.prove-world-video.is-visible { opacity: 1; }
+
+/* Constant dark scrim so the existing cream/gold text stays legible over
+   EVERY world — including the bright Letterpress one, which would nearly
+   white out this pane's light text without it. Same tone as the pane's own
+   base gradient, so a world showing through reads as "seen through this
+   pane's own glass," not a jarring foreign background. Never changes with
+   --reveal-ramp or which world is playing — a constant, not a drama beat. */
+.prove-world-scrim {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(160deg, rgba(28, 23, 18, 0.82), rgba(36, 32, 25, 0.78) 55%, rgba(42, 34, 24, 0.85));
+  pointer-events: none;
+}
+
+/* Small-cell dither texture for the world-to-world transition (fx/prove-it.js
+   toggles .is-transitioning for ~600ms around a source swap) — a tileable,
+   tiny (6x6px) black/gold speckle, opacity-animated so the swap reads as a
+   grainy dissolve rather than a flat opacity crossfade. Purely decorative;
+   skipped under reduced-motion (which never cycles worlds anyway). */
+.prove-world-dither {
+  position: absolute; inset: 0; z-index: 2;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(247, 236, 216, 0.5) 0.6px, transparent 0.6px),
+    radial-gradient(circle at 4px 3px, rgba(184, 153, 104, 0.45) 0.6px, transparent 0.6px);
+  background-size: 6px 6px;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prove-world-video.is-transitioning ~ .prove-world-dither { animation: proveDither 0.6s ease-in-out; }
+}
+@keyframes proveDither {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.9; }
+}
+
+.prove-content { position: relative; z-index: 3; }
+
 /* The "comes alive" sheen — a soft diagonal gold sweep, invisible until
    --reveal-ramp rises past 0 (i.e. reveal fraction > ~0.6), fading in as it
    climbs to 1. Purely decorative/ambient, so it's the one piece gated
    behind prefers-reduced-motion; the brightness/saturation lift above is a
    static color value tied to slider position (not autonomous motion) and
-   stays for reduced-motion users. */
+   stays for reduced-motion users. z-index 4 — above the world/scrim/dither
+   layers (0-2) and the content (3), same as it swept over the text before
+   the world-cycle feature existed. */
 .prove-pane-handbuilt::before {
   content: '';
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; z-index: 4;
   background: linear-gradient(115deg, transparent 30%, rgba(247, 236, 216, 0.16) 48%, transparent 66%);
   background-size: 220% 100%;
   background-position: 0 0;

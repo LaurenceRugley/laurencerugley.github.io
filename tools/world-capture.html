@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- tools/world-capture.html — dev-only capture page for the prove-it
+     "world cycle" feature's recorded backdrop loops. NOT part of the shipped
+     site (tools/ is excluded from both Jekyll and promote.sh). Mounts the
+     real hero engine (same boot sequence as fx/engine-hero.js and
+     og-image-capture.html: createEngineCore + setPostMode(2) +
+     createHeroDirector) locked to ONE scene, chosen via ?scene=<name> —
+     no text overlay at all, since these loops are pure backdrop video; the
+     prove-it pane's actual headline/copy stays live DOM on top of them.
+     Sized to the prove-it slider's own desktop render box (max-width 920px
+     content, aspect-ratio 2.4/1 -> 920x384) so the capture needs no
+     scale/crop pass. Recorded by tools/capture-world-loop.mjs via
+     Playwright's recordVideo, then boomeranged (forward+reverse) and
+     re-encoded by that same script's ffmpeg pass for a guaranteed-seamless
+     loop — a live procedural scene's own internal clock rarely lines up
+     into a clean loop point on its own. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23211B12'/%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 920px; height: 384px; overflow: hidden; background: #171310; }
+  #mount { position: absolute; inset: 0; }
+  #mount canvas { display: block; width: 920px; height: 384px; }
+</style>
+</head>
+<body>
+<div id="mount"></div>
+<script type="module">
+  const SCENES = {
+    firstlight: 'createFirstLight',
+    letterpress: 'createLetterpress',
+    cathedrallight: 'createCathedralLight',
+    dunes: 'createDuskSilk',
+  };
+  const name = new URLSearchParams(location.search).get('scene') || 'firstlight';
+  const fn = SCENES[name];
+  if (!fn) throw new Error('world-capture.html: unknown ?scene=' + name);
+
+  const mount = document.getElementById('mount');
+  const lib = await import('../vendor/lgr-engine-hero.es.js?v=4');
+  const core = await lib.createEngineCore({ container: mount });
+  core.setPostMode(2);
+  const scenes = [lib[fn](core)];
+  lib.createHeroDirector(core, { scenes, dwell: 999999, transitionMs: 0 });
+  window.__worldCaptureReady = true;
+</script>
+</body>
+</html>

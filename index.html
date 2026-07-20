@@ -86,7 +86,7 @@
 <link rel="stylesheet" href="fx/hero-gradient.css">
 <link rel="stylesheet" href="fx/engine-hero.css?v=3">
 <link rel="stylesheet" href="fx/look-reel.css">
-<link rel="stylesheet" href="fx/prove-it.css?v=4">
+<link rel="stylesheet" href="fx/prove-it.css?v=5">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
 <link rel="stylesheet" href="fx/codec-call.css">
@@ -458,10 +458,24 @@
           <div class="prove-stock">STOCK PHOTO</div>
         </div>
         <div class="prove-pane prove-pane-handbuilt" aria-hidden="true">
-          <span class="prove-lab">A Digital Atelier · Pasadena</span>
-          <h4>Beautiful work,<br><em>booked solid.</em></h4>
-          <p>Hand-built, engine-lit, found on Google — with booking that routes straight to you.</p>
-          <span class="prove-btn prove-btn-handbuilt">Book Now</span>
+          <!-- World cycle (2026-07-20): recorded loops of our real engine
+               scenes, cycled behind the SAME constant content below — see
+               fx/prove-it.js's header for the lazy-load gate, cycle timer,
+               and transition. No src/poster set here — JS only loads
+               anything once the slider is in view AND the reveal fraction
+               has crossed ~0.35, so this never touches LCP. A constant dark
+               scrim (.prove-world-scrim) sits between the video and the
+               text so the existing cream/gold text stays legible against
+               every world, including the bright Letterpress one. -->
+          <video class="prove-world-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <div class="prove-world-dither" aria-hidden="true"></div>
+          <div class="prove-world-scrim" aria-hidden="true"></div>
+          <div class="prove-content">
+            <span class="prove-lab">A Digital Atelier · Pasadena</span>
+            <h4>Beautiful work,<br><em>booked solid.</em></h4>
+            <p>Hand-built, engine-lit, found on Google — with booking that routes straight to you.</p>
+            <span class="prove-btn prove-btn-handbuilt">Book Now</span>
+          </div>
         </div>
         <!-- Straight gold divider bar (2026-07-20 redesign) — the liquid
              feTurbulence seam that used to sit here is gone; see
@@ -618,7 +632,7 @@
 <script defer src="pixel/egg-loader.js?v=1"></script>
 <script type="module" src="fx/engine-hero.js?v=10"></script>
 <script type="module" src="fx/look-reel.js?v=3"></script>
-<script defer src="fx/prove-it.js?v=4"></script>
+<script defer src="fx/prove-it.js?v=5"></script>
 <script defer src="fx/process-rail.js?v=1"></script>
 <script defer src="fx/finale.js?v=1"></script>
 

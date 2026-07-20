@@ -51,6 +51,21 @@
    internals for an undocumented lever would be exactly the kind of fragile
    coupling that lesson was about. The "comes alive" drama lives entirely in
    this pane's own CSS instead.
+
+   WORLD CYCLE (2026-07-20): the handbuilt pane's backdrop now cycles
+   through recorded loops of the engine's real scenes (fx/world-loops/*) —
+   "same business, pick your world." Content (headline/copy/layout) never
+   changes; only the video behind it does. NOT live WebGL — these are short
+   (~9s), pre-captured, seamlessly-looped clips (see tools/capture-world-
+   loop.mjs), muted/looping/playsinline <video>, webm-first with an mp4
+   fallback source. Lazy: nothing loads until the slider is in view AND the
+   reveal fraction has crossed ~0.35 (checked from the same setCut() calls
+   and the same IntersectionObserver already used for the attract-loop
+   below — no new observer). Cycles every ~8s, PAUSED (the countdown itself,
+   not just skipped ticks) while actually dragging or off-screen, and
+   restarted fresh on release/re-entry. prefers-reduced-motion: shows a
+   single static poster frame of the first world, no <source> ever set (zero
+   video bytes), never cycles.
 */
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -65,13 +80,85 @@ function init() {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const STEP = 4;
 
+  function revealFraction(pct) { return (100 - pct) / 100; }
+
   // Reveal ramp: 0 until the handbuilt pane's visible share crosses ~60%,
   // then eases linearly to 1 at full reveal (pct 0). Written as a CSS custom
   // property so prove-it.css's filter/sheen do the actual animating — this
   // function only ever computes one number, no allocation.
   function revealRamp(pct) {
-    const revealFraction = (100 - pct) / 100;
-    return clamp((revealFraction - 0.6) / 0.4, 0, 1);
+    return clamp((revealFraction(pct) - 0.6) / 0.4, 0, 1);
+  }
+
+  // ---------------------------------------------------------------------
+  // World cycle: recorded loops of real engine scenes behind the constant
+  // content. See the file header for the full design; this block owns the
+  // lazy-load gate, the source-swap transition, and the cycle timer.
+  // ---------------------------------------------------------------------
+  const WORLDS = ['firstlight', 'letterpress', 'cathedrallight', 'dunes'];
+  const WORLD_BASE = 'fx/world-loops/';
+  const worldVideo = root.querySelector('.prove-world-video');
+  let worldActivated = false, worldIndex = 0, cycleTimer = null;
+  let worldOnScreen = false; // updated by the shared IntersectionObserver below
+
+  function setWorldSource(key) {
+    while (worldVideo.firstChild) worldVideo.removeChild(worldVideo.firstChild);
+    const webm = document.createElement('source');
+    webm.type = 'video/webm'; webm.src = WORLD_BASE + key + '.webm';
+    const mp4 = document.createElement('source');
+    mp4.type = 'video/mp4'; mp4.src = WORLD_BASE + key + '.mp4';
+    worldVideo.appendChild(webm);
+    worldVideo.appendChild(mp4);
+    worldVideo.load();
+  }
+
+  function scheduleCycle() {
+    clearTimeout(cycleTimer);
+    cycleTimer = setTimeout(function () {
+      advanceWorld();
+      scheduleCycle();
+    }, 8000);
+  }
+  function pauseCycle() { clearTimeout(cycleTimer); cycleTimer = null; }
+  function resumeCycle() { if (worldActivated && !reduce && worldOnScreen && !cycleTimer) scheduleCycle(); }
+
+  function advanceWorld() {
+    worldIndex = (worldIndex + 1) % WORLDS.length;
+    worldVideo.classList.remove('is-visible');   // begin fade-out (css: 0.3s)
+    worldVideo.classList.add('is-transitioning'); // dither texture peaks over 0.6s (css)
+    setTimeout(function () {
+      setWorldSource(WORLDS[worldIndex]);
+      worldVideo.play().catch(function () { /* autoplay policies — muted+playsinline should always allow this, but never throw */ });
+      worldVideo.classList.add('is-visible'); // fade back in
+    }, 300);
+    setTimeout(function () {
+      worldVideo.classList.remove('is-transitioning');
+    }, 620);
+  }
+
+  // One-time activation once the lazy-load gate is satisfied. Reduced-motion
+  // gets a single static poster (no <source>, zero video bytes) and never
+  // cycles; everyone else gets the first world playing + the cycle timer.
+  function activateWorldCycle() {
+    if (worldActivated) return;
+    worldActivated = true;
+    if (reduce) {
+      worldVideo.setAttribute('poster', WORLD_BASE + WORLDS[0] + '-poster.jpg');
+      worldVideo.classList.add('is-visible');
+      return;
+    }
+    setWorldSource(WORLDS[worldIndex]);
+    worldVideo.addEventListener('loadeddata', function onReady() {
+      worldVideo.removeEventListener('loadeddata', onReady);
+      worldVideo.classList.add('is-visible');
+    });
+    worldVideo.play().catch(function () {});
+    if (worldOnScreen) scheduleCycle();
+  }
+
+  function checkWorldGate(pct) {
+    if (worldActivated || !worldOnScreen) return;
+    if (revealFraction(pct) > 0.35) activateWorldCycle();
   }
 
   function setCut(pct) {
@@ -80,6 +167,7 @@ function init() {
     handle.style.left = pct + '%';
     pane.style.setProperty('--reveal-ramp', revealRamp(pct).toFixed(3));
     root.setAttribute('aria-valuenow', String(Math.round(pct)));
+    checkWorldGate(pct);
 
     // The handcrafted pane's visible share grows as pct shrinks (see the
     // clip-path math above) — flip the ticker at the same midline the pane
@@ -120,6 +208,7 @@ function init() {
   root.addEventListener('pointerdown', function (e) {
     dragging = true;
     root.classList.add('is-dragging');
+    pauseCycle(); // the user's attention owns the moment — world stays put mid-drag
     try { root.setPointerCapture(e.pointerId); } catch (_) { /* unsupported pointer type — fine */ }
     setCut(xToPct(e.clientX));
   });
@@ -133,6 +222,7 @@ function init() {
       dragging = false;
       root.classList.remove('is-dragging');
       settleIfPastThreshold();
+      resumeCycle(); // fresh ~8s wait before the next transition, not a resumed partial countdown
     });
   });
 
@@ -170,64 +260,79 @@ function init() {
   //
   // is-sweeping mirrors is-dragging for the idle-pulse pause (prove-it.css)
   // — a moving bar shouldn't also be visibly breathing during the demo.
-  if (!reduce && 'IntersectionObserver' in window) {
-    let onScreen = false, userInteracted = false, attractRuns = 0;
-    let idleTimer = null, sweepRaf = null;
+  //
+  // ONE shared IntersectionObserver drives both the attract-loop (below,
+  // reduced-motion users never get one at all) and the world-cycle's
+  // viewport gate (which DOES need to run under reduced-motion, so it can
+  // show the static poster once the section is actually in view) — not a
+  // second observer per feature.
+  let userInteracted = false, attractRuns = 0;
+  let idleTimer = null, sweepRaf = null;
 
+  if (!reduce) {
     function stopAttract() {
       userInteracted = true;
       clearTimeout(idleTimer); idleTimer = null;
       if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; root.classList.remove('is-sweeping'); }
     }
     ['pointerdown', 'keydown'].forEach(function (t) { root.addEventListener(t, stopAttract); });
+  }
 
-    function easeInOutQuad(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+  function easeInOutQuad(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
 
-    function scheduleIdleWatch() {
-      if (userInteracted || attractRuns >= 2) return;
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(function () {
-        if (!userInteracted && onScreen && !dragging && attractRuns < 2) runSweep();
-      }, 4000);
-    }
+  function scheduleIdleWatch() {
+    if (userInteracted || attractRuns >= 2) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () {
+      if (!userInteracted && worldOnScreen && !dragging && attractRuns < 2) runSweep();
+    }, 4000);
+  }
 
-    function runSweep() {
-      attractRuns++;
-      root.classList.add('is-sweeping');
-      const OUT_MS = 900, PAUSE_MS = 650, BACK_MS = 900;
-      const t0 = performance.now();
-      function frame(now) {
-        if (userInteracted || !onScreen) { sweepRaf = null; root.classList.remove('is-sweeping'); return; } // interrupted — leave as-is
-        const el = now - t0;
-        let pct;
-        if (el < OUT_MS) {
-          pct = 50 - 20 * easeInOutQuad(el / OUT_MS);
-        } else if (el < OUT_MS + PAUSE_MS) {
-          pct = 30;
-        } else if (el < OUT_MS + PAUSE_MS + BACK_MS) {
-          pct = 30 + 20 * easeInOutQuad((el - OUT_MS - PAUSE_MS) / BACK_MS);
-        } else {
-          setCut(50);
-          sweepRaf = null;
-          root.classList.remove('is-sweeping');
-          if (attractRuns < 2) scheduleIdleWatch();
-          return;
-        }
-        setCut(pct);
-        sweepRaf = requestAnimationFrame(frame);
+  function runSweep() {
+    attractRuns++;
+    root.classList.add('is-sweeping');
+    const OUT_MS = 900, PAUSE_MS = 650, BACK_MS = 900;
+    const t0 = performance.now();
+    function frame(now) {
+      if (userInteracted || !worldOnScreen) { sweepRaf = null; root.classList.remove('is-sweeping'); return; } // interrupted — leave as-is
+      const el = now - t0;
+      let pct;
+      if (el < OUT_MS) {
+        pct = 50 - 20 * easeInOutQuad(el / OUT_MS);
+      } else if (el < OUT_MS + PAUSE_MS) {
+        pct = 30;
+      } else if (el < OUT_MS + PAUSE_MS + BACK_MS) {
+        pct = 30 + 20 * easeInOutQuad((el - OUT_MS - PAUSE_MS) / BACK_MS);
+      } else {
+        setCut(50);
+        sweepRaf = null;
+        root.classList.remove('is-sweeping');
+        if (attractRuns < 2) scheduleIdleWatch();
+        return;
       }
+      setCut(pct);
       sweepRaf = requestAnimationFrame(frame);
     }
+    sweepRaf = requestAnimationFrame(frame);
+  }
 
+  if ('IntersectionObserver' in window) {
     new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        onScreen = en.isIntersecting;
-        if (onScreen) {
-          scheduleIdleWatch();
+        worldOnScreen = en.isIntersecting;
+        if (worldOnScreen) {
+          checkWorldGate(parseFloat(root.getAttribute('aria-valuenow') || '50'));
+          resumeCycle();
+          if (worldActivated && !reduce) worldVideo.play().catch(function () {});
+          if (!reduce) scheduleIdleWatch();
         } else {
-          // never while off-screen: abort any in-flight sweep and snap back
-          clearTimeout(idleTimer); idleTimer = null;
-          if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; root.classList.remove('is-sweeping'); setCut(50); }
+          pauseCycle();
+          if (worldActivated) worldVideo.pause();
+          if (!reduce) {
+            // never while off-screen: abort any in-flight sweep and snap back
+            clearTimeout(idleTimer); idleTimer = null;
+            if (sweepRaf) { cancelAnimationFrame(sweepRaf); sweepRaf = null; root.classList.remove('is-sweeping'); setCut(50); }
+          }
         }
       });
     }, { threshold: 0.4 }).observe(root);
