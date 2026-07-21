@@ -28,6 +28,15 @@
    from lab commit b608159, shipped in a1d8f89 — see fx/vendor-engine-url.js
    for full provenance).
 
+   Cold-load build-in (2026-07-22): on a genuine first visit this session
+   (sessionStorage-gated), the hero opens on Letterpress and plays the brand
+   ampersand stamping into paper — the "press" choreography — then continues
+   the ring's normal rotation. Subsequent page navigations stay on the default
+   dawn-first sequence with no animation. This is a one-time visual lead that
+   reinforces brand identity on cold load without repeating on repeat visits,
+   matching the design brief's "once per visit" intent and the multi-page static
+   site's need for visit-scoped (not page-scoped) sessionStorage.
+
    SEQUENCE (tonal alternation — see each scene's own tone: field, sourced
    from the engine's own pack contract, not eyeballed here): only 2 of the
    7 scenes are 'bright' (Letterpress, Product Moment), so a perfect
@@ -63,20 +72,45 @@ function boot(mount) {
       // Beauty mode (2): full filmic pipeline — HDR beautyRT, bloom, ACES, dither.
       core.setPostMode(2);
 
-      // The 7 bespoke scenes, in ring order — see the header comment above
-      // for the tonal-alternation reasoning behind this sequence.
-      const scenes = [
-        // starBrightness: 1.05 (engine default 0.85) — owner wants the
-        // night-sky stars a touch more prominent on our site specifically,
-        // "nothing crazy." Re-vendored 2026-07-21 for this pack option.
-        lib.createFirstLight(core, { starBrightness: 1.05 }), // dark, dawn
-        lib.createLetterpress(core),     // bright
-        lib.createDuskSilk(core),        // dark
-        lib.createConstellation(core),   // dark
-        lib.createProductMoment(core),   // bright
-        lib.createAurora(core),          // dark
-        lib.createCathedralLight(core),  // dark, warm
-      ];
+      // COLD-LOAD GATE: "once per visit" per the design brief — sessionStorage
+      // (not localStorage) so it resets per new session/tab but persists across
+      // page navigations within one visit, matching this multi-page static site.
+      var COLD_LOAD_KEY = 'lgr-hero-build-in';
+      var isColdLoad = false;
+      try { isColdLoad = !sessionStorage.getItem(COLD_LOAD_KEY); } catch (e) {}
+      if (isColdLoad) { try { sessionStorage.setItem(COLD_LOAD_KEY, '1'); } catch (e) {} }
+
+      // The 7 bespoke scenes — see the header comment above for the tonal-
+      // alternation reasoning behind the default order.
+      var firstLight = lib.createFirstLight(core, { starBrightness: 1.05 }); // dark, dawn
+      var letterpress = lib.createLetterpress(core);     // bright
+      var duskSilk = lib.createDuskSilk(core);            // dark
+      var constellation = lib.createConstellation(core);  // dark
+      var productMoment = lib.createProductMoment(core);  // bright
+      var aurora = lib.createAurora(core);                // dark
+      var cathedralLight = lib.createCathedralLight(core); // dark, warm
+
+      // BUILD-IN (cold load only): letterpress leads so its shader-press —
+      // the brand ampersand stamping into paper — is the opening moment,
+      // then the ring continues its normal cyclic order from there. Every
+      // other load keeps the default dawn-open tonal-alternation order.
+      var scenes = isColdLoad
+        ? [letterpress, duskSilk, constellation, productMoment, aurora, cathedralLight, firstLight]
+        : [firstLight, letterpress, duskSilk, constellation, productMoment, aurora, cathedralLight];
+
+      var buildIn = null;
+      if (isColdLoad) {
+        buildIn = lib.createBuildIn(letterpress);
+        // Chain the build-in's transport onto the pack's own per-frame update
+        // (createBuildIn.update(dt) must run AFTER pack.update(), per its own
+        // contract) — the director calls pack.update() every frame, so this
+        // wrap is the seam without touching createHeroDirector itself.
+        var letterpressUpdate = letterpress.update.bind(letterpress);
+        letterpress.update = function (dt, elapsed) {
+          letterpressUpdate(dt, elapsed);
+          buildIn.update(dt);
+        };
+      }
 
       // The director owns the RAF loop, crossfades, dwell timer, visibilitychange
       // pause, and the prefers-reduced-motion static-frame path. We just hand it
@@ -90,8 +124,12 @@ function boot(mount) {
       // One resize call cascades to the director's transition RTs + pack cameras.
       window.addEventListener('resize', function () { core.resize(); }, { passive: true });
 
-      // Reveal the canvas once the first frame has a chance to render.
-      requestAnimationFrame(function () { mount.classList.add('is-loaded'); });
+      // Reveal the canvas AND start the press in the same frame so the
+      // animated stamp-in and the CSS opacity fade begin together.
+      requestAnimationFrame(function () {
+        mount.classList.add('is-loaded');
+        if (buildIn) buildIn.play('press', { duration: 1700, easing: 'easeInCubic' });
+      });
 
       // Expose for debugging / a future codec egg; harmless if unused.
       window.__heroDirector = director;
