@@ -73,7 +73,9 @@ try {
     });
   }
 
-  const names = ['createFirstLight', 'createLetterpress', 'createDuskSilk', 'createConstellation', 'createProductMoment', 'createAurora', 'createCathedralLight'];
+  // Every fresh Playwright context has empty sessionStorage → always hits the
+  // cold-load path (fx/engine-hero.js) → Letterpress leads the ring.
+  const names = ['createLetterpress', 'createDuskSilk', 'createConstellation', 'createProductMoment', 'createAurora', 'createCathedralLight', 'createFirstLight'];
   for (let i = 0; i < sceneCount; i++) {
     await page.evaluate((idx) => window.__heroDirector.goTo(idx), i);
     const tone = await page.evaluate(() => window.__heroDirector.currentTone);
