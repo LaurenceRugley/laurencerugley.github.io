@@ -20,5 +20,20 @@
    (fx/vendor-engine-url.js), not the importing module's — so every
    consumer gets the identical resolved absolute URL regardless of where
    IT lives, which is what actually matters for the browser to dedupe the
-   module. */
-export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=5', import.meta.url).href;
+   module.
+
+   2026-07-22 (the Lenis swap): re-vendored from the lab's lgr-engine-core
+   dist-lib build (sha256 7c9aa1f6f624263f6b856470c7d7d461ccc6b4bee644cb638c8da8b01da5c705,
+   md5-matched against the lab's current build) instead of the old
+   lgr-engine-hero trim — the hero-only bundle never included
+   createSmoothScroll (motion.js's new Lenis replacement), createCameraDirector,
+   or createBeautyPresenter, only the -core build does. Kept the SITE-SIDE
+   filename (vendor/lgr-engine-hero.es.js) unchanged to keep this swap a
+   content + version-bump diff, not a rename-and-chase-every-reference one —
+   the name is a little stale now (this is genuinely the core bundle, not a
+   hero-only trim) but every consumer already resolves through this one
+   constant, so a future rename is a single-file edit whenever it's worth it.
+   THIRD consumer as of this swap: motion.js dynamically imports this same
+   constant for createSmoothScroll — same dedupe guarantee applies, now
+   across three call sites instead of two. */
+export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=6', import.meta.url).href;

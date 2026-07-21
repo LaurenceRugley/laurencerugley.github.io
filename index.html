@@ -93,8 +93,9 @@
 <style>
   /* Global reset + page base (tokens live in motion.css). */
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  /* No CSS scroll-behavior: smooth — it fights Lenis (which owns smooth scroll).
-     Reduced-motion users get native instant scrolling (Lenis never inits). */
+  /* No CSS scroll-behavior: smooth — it would double-smooth against
+     createSmoothScroll (motion.js), which owns smooth scroll now.
+     Reduced-motion users get native instant scrolling (it never inits). */
   html { -webkit-font-smoothing: antialiased; }
   body {
     background: var(--bg);
@@ -637,15 +638,14 @@
   });
 </script>
 
-<script src="vendor/lenis.min.js" defer></script>
-<script defer src="motion.js?v=3"></script>
+<script defer src="motion.js?v=4"></script>
 <script defer src="fx/hero-gradient.js"></script>
 <script defer src="fx/cursor-ripple.js"></script>
 <!-- Pixel-companion easter egg: a ~1KB eager loader owns the triggers and
      dynamic-injects the ~27KB-gz chain only on first activation (or immediately
      for returning pixel-mode users). See pixel/egg-loader.js. -->
 <script defer src="pixel/egg-loader.js?v=1"></script>
-<script type="module" src="fx/engine-hero.js?v=11"></script>
+<script type="module" src="fx/engine-hero.js?v=12"></script>
 <script type="module" src="fx/look-reel.js?v=3"></script>
 <script defer src="fx/prove-it.js?v=6"></script>
 <script defer src="fx/process-rail.js?v=1"></script>

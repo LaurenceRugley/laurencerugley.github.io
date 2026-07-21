@@ -61,24 +61,17 @@
 }
 
 /* Offset native anchor jumps + scroll-into-view below the sticky nav.
-   (Lenis ignores this and uses the JS offset instead; this covers the
-   reduced-motion / no-Lenis path.) */
+   (createSmoothScroll ignores this and uses its own JS offset option
+   instead for anchor clicks it handles — this covers the reduced-motion /
+   native-scroll path, where nothing else sets the offset.) */
 html { scroll-padding-top: 64px; }
 
-/* ---------- LENIS recommended stylesheet ----------
-   The official CSS (darkroomengineering/lenis). Lenis adds .lenis / .lenis-smooth
-   / .lenis-stopped / .lenis-scrolling / .lenis-locked to <html> at runtime; these
-   rules make it behave correctly (proper height, scroll-lock clipping, nested
-   scroll containment via [data-lenis-prevent], iframe pointer safety). */
-html.lenis, html.lenis body { height: auto; }
-.lenis.lenis-smooth { scroll-behavior: auto !important; } /* guard vs native smooth */
-.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
-.lenis [data-lenis-prevent],
-.lenis [data-lenis-prevent-wheel],
-.lenis [data-lenis-prevent-touch],
-.lenis [data-lenis-prevent-vertical],
-.lenis [data-lenis-prevent-horizontal] { overscroll-behavior: contain; }
-.lenis.lenis-smooth iframe { pointer-events: none; }
+/* The old "LENIS recommended stylesheet" block (.lenis/.lenis-smooth/etc.
+   classes Lenis added to <html> at runtime) lived here — removed 2026-07-22
+   with the Lenis rip-out. createSmoothScroll never touches <html>'s
+   classList (confirmed from its source), so none of those selectors could
+   ever match again; kept as pure dead weight would be exactly the kind of
+   stale-reference the swap was meant to leave zero of. */
 
 /* ---------- Selected Work — compact index (2026-07-17 redesign) ----------
    Rows, not tall cards: every project leads with the outcome instead of a

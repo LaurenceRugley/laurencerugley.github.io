@@ -1,10 +1,15 @@
 /* engine-hero.js — lazy-mount the 7-scene WebGL hero carousel after LCP.
    ------------------------------------------------------------------------
    The hero is a carousel of bespoke shader scenes driven by the engine's
-   createHeroDirector, running on the hero-only one-file lib
-   (lgr-engine-hero.es.js, ~241 KB gz — no city, no editor/pilot/cockpit/
-   terrain/catalog/audio/tracer; same createEngineCore + the 7 scene packs +
-   createHeroDirector exports as the slim core).
+   createHeroDirector, from the vendored engine lib (vendor/lgr-engine-
+   hero.es.js — the SITE-side filename is now a bit stale: as of the
+   2026-07-22 Lenis swap this is the lab's -core build, ~352 KB gz, not the
+   old hero-only ~241 KB trim, since motion.js's createSmoothScroll only
+   lives in -core — see fx/vendor-engine-url.js for the full re-vendor note).
+   Same createEngineCore + the 7 scene packs + createHeroDirector exports
+   this file has always used; the extra weight is createSmoothScroll +
+   createCameraDirector + createBeautyPresenter, unused by this file but
+   sharing the one dynamic-imported module with motion.js and fx/look-reel.js.
 
    Polish wave (2026-07-18): re-vendored from the lab's certified dist-lib
    build and added the three new scenes — Letterpress (bright), Cathedral
@@ -29,7 +34,9 @@
 
    Rules:
    - Never blocks LCP: waits for window 'load', then an IntersectionObserver so the
-     ~300 KB import only fires when the hero is actually in view. The existing
+     ~352 KB import only fires when the hero is actually in view (motion.js may
+     trigger the same shared import earlier for smooth-scroll — the module cache
+     means only one of the two ever actually causes the fetch). The existing
      hero-gradient (fx/hero-gradient.*) is the instant poster until the canvas fades in.
    - prefers-reduced-motion: still mounts — createHeroDirector shows a STATIC first
      scene with no auto-advance and no RAF (the director handles the policy itself).
@@ -98,8 +105,9 @@ function boot(mount) {
       // out of view (e.g. reading the Work section) — the director's tick early-
       // returns on core.paused; keeps us from rendering two WebGL scenes at once —
       // and refresh the text tone from the director. Poll the rect rather than an
-      // IntersectionObserver — IO doesn't track Lenis's transform-based scroll
-      // reliably here (the same reason the boot needed a fallback).
+      // IntersectionObserver — IO wasn't reliable enough here in practice (the
+      // same reason the boot needed a fallback below); polling sidesteps
+      // whatever the cause was rather than chasing it further.
       (function pausePoll() {
         var r = mount.getBoundingClientRect();
         var vh = window.innerHeight || document.documentElement.clientHeight;
@@ -128,7 +136,8 @@ function init() {
   // normally fires right after load) — keeps the import off the critical path.
   // FALLBACK TIMER (2026-07-09): IntersectionObserver was observed NEVER FIRING on a
   // real Chrome despite the mount being visible and in-viewport (fresh observer, no
-  // callback in 1.5s — cause unclear; Lenis/environment interplay suspected). An optimization
+  // callback in 1.5s — cause unclear; an environment interplay was suspected at the
+  // time, unconfirmed, and moot now regardless of cause). An optimization
   // must never gate the feature: if IO hasn't fired shortly after init, boot anyway.
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(function (entries) {

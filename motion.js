@@ -127,103 +127,127 @@
     els.forEach(function (el) { el.classList.add('is-visible'); });
   }
 
-  /* ---------- LENIS SMOOTH SCROLL ---------- */
-  // Self-hosted Lenis (vendor/lenis.min.js, defer): poll briefly until the
-  // global is ready, then fall back to native scrolling if it never loads.
-  var tries = 0;
-  (function initLenis() {
-    if (window.Lenis) {
-      // Slightly snappier than default so the glide tail is short (less "lag").
-      var lenis = new Lenis({ lerp: 0.14, smoothWheel: true, syncTouch: false });
-      function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-      requestAnimationFrame(raf);
+  /* ---------- SMOOTH SCROLL (first-party createSmoothScroll) ----------
+     2026-07-22: replaces Lenis (the doctrine close-out — no more third-party
+     scroll-smoothing code shipped anywhere on the site). motion.js is a
+     classic deferred script, not type="module", so it can't use a static
+     `import` declaration — but a dynamic import() expression works from any
+     script context, and critically resolves to the SAME cached module every
+     other consumer (fx/engine-hero.js, fx/look-reel.js) gets, since all
+     three import the identical fx/vendor-engine-url.js constant. Same
+     double-fetch protection as before, now across three call sites instead
+     of two.
 
-      var navEl = document.querySelector('.nav');
-      function navH() { return navEl ? Math.round(navEl.getBoundingClientRect().height) : 0; }
-      function scrollY() { return typeof lenis.scroll === 'number' ? lenis.scroll : (window.scrollY || window.pageYOffset || 0); }
+     No more poll-for-a-global-then-fall-back-to-native loop (Lenis was
+     loaded as a separate deferred <script>, so its readiness was a race);
+     the .then() below only ever runs once the module is actually loaded —
+     if the import ever rejects, .catch() logs a warning and the page is
+     already 100% native the whole time (nothing partially attached). */
+  var VENDOR_MODULE = './fx/vendor-engine-url.js';
+  import(VENDOR_MODULE).then(function (mod) {
+    return import(mod.VENDOR_ENGINE_URL);
+  }).then(function (lib) {
+    // smooth:11, a touch above the house default (9) — matches the old
+    // Lenis lerp:0.14 "slightly snappier, short glide tail" intent. No
+    // reducedMotion option passed — createSmoothScroll auto-detects via
+    // matchMedia on its own (this whole block already never runs under
+    // reduced-motion anyway, gated by the file-level `if (reduce) return;`
+    // above — belt-and-suspenders, not a conflict).
+    var ss = lib.createSmoothScroll({ smooth: 11 });
+    ss.start();
 
-      // Smooth-scroll in-page anchor links (nav + scroll cue) instead of jumping.
-      document.addEventListener('click', function (e) {
-        var a = e.target.closest('a[href^="#"]');
-        if (!a) return;
-        var id = a.getAttribute('href');
-        if (id.length < 2) return; // ignore bare "#"
-        var target = document.querySelector(id);
-        if (!target) return;
-        e.preventDefault();
-        lenis.scrollTo(target, { offset: -navH(), lock: true, duration: 0.6 }); // clear the sticky nav
-      });
+    var navEl = document.querySelector('.nav');
+    function navH() { return navEl ? Math.round(navEl.getBoundingClientRect().height) : 0; }
+    function scrollY() { return ss.scroll; }
 
-      /* ---------- DIRECTIONAL COMMIT-SNAP ----------
-         Free smooth scrolling stays free. The snap NEVER pulls you backward:
-         it only moves toward the direction you were travelling, and only once
-         Lenis has actually stopped (not mid-glide). It engages only after you
-         coast close to the next section (commit zone), is locked so live input
-         can't fight it, and never re-fires while one is in flight. Hand-rolled
-         on Lenis's own scrollTo — fully ours, no extra deps. */
-      var sections = [].slice.call(document.querySelectorAll('main section'));
-      if (sections.length) {
-        var snapping = false, snapTimer = null, safety = null;
-        var lastY = scrollY(), dir = 0; // dir: 1 = down, -1 = up
+    // Smooth-scroll in-page anchor links (nav + scroll cue) instead of jumping.
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      var id = a.getAttribute('href');
+      if (id.length < 2) return; // ignore bare "#"
+      var target = document.querySelector(id);
+      if (!target) return;
+      e.preventDefault();
+      // duration in ms here (was seconds under Lenis: 0.6s -> 600ms).
+      ss.scrollTo(target, { offset: -navH(), duration: 600 }); // clear the sticky nav
+    });
 
-        // offsetTop is the LAYOUT position — immune to the reveal transform — so
-        // the snap lands aligned (getBoundingClientRect would include it).
-        function absTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
-        function snapTargets() {
-          var nh = navH(), vh = window.innerHeight;
-          var maxY = Math.max(0, (document.documentElement.scrollHeight || document.body.scrollHeight) - vh);
-          var raw = sections.map(function (s, i) {
-            var t = i === 0 ? 0 : Math.max(0, Math.round(absTop(s) - nh)); // top of page for hero
-            return Math.min(t, maxY); // never past the bottom — keep the footer reachable
-          });
-          if (raw.length && raw[raw.length - 1] < maxY - 4) raw.push(maxY); // bottom = footer framed
-          // Always keep the top (0) and the bottom; drop near-duplicates between.
-          var pts = [raw[0]];
-          for (var i = 1; i < raw.length; i++) {
-            if (raw[i] - pts[pts.length - 1] > vh * 0.5) pts.push(raw[i]);
-          }
-          var bottom = raw[raw.length - 1];
-          if (pts[pts.length - 1] !== bottom) pts.push(bottom);
-          return pts;
-        }
+    /* ---------- DIRECTIONAL COMMIT-SNAP ----------
+       Free smooth scrolling stays free. The snap NEVER pulls you backward:
+       it only moves toward the direction you were travelling, and only once
+       the glide has actually stopped (not mid-glide). It engages only after
+       you coast close to the next section (commit zone) and never re-fires
+       while one is in flight. NOTE: no lock option exists on this module by
+       design (native scroll always wins, structurally — see
+       createSmoothScroll's own header) — a real scroll gesture starting
+       mid-snap now interrupts it rather than fighting it, which is the
+       correct a11y-first behavior, not a regression: the snap only ever
+       starts once the user has already stopped moving, so this only matters
+       if a NEW gesture begins during the ~450ms glide itself. Hand-rolled on
+       our own scrollTo — fully ours, no extra deps. */
+    var sections = [].slice.call(document.querySelectorAll('main section'));
+    if (sections.length) {
+      var snapping = false, snapTimer = null, safety = null;
+      var lastY = scrollY(), dir = 0; // dir: 1 = down, -1 = up
 
-        function settle() {
-          if (snapping) return;
-          if (lenis.isScrolling) { snapTimer = setTimeout(settle, 60); return; } // wait for a real stop
-          var y = scrollY(), vh = window.innerHeight;
-          var pts = snapTargets(), best = null, bestD = Infinity;
-          for (var i = 0; i < pts.length; i++) {
-            var delta = pts[i] - y;
-            if (dir > 0 && delta < -4) continue;   // going down: ignore targets above — no backward snap
-            if (dir < 0 && delta >  4) continue;   // going up:   ignore targets below
-            var d = Math.abs(delta);
-            if (d < bestD) { bestD = d; best = pts[i]; }
-          }
-          if (best == null) return;
-          if (bestD < 24) return;            // already framed — leave it (dead-zone, no micro-snaps)
-          if (bestD > vh * 0.4) return;      // not committed yet — free scroll stays free
-          snapping = true;
-          lenis.scrollTo(best, {
-            duration: 0.45,
-            lock: true,                                              // don't let momentum fight the snap
-            easing: function (t) { return 1 - Math.pow(1 - t, 3); }, // easeOutCubic
-            onComplete: function () { clearTimeout(safety); snapping = false; }
-          });
-          clearTimeout(safety);
-          safety = setTimeout(function () { snapping = false; }, 1400); // > max duration; backup unlock
-        }
-
-        lenis.on('scroll', function () {
-          var y = scrollY();
-          if (y > lastY + 1) dir = 1; else if (y < lastY - 1) dir = -1;
-          lastY = y;
-          if (snapping) return;
-          clearTimeout(snapTimer);
-          snapTimer = setTimeout(settle, 140); // wait out the glide tail, then settle
+      // offsetTop is the LAYOUT position — immune to the reveal transform — so
+      // the snap lands aligned (getBoundingClientRect would include it).
+      function absTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
+      function snapTargets() {
+        var nh = navH(), vh = window.innerHeight;
+        var maxY = Math.max(0, (document.documentElement.scrollHeight || document.body.scrollHeight) - vh);
+        var raw = sections.map(function (s, i) {
+          var t = i === 0 ? 0 : Math.max(0, Math.round(absTop(s) - nh)); // top of page for hero
+          return Math.min(t, maxY); // never past the bottom — keep the footer reachable
         });
+        if (raw.length && raw[raw.length - 1] < maxY - 4) raw.push(maxY); // bottom = footer framed
+        // Always keep the top (0) and the bottom; drop near-duplicates between.
+        var pts = [raw[0]];
+        for (var i = 1; i < raw.length; i++) {
+          if (raw[i] - pts[pts.length - 1] > vh * 0.5) pts.push(raw[i]);
+        }
+        var bottom = raw[raw.length - 1];
+        if (pts[pts.length - 1] !== bottom) pts.push(bottom);
+        return pts;
       }
-      return;
+
+      function settle() {
+        if (snapping) return;
+        if (ss.active) { snapTimer = setTimeout(settle, 60); return; } // wait for a real stop
+        var y = scrollY(), vh = window.innerHeight;
+        var pts = snapTargets(), best = null, bestD = Infinity;
+        for (var i = 0; i < pts.length; i++) {
+          var delta = pts[i] - y;
+          if (dir > 0 && delta < -4) continue;   // going down: ignore targets above — no backward snap
+          if (dir < 0 && delta >  4) continue;   // going up:   ignore targets below
+          var d = Math.abs(delta);
+          if (d < bestD) { bestD = d; best = pts[i]; }
+        }
+        if (best == null) return;
+        if (bestD < 24) return;            // already framed — leave it (dead-zone, no micro-snaps)
+        if (bestD > vh * 0.4) return;      // not committed yet — free scroll stays free
+        snapping = true;
+        // duration in ms (was seconds under Lenis: 0.45s -> 450ms). easing
+        // 'easeOutCubic' is the exact curve the old inline fn computed
+        // (1 - (1-t)^3) — named in the house easing set now.
+        ss.scrollTo(best, { duration: 450, easing: 'easeOutCubic' }).then(function () {
+          clearTimeout(safety); snapping = false;
+        });
+        clearTimeout(safety);
+        safety = setTimeout(function () { snapping = false; }, 1400); // > max duration; backup unlock
+      }
+
+      ss.on('scroll', function () {
+        var y = scrollY();
+        if (y > lastY + 1) dir = 1; else if (y < lastY - 1) dir = -1;
+        lastY = y;
+        if (snapping) return;
+        clearTimeout(snapTimer);
+        snapTimer = setTimeout(settle, 140); // wait out the glide tail, then settle
+      });
     }
-    if (tries++ < 20) setTimeout(initLenis, 50);
-  })();
+  }).catch(function (err) {
+    console.warn('[motion] smooth-scroll boot failed — native scroll stays.', err);
+  });
 })();

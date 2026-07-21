@@ -9,10 +9,15 @@
      NOT here (it is dynamic-imported by engine-hero, not a tag) — it has its own
      line below. The lazy egg chain is behind egg-loader, so it is not counted
      either: that is the point of the lazy loader.
-   • vendor/lgr-engine-hero.es.js ≤ 300 KB — the one heavy dependency. Hero-only
-     build (Lesson O): createEngineCore + the 4 scene packs + createHeroDirector,
-     none of editor/pilot/cockpit/terrain/catalog/audio/tracer — ~216 KB gz vs the
-     slim core's ~292 KB, so there is real headroom under the 300 KB ceiling again.
+   • vendor/lgr-engine-hero.es.js ≤ 380 KB — 2026-07-22 (the Lenis swap): this is
+     now the lab's lgr-engine-core build (~352 KB gz), not the old hero-only trim
+     (~245 KB) — the hero trim never included createSmoothScroll (motion.js's
+     first-party Lenis replacement), createCameraDirector, or
+     createBeautyPresenter, only -core has all three. Budget raised from 300 KB
+     to 380 KB to fit with headroom, a deliberate, reported tradeoff (not a
+     silent creep) for deleting vendor/lenis.min.js (~3.8 KB gz) entirely — net
+     site-wide vendor weight is up appreciably, in exchange for zero third-party
+     scroll-smoothing code.
 
    Numbers print either way (green or red) so drift is visible before it bites.
 
@@ -28,9 +33,11 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const LAB_CORE = '/Users/lencho/dev/lgr-webgl-lab/packages/engine-core/dist-lib/lgr-engine-hero.es.js';
+// 2026-07-22: the site now vendors the lab's -core build (createSmoothScroll
+// lives there, not in the old hero-only trim) — drift check follows suit.
+const LAB_CORE = '/Users/lencho/dev/lgr-webgl-lab/packages/engine-core/dist-lib/lgr-engine-core.es.js';
 const EAGER_BUDGET = 80 * 1024;
-const VENDOR_BUDGET = 300 * 1024;
+const VENDOR_BUDGET = 380 * 1024;
 
 const gz = (p) => gzipSync(readFileSync(p)).length;
 const kb = (n) => (n / 1024).toFixed(1) + ' KB';
