@@ -35,5 +35,15 @@
    constant, so a future rename is a single-file edit whenever it's worth it.
    THIRD consumer as of this swap: motion.js dynamically imports this same
    constant for createSmoothScroll — same dedupe guarantee applies, now
-   across three call sites instead of two. */
-export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=6', import.meta.url).href;
+   across three call sites instead of two.
+
+   2026-07-22 (the build-in swap): re-vendored again from the lab's lgr-engine-core
+   dist-lib build (sha256 805c7364261948dd0fc66ab2201046a52228b698be4c7f760c80cd8a7141adc0)
+   for the new createBuildIn export (entrance/assembly choreography) and the
+   letterpress shader-press (pack.setBuild). Source: lab commit b608159
+   ("feat(letterpress): shader-press build-in"), shipped in the pushed +
+   CI-green commit a1d8f89 — NOT the 64c075b "provenance anchor" commit, which
+   predates createBuildIn entirely (see docs/superpowers/plans/2026-07-21-hero-
+   buildin-entrance.md for the full discrepancy note). dist-lib content is
+   byte-identical from b608159 through the lab's HEAD at vendor time. */
+export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=7', import.meta.url).href;

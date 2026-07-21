@@ -23,6 +23,11 @@
    second time to stay current) for the new createFirstLight starBrightness
    pack option.
 
+   Re-vendored 2026-07-22 for createBuildIn export and letterpress shader-press
+   (sha256 805c7364261948dd0fc66ab2201046a52228b698be4c7f760c80cd8a7141adc0,
+   from lab commit b608159, shipped in a1d8f89 — see fx/vendor-engine-url.js
+   for full provenance).
+
    SEQUENCE (tonal alternation — see each scene's own tone: field, sourced
    from the engine's own pack contract, not eyeballed here): only 2 of the
    7 scenes are 'bright' (Letterpress, Product Moment), so a perfect
