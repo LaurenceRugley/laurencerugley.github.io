@@ -73,8 +73,15 @@ async function main() {
   let status = 'IN_PROGRESS';
   for (let i = 0; i < 5 && status === 'IN_PROGRESS'; i++) {
     await new Promise((r) => setTimeout(r, 60_000));
-    const statusRes = await fetch(`https://graph.facebook.com/${IG_GRAPH_VERSION}/${creationId}?fields=status_code&access_token=${token}`);
-    const statusBody = await statusRes.json();
+    let statusBody;
+    try {
+      const statusRes = await fetch(`https://graph.facebook.com/${IG_GRAPH_VERSION}/${creationId}?fields=status_code&access_token=${token}`);
+      if (!statusRes.ok) throw new Error(`HTTP ${statusRes.status}`);
+      statusBody = await statusRes.json();
+    } catch (err) {
+      console.error('Container status check failed:', err.message);
+      process.exit(1);
+    }
     status = statusBody.status_code;
     console.log(`  status: ${status}`);
   }
