@@ -21,9 +21,11 @@
      node tools/ig-publish-test.mjs --image-url=<url> --live --confirm=PUBLISH          (real publish)
 
    --image-url and --video-url are mutually exclusive; exactly one is
-   required. A video post uses media_type=VIDEO (regular feed video, not
-   Reels — Instagram's Reels media_type is a separate, distinct flow this
-   script does not implement).
+   required. A video post uses media_type=REELS + share_to_feed=true (Meta
+   deprecated media_type=VIDEO for feed video posts — confirmed live,
+   error_subcode 2207067 — REELS is now the only path for video, and
+   share_to_feed makes it appear as a normal grid post too, not just under
+   the Reels tab).
 
    Reads IG_TOKEN and IG_USER_ID from the environment — never hardcode a
    token here, never pass one as a CLI arg (shell history would leak it).
@@ -60,7 +62,11 @@ async function main() {
 
   const containerUrl = `https://graph.instagram.com/${IG_GRAPH_VERSION}/${igUserId || '<IG_USER_ID>'}/media`;
   const containerParams = args.videoUrl
-    ? { media_type: 'VIDEO', video_url: args.videoUrl, ...(args.caption ? { caption: args.caption } : {}) }
+    // media_type=VIDEO is deprecated by Meta for feed video posts (confirmed
+    // live, error_subcode 2207067: "Use the REELS media type to publish a
+    // video to your Instagram feed"). share_to_feed=true makes it appear as
+    // a normal grid post (and in the Reels tab), not Reels-tab-only.
+    ? { media_type: 'REELS', video_url: args.videoUrl, share_to_feed: 'true', ...(args.caption ? { caption: args.caption } : {}) }
     : { image_url: args.imageUrl, ...(args.caption ? { caption: args.caption } : {}) };
   const publishUrl = `https://graph.instagram.com/${IG_GRAPH_VERSION}/${igUserId || '<IG_USER_ID>'}/media_publish`;
 
