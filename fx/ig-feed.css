@@ -7,6 +7,14 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-top: 30px;
+  /* Reserve the fully-loaded grid's footprint up front so the async fetch
+     (IntersectionObserver + fallback timer in fx/ig-feed.js) swapping the
+     one-line .ig-grid-fallback for a 3-row tile grid doesn't shift
+     everything below it (a real CLS bug — #prove-it sits right after this
+     section). 3 equal columns of aspect-ratio:1/1 tiles with equal gaps on
+     both axes makes a MAX_TILES=9 grid come out ~square: measured 920x920
+     at 1280px viewport width. */
+  aspect-ratio: 1 / 1;
 }
 
 .ig-tile {
@@ -30,7 +38,9 @@
 }
 
 @media (max-width: 680px) {
-  .ig-grid { grid-template-columns: repeat(2, 1fr); }
+  /* 2 columns -> 5 rows at MAX_TILES=9, so the square ratio above no longer
+     approximates it; reserve the taller 2-column footprint instead. */
+  .ig-grid { grid-template-columns: repeat(2, 1fr); aspect-ratio: 2 / 5; }
 }
 
 @media (prefers-reduced-motion: reduce) {
