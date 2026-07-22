@@ -86,6 +86,7 @@
 <link rel="stylesheet" href="fx/hero-gradient.css">
 <link rel="stylesheet" href="fx/engine-hero.css?v=3">
 <link rel="stylesheet" href="fx/look-reel.css">
+<link rel="stylesheet" href="fx/ig-feed.css">
 <link rel="stylesheet" href="fx/prove-it.css?v=5">
 <link rel="stylesheet" href="fx/cursor-ripple.css">
 <link rel="stylesheet" href="fx/konami-trophy.css">
@@ -438,6 +439,19 @@
     </div>
   </section>
 
+  <section class="section" id="ig-feed">
+    <div class="band reveal">
+      <h2 class="section-label">Latest from @lgrwebstudios</h2>
+      <h3 class="index-title">Post to Instagram. <em>The site updates itself.</em></h3>
+      <p class="index-dek" id="ig-feed-caption">Sample preview — live sync flips on soon.</p>
+      <div class="ig-grid" id="ig-feed-grid" aria-live="polite">
+        <!-- fx/ig-feed.js populates this from IG_FEED_URL. Static fallback
+             (also the no-JS state): a link straight to the profile. -->
+        <a class="ig-grid-fallback" href="https://www.instagram.com/lgrwebstudios/" target="_blank" rel="noopener">See @lgrwebstudios on Instagram ↗</a>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="prove-it">
     <div class="band reveal">
       <h2 class="section-label">The prove-it moment</h2>
@@ -647,6 +661,7 @@
 <script defer src="pixel/egg-loader.js?v=1"></script>
 <script type="module" src="fx/engine-hero.js?v=12"></script>
 <script type="module" src="fx/look-reel.js?v=3"></script>
+<script type="module" src="fx/ig-feed.js?v=1"></script>
 <script defer src="fx/prove-it.js?v=6"></script>
 <script defer src="fx/process-rail.js?v=1"></script>
 <script defer src="fx/finale.js?v=1"></script>
