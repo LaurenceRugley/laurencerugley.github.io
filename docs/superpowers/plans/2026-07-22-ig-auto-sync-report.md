@@ -143,11 +143,64 @@ run from a machine with `IG_TOKEN`/`IG_USER_ID` in its environment (the
 Worker secret isn't readable back out via `wrangler`, so this needs the
 token value from wherever the owner holds it separately).
 
-## 7. What's next (not this session's scope)
+## 7. The loop closed, end to end (2026-07-22, same day)
 
-- Post to `@lgrwebstudios` on Instagram whenever ready — the very next
-  `/api/ig-feed` request after that (or the next 3-hour cron tick) will
-  pick it up automatically, no further deploys needed.
+The owner ran the real, deliberate `--live --confirm=PUBLISH` publish
+himself (token entered directly at wrangler's own prompt, never through the
+agent session), posting the first real content to `@lgrwebstudios` — the
+featured camera-director cut (17s, 1080×1080 H.264,
+`captures/camera-director/featured-1x1.mp4`), captioned per DESIGN's
+shaping. Three real bugs surfaced and were fixed live, in order:
+
+1. **`media_type: VIDEO` is deprecated by Meta for feed posts** (confirmed
+   via the live error, `error_subcode 2207067`: "Use the REELS media type
+   to publish a video to your Instagram feed"). Fixed:
+   `media_type: 'REELS'` + `share_to_feed: 'true'` (so it appears as a
+   normal grid post, not Reels-tab-only) in `tools/ig-publish-test.mjs`.
+2. **Media hosting**: the local video file needed a public HTTPS URL for
+   Meta to fetch. Temporarily deployed to the Worker's own
+   `public/tmp-ig-publish/`, confirmed fetchable (200, `video/mp4`), then
+   removed automatically by `promote.sh`'s `rsync --delete` on the next
+   promote (never committed to git).
+3. **Missing `thumbnail_url`** — the first real regression this feature
+   ever hit with actual VIDEO/REELS content: `media_url` on a video item is
+   the raw `.mp4` file, which an `<img>` tag can't render, so the tile
+   showed broken-image alt text instead of a thumbnail. Every prior test
+   (sample data, Task 2's reviews, the local sweep) only exercised
+   `IMAGE`-type items, so this never surfaced until a real video existed.
+   Fixed: `IG_FIELDS` now requests `thumbnail_url`;
+   `fx/ig-feed.js` uses `item.thumbnail_url || item.media_url`.
+
+**Result, verified:**
+- Published media ID `18049160864572657`, permalink
+  `https://www.instagram.com/reel/DbG5QXqAdaF/`.
+- `GET https://lgrwebstudios.com/api/ig-feed` returns the real item
+  (`"live":true`), with a working `thumbnail_url`.
+- `lgrwebstudios.com`'s "Latest from @lgrwebstudios" section shows the real
+  thumbnail (confirmed `naturalWidth=640`, not a broken image), caption
+  reads "Live from Instagram", links out to the real permalink, 0 console
+  errors. Screenshots:
+  `showcase-review/ig-sync/desktop-LIVE-thumbnail-fixed.png`,
+  `instagram-post-live.png`.
+- One cosmetic note: the caption's em-dash and middle-dot were lost in
+  transit (garbled on the first check, then silently stripped by the
+  second fetch) — most likely the owner's terminal mangling those Unicode
+  characters when the command was typed/pasted, not a script bug (the
+  script's own dry-run test with the identical string rendered correctly).
+  Fixable via the Instagram app's normal caption edit if desired; left as
+  the owner's call, not fixed here.
+- `verify-ig-feed.mjs`'s "6-9 tiles" assertion now reads FAIL (1 tile
+  found) against production — this is the script's own outdated assumption
+  (written for an established feed), not a site defect; with exactly one
+  real post, one tile is correct.
+
+## 8. What's next (not this session's scope)
+
+- More posts to `@lgrwebstudios` will appear automatically (next
+  `/api/ig-feed` request or the next 3-hour cron tick), no further deploys
+  needed.
+- Consider loosening `verify-ig-feed.mjs`'s tile-count assertion (currently
+  hardcoded 6-9) now that the real feed can legitimately have fewer.
 - The `vendor-hash drift` warning surfaced by every `size-budget` run
   (pre-existing, unrelated to this feature) is still open — re-vendor from
   the lab, or confirm the drift is deliberate.
