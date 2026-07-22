@@ -7,7 +7,7 @@
     "probe": "node tools/site-probe.mjs",
     "probe:neg": "NEG=1 node tools/site-probe.mjs",
     "budget": "node tools/size-budget.mjs",
-    "test": "node --test",
+    "test": "node --test tests/*.mjs",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy"
   },
