@@ -45,5 +45,19 @@
    CI-green commit a1d8f89 — NOT the 64c075b "provenance anchor" commit, which
    predates createBuildIn entirely (see docs/superpowers/plans/2026-07-21-hero-
    buildin-entrance.md for the full discrepancy note). dist-lib content is
-   byte-identical from b608159 through the lab's HEAD at vendor time. */
-export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=7', import.meta.url).href;
+   byte-identical from b608159 through the lab's HEAD at vendor time.
+
+   2026-07-22 (the shadows app pass): re-vendored from the lab's lgr-engine-core
+   dist-lib build (sha256 970d34fed61636c4868755d26a9102a7524f433ad4ab7925a4332af901eab751)
+   at the lab's post-hoard-merge provenance-anchor commit 4e42e7b ("chore(dist-lib):
+   rebuild at merged HEAD (post-hoard-merge) — provenance anchor"), lab HEAD 9a531e3
+   at vendor time (2 commits after 4e42e7b, neither touching dist-lib — confirmed via
+   `git diff 4e42e7b HEAD -- packages/engine-core/dist-lib/`, empty). Brings
+   createShadowRig (new, wired into createDuskSilk + createProductMoment, both default
+   `shadows:true` in this build) plus createScatter (bundled, unused by any site scene
+   yet). createTorchLight and createDiveController are NOT in this bundle — the lab's
+   own provenance commit documents them as deliberately excluded from the no-build
+   dist-lib barrels (game-only abilities, a separate curation call). No other scene
+   pack changed: createLetterpress/createConstellation/createAurora/createCathedralLight/
+   createFirstLight/createBuildIn are byte-unaffected by this re-vendor. */
+export const VENDOR_ENGINE_URL = new URL('../vendor/lgr-engine-hero.es.js?v=8', import.meta.url).href;

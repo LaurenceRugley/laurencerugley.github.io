@@ -25381,46 +25381,124 @@ function qx(e, {} = {}) {
 	};
 }
 //#endregion
+//#region src/hero/createShadowRig.js
+function Jx(e, { scene: t, color: n = 16777215, intensity: r = 1, center: i = [
+	0,
+	0,
+	0
+], radius: a = 20, distance: o = 40, mapSize: s = 2048, bias: c = -4e-4, normalBias: l = 0, softness: u = 1, animatedCaster: d = !1 } = {}) {
+	if (!t) throw Error("createShadowRig: `scene` is required (the scene to cast shadows in)");
+	let { renderer: f } = e, p = new hu(n, r);
+	p.castShadow = !0, p.shadow.mapSize.set(s, s), p.shadow.bias = c, p.shadow.normalBias = l, p.shadow.radius = u;
+	let m = new K().fromArray(i), h = a;
+	t.add(p), t.add(p.target);
+	let g = new K(0, 1, 0), _ = new K(0, -1, 0), v = !1;
+	function y({ center: e, radius: t } = {}) {
+		e && m.fromArray(e), typeof t == "number" && (h = t);
+		let n = p.shadow.camera;
+		n.left = -h, n.right = h, n.top = h, n.bottom = -h, n.near = .1, n.far = o + h * 2 + .1, n.updateProjectionMatrix(), p.target.position.copy(m), p.target.updateMatrixWorld(), f.shadowMap.needsUpdate = !0;
+	}
+	function b(e) {
+		g.copy(e).normalize(), p.position.copy(m).addScaledVector(g, o), p.target.position.copy(m), p.target.updateMatrixWorld();
+	}
+	function x() {
+		let t = e._qualityShadows;
+		if (t) {
+			let e = _.distanceToSquared(g) > 1e-6;
+			(d || e || !v) && (f.shadowMap.needsUpdate = !0, _.copy(g));
+		}
+		v = t;
+	}
+	return y({
+		center: i,
+		radius: a
+	}), {
+		light: p,
+		setSunDir: b,
+		fit: y,
+		update: x,
+		get sunDir() {
+			return g;
+		},
+		get strength() {
+			return +!!e._qualityShadows;
+		},
+		get active() {
+			return e._qualityShadows;
+		},
+		dispose() {
+			t.remove(p), t.remove(p.target), p.dispose?.();
+		}
+	};
+}
+//#endregion
 //#region src/shaders/silk.vert
-var Jx = "uniform float uTime;\n\nvarying vec2 vUv;\nvarying float vDisplacement;\n\n/* Smooth value noise — 2D hash + bilinear blend. */\nfloat hash2(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);\n}\nfloat noise2(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  /* Quintic smoothstep for C2 continuity (smoother than cubic). */\n  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  return mix(\n    mix(hash2(i),               hash2(i + vec2(1.0, 0.0)), u.x),\n    mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x),\n    u.y\n  );\n}\n\nvoid main() {\n  vUv = uv;\n  float x = position.x;\n  float z = position.z;\n  float t = uTime;\n\n  /* L1 — long slow swells: primary fabric drape (λ ≈ 25 units, T ≈ 18s). */\n  float d1 = sin(x * 0.25 + t * 0.35) * cos(z * 0.18 + t * 0.26) * 1.8;\n\n  /* L2 — medium diagonal ripple (λ ≈ 8 units, T ≈ 11s, 45° bias). */\n  float d2 = sin((x * 0.55 + z * 0.40) + t * 0.57 + 1.2) * 0.9;\n\n  /* L3 — smooth noise detail (fine silk texture). */\n  float d3 = (noise2(vec2(x * 0.70 + t * 0.32, z * 0.70 + t * 0.24)) - 0.5) * 1.0;\n\n  float disp = d1 + d2 + d3;\n  vDisplacement = disp;\n\n  vec3 displaced = position;\n  displaced.y += disp;\n\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);\n}", Yx = "precision highp float;\n\nvarying vec2 vUv;\nvarying float vDisplacement;\n\n/* Dusk-harbor palette — linear sRGB (sRGB^2.2 ≈ linear).\n   L-N re-skin: lifted from const to UNIFORMS so a client build can inject its own gradient\n   via createDuskSilk ink/gold/cream options, WITHOUT editing this shader. The JS factory defaults\n   them to the exact values below, so a default build is byte-identical.\n   Defaults (from diagram-theme.js OKLCH tokens):\n     Ink   = NEUTRAL.bg  = oklch(10, 0.022, 40)  ≈ #1a1208 → linear = vec3(0.009, 0.004, 0.001)\n     Gold  = ACCENT.ihat = #ff8a5a                           → linear = vec3(1.000, 0.258, 0.101)\n     Cream = NEUTRAL.text = oklch(85, 0.018, 52)  ≈ #d1c5b5 → linear = vec3(0.650, 0.563, 0.474)  */\nuniform vec3 uInk;    /* trough — very dark warm near-black */\nuniform vec3 uGold;   /* mid-wave — warm orange (dusk.sky linear) */\nuniform vec3 uCream;  /* crest — warm cream (NEUTRAL.text linear) */\n\n/* uBrightness: HDR multiplier — crests are 2.4× to trigger bloom.\n   Troughs use 0.6× to stay dark. Cap at 2.5× avoids white blowout. */\nconst float BRIGHT_LOW  = 0.60;\nconst float BRIGHT_HIGH = 2.40;\n\nvoid main() {\n  /* Map raw displacement to [0, 1]:\n     range [-3.0, +3.0] covers >99% of wave values. */\n  float t = clamp((vDisplacement + 3.0) / 6.0, 0.0, 1.0);\n\n  /* Two-stop gradient: ink → gold → cream. */\n  vec3 col;\n  if (t < 0.5) {\n    col = mix(uInk, uGold, t * 2.0);\n  } else {\n    col = mix(uGold, uCream, (t - 0.5) * 2.0);\n  }\n\n  /* HDR brightness ramp — crests bright enough for bloom, troughs stay dark. */\n  float brightness = mix(BRIGHT_LOW, BRIGHT_HIGH, t);\n  col *= brightness;\n\n  gl_FragColor = vec4(col, 1.0);\n}", Xx = new J(.009, .004, .001), Zx = new J(1, .258, .101), Qx = new J(.65, .563, .474);
-function $x(e, { ink: t = Xx, gold: n = Zx, cream: r = Qx } = {}) {
-	let i = new wr(), { x: a, y: o } = e.drawBuffer, s = new cu(52, a / o, .1, 500);
-	s.position.set(0, 5.5, 13), s.lookAt(0, .5, 0);
-	let c = new Mc(40, 24, 120, 80);
-	c.rotateX(-Math.PI / 2);
-	let l = new $c({
-		vertexShader: Jx,
-		fragmentShader: Yx,
-		uniforms: {
+var Yx = "#include <common>\n#include <shadowmap_pars_vertex>\n\nuniform float uTime;\n\nvarying vec2 vUv;\nvarying float vDisplacement;\n\n/* Smooth value noise — 2D hash + bilinear blend with a quintic (C2) fade. Prefixed 'silk_'\n   so it can't collide with any function three's chunks bring in. */\nfloat silk_hash2(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);\n}\nfloat silk_noise2(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  return mix(\n    mix(silk_hash2(i),                 silk_hash2(i + vec2(1.0, 0.0)), u.x),\n    mix(silk_hash2(i + vec2(0.0, 1.0)), silk_hash2(i + vec2(1.0, 1.0)), u.x),\n    u.y\n  );\n}\n\n/* The wave height at a plane position, at time t. Returns the raw y-offset (also the value\n   silk.frag maps to the ink→gold→cream gradient, so silk.vert still passes it on as\n   vDisplacement). Identical expressions to the original inline body — do not \"tidy\" the\n   constants; both the render and the depth pass depend on them matching exactly. */\nfloat silkDisplacement(vec3 pos, float t) {\n  float x = pos.x;\n  float z = pos.z;\n  /* L1 — long slow swells: primary fabric drape (λ ≈ 25 units, T ≈ 18s). */\n  float d1 = sin(x * 0.25 + t * 0.35) * cos(z * 0.18 + t * 0.26) * 1.8;\n  /* L2 — medium diagonal ripple (λ ≈ 8 units, T ≈ 11s, 45° bias). */\n  float d2 = sin((x * 0.55 + z * 0.40) + t * 0.57 + 1.2) * 0.9;\n  /* L3 — smooth noise detail (fine silk texture). */\n  float d3 = (silk_noise2(vec2(x * 0.70 + t * 0.32, z * 0.70 + t * 0.24)) - 0.5) * 1.0;\n  return d1 + d2 + d3;\n}\n\nvoid main() {\n  vUv = uv;\n\n  /* The wave height — shared with the depth pass so the cast shadow matches the surface. */\n  float disp = silkDisplacement(position, uTime);\n  vDisplacement = disp;\n\n  /* 'transformed' is the displaced object-space position — the single point everything below\n     (clip position, world position for the shadow coord) is derived from. */\n  vec3 transformed = position;\n  transformed.y += disp;\n\n  /* World position of the DISPLACED point — three's shadow chunk projects THIS into the sun's\n     shadow camera. Deriving it from the flat plane instead would make the shadow swim. */\n  vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);\n\n  vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);\n  gl_Position = projectionMatrix * mvPosition;\n\n  /* transformedNormal — required by <shadowmap_vertex> under HAS_NORMAL (which three defines for\n     this material). The plane's up-normal is a fine stand-in: normalBias is 0, so this only has to\n     exist, not be exact. 'normal'/'normalMatrix' are three-injected. */\n  vec3 transformedNormal = normalMatrix * normal;\n\n  #include <shadowmap_vertex>\n}", Xx = "precision highp float;\n\n#include <common>\n#include <packing>\n\nuniform bool receiveShadow;   \n                              \n#include <shadowmap_pars_fragment>\n#include <shadowmask_pars_fragment>\n\nvarying vec2 vUv;\nvarying float vDisplacement;\n\n/* Dusk-harbor palette — linear sRGB. L-N re-skin: uniforms so a client build injects its own\n   gradient without editing this shader; JS defaults them to the values below → byte-identical. */\nuniform vec3 uInk;    /* trough — very dark warm near-black */\nuniform vec3 uGold;   /* mid-wave — warm orange (dusk.sky linear) */\nuniform vec3 uCream;  /* crest — warm cream (NEUTRAL.text linear) */\n\n/* uShadow: self-shadow strength, 0..1. 0 = OFF and byte-identical to pre-shadows Dusk-Silk. */\nuniform float uShadow;\n\n/* uBrightness ramp — crests 2.4× to trigger bloom, troughs 0.6× to stay dark. */\nconst float BRIGHT_LOW  = 0.60;\nconst float BRIGHT_HIGH = 2.40;\n\nvoid main() {\n  /* Map raw displacement to [0,1] (range [-3,+3] covers >99% of wave values). */\n  float t = clamp((vDisplacement + 3.0) / 6.0, 0.0, 1.0);\n\n  /* Two-stop gradient: ink → gold → cream. */\n  vec3 col;\n  if (t < 0.5) {\n    col = mix(uInk, uGold, t * 2.0);\n  } else {\n    col = mix(uGold, uCream, (t - 0.5) * 2.0);\n  }\n\n  /* HDR brightness ramp. */\n  float brightness = mix(BRIGHT_LOW, BRIGHT_HIGH, t);\n  col *= brightness;\n\n  /* SELF-SHADOW: 1.0 lit, <1.0 where a crest occludes the sun. Gated by uShadow (0 → identity,\n     so an un-shadowed build is unchanged). We darken toward, but not fully to, black — a real\n     letterpress-flat 0 reads as a hole; 0.28 keeps a touch of ambient in the shade so the silk\n     still reads as fabric in the troughs. */\n  float sMask = getShadowMask();\n  float shade = mix(1.0, mix(0.28, 1.0, sMask), uShadow);\n  col *= shade;\n\n  gl_FragColor = vec4(col, 1.0);\n}", Zx = "uniform float uTime;\n\nvarying vec2 vHighPrecisionZW;\n\n/* Smooth value noise — 2D hash + bilinear blend with a quintic (C2) fade. Prefixed 'silk_'\n   so it can't collide with any function three's chunks bring in. */\nfloat silk_hash2(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);\n}\nfloat silk_noise2(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  return mix(\n    mix(silk_hash2(i),                 silk_hash2(i + vec2(1.0, 0.0)), u.x),\n    mix(silk_hash2(i + vec2(0.0, 1.0)), silk_hash2(i + vec2(1.0, 1.0)), u.x),\n    u.y\n  );\n}\n\n/* The wave height at a plane position, at time t. Returns the raw y-offset (also the value\n   silk.frag maps to the ink→gold→cream gradient, so silk.vert still passes it on as\n   vDisplacement). Identical expressions to the original inline body — do not \"tidy\" the\n   constants; both the render and the depth pass depend on them matching exactly. */\nfloat silkDisplacement(vec3 pos, float t) {\n  float x = pos.x;\n  float z = pos.z;\n  /* L1 — long slow swells: primary fabric drape (λ ≈ 25 units, T ≈ 18s). */\n  float d1 = sin(x * 0.25 + t * 0.35) * cos(z * 0.18 + t * 0.26) * 1.8;\n  /* L2 — medium diagonal ripple (λ ≈ 8 units, T ≈ 11s, 45° bias). */\n  float d2 = sin((x * 0.55 + z * 0.40) + t * 0.57 + 1.2) * 0.9;\n  /* L3 — smooth noise detail (fine silk texture). */\n  float d3 = (silk_noise2(vec2(x * 0.70 + t * 0.32, z * 0.70 + t * 0.24)) - 0.5) * 1.0;\n  return d1 + d2 + d3;\n}\n\nvoid main() {\n  /* Same displacement as silk.vert — identical field, identical time. */\n  float disp = silkDisplacement(position, uTime);\n  vec3 transformed = position;\n  transformed.y += disp;\n\n  vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);\n  gl_Position = projectionMatrix * mvPosition;\n\n  vHighPrecisionZW = gl_Position.zw;\n}", Qx = "#include <common>\n#include <packing>\n\nvarying vec2 vHighPrecisionZW;\n\nvoid main() {\n  /* Normalised device depth in [0,1], then packed to RGBA (three's MeshDepthMaterial recipe). */\n  float fragCoordZ = 0.5 * vHighPrecisionZW.x / vHighPrecisionZW.y + 0.5;\n  gl_FragColor = packDepthToRGBA(fragCoordZ);\n}", $x = new J(.009, .004, .001), eS = new J(1, .258, .101), tS = new J(.65, .563, .474);
+function nS(e, { ink: t = $x, gold: n = eS, cream: r = tS, shadows: i = !0 } = {}) {
+	let a = new wr(), { x: o, y: s } = e.drawBuffer, c = new cu(52, o / s, .1, 500);
+	c.position.set(0, 5.5, 13), c.lookAt(0, .5, 0);
+	let l = new Mc(40, 24, 120, 80);
+	l.rotateX(-Math.PI / 2);
+	let u = new $c({
+		vertexShader: Yx,
+		fragmentShader: Xx,
+		lights: !0,
+		uniforms: Xc.merge([Q.lights, {
 			uTime: { value: 0 },
 			uInk: { value: new J().copy(t) },
 			uGold: { value: new J().copy(n) },
-			uCream: { value: new J().copy(r) }
-		},
+			uCream: { value: new J().copy(r) },
+			uShadow: { value: +!!i }
+		}]),
 		side: 0
-	}), u = new Z(c, l);
-	i.add(u);
-	function d(e, t) {
-		l.uniforms.uTime.value = t;
+	}), d = new Z(l, u);
+	a.add(d);
+	let f = null;
+	i && (d.castShadow = !0, d.receiveShadow = !0, d.customDepthMaterial = new $c({
+		vertexShader: Zx,
+		fragmentShader: Qx,
+		uniforms: { uTime: { value: 0 } }
+	}), f = Jx(e, {
+		scene: a,
+		center: [
+			0,
+			0,
+			0
+		],
+		radius: 24,
+		distance: 46,
+		mapSize: 2048,
+		bias: -.0016,
+		softness: 3.5,
+		animatedCaster: !0
+	}));
+	let p = .2, m = new K(), h = Math.cos(p), g = Math.sin(p);
+	function _(e) {
+		let t = -.55 + Math.sin(e * .05) * .75;
+		m.set(Math.cos(t) * h, g, Math.sin(t) * h), f.setSunDir(m);
 	}
-	function f() {
-		c.dispose(), l.dispose(), i.remove(u);
+	f && _(0);
+	function v(e, t) {
+		u.uniforms.uTime.value = t, f && (d.customDepthMaterial.uniforms.uTime.value = t, _(t), f.update(), u.uniforms.uShadow.value = f.strength);
+	}
+	function y() {
+		l.dispose(), u.dispose(), f && (d.customDepthMaterial.dispose(), f.dispose()), a.remove(d);
 	}
 	return {
-		scene: i,
-		camera: s,
-		update: d,
-		dispose: f,
+		scene: a,
+		camera: c,
+		update: v,
+		dispose: y,
 		usesBloom: !0,
 		tone: "dark"
 	};
 }
 //#endregion
 //#region src/shaders/disc-glow.vert
-var eS = "uniform float uTime;\n\nattribute float aSize;    \nattribute float aPhase;   \n\nvarying vec2  vUv;\nvarying float vPulse;\n\nvoid main() {\n  vUv = uv;\n\n  /* Twinkle: brightness breathes 0.55 → 1.0, staggered by aPhase so the field\n     never pulses in unison. */\n  vPulse = 0.55 + 0.45 * (0.5 + 0.5 * sin(uTime * 1.5 + aPhase));\n\n  /* Instance centre in view space (instanceMatrix = node translation). */\n  vec3 centerView = (modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n\n  /* Quad corner (PlaneGeometry(1,1): position.xy ∈ [-0.5, 0.5]) → camera-facing offset. */\n  vec2 corner = position.xy * aSize;\n\n  gl_Position = projectionMatrix * vec4(centerView + vec3(corner, 0.0), 1.0);\n}", tS = "precision highp float;\n\nuniform vec3 uColor;   \n\nvarying vec2  vUv;\nvarying float vPulse;\n\nvoid main() {\n  /* Distance from disc centre: 0 at centre → 1 at the quad edge. */\n  float d = length(vUv - 0.5) * 2.0;\n\n  /* Two-part glow: a bright tight core + a soft wide halo. Both feather to 0 at\n     the rim so there is no hard sprite edge. */\n  float core = smoothstep(0.35, 0.0, d);\n  float halo = smoothstep(1.0,  0.0, d);\n  halo = pow(halo, 2.0);\n\n  float glow = halo + core * 1.6;          \n  vec3  col  = uColor * glow * vPulse * 1.5;\n\n  gl_FragColor = vec4(col, halo);          \n}", nS = "uniform float uWidth;   \n\nattribute vec3  aEndA;\nattribute vec3  aEndB;\nattribute float aAlong;\nattribute float aSide;\n\nvarying float vAlong;\nvarying float vSide;\n\nvoid main() {\n  vAlong = aAlong;\n  vSide  = aSide;\n\n  /* Endpoints → view space (tracks the group's slow rotation/drift). */\n  vec3 aV = (modelViewMatrix * vec4(aEndA, 1.0)).xyz;\n  vec3 bV = (modelViewMatrix * vec4(aEndB, 1.0)).xyz;\n\n  vec3 baseV = mix(aV, bV, aAlong);\n\n  /* Screen-plane perpendicular of the edge (epsilon guards a degenerate\n     end-on edge where both endpoints project to the same xy). */\n  vec2 dir  = bV.xy - aV.xy;\n  dir = normalize(dir + vec2(1e-6, 0.0));\n  vec2 perp = vec2(-dir.y, dir.x);\n\n  baseV.xy += perp * aSide * uWidth;\n\n  gl_Position = projectionMatrix * vec4(baseV, 1.0);\n}", rS = "precision highp float;\n\nuniform vec3  uColor;   \nuniform float uTime;    \nuniform float uSpeed;   \nuniform float uDash;    \n\nvarying float vAlong;\nvarying float vSide;\n\nvoid main() {\n  /* Across-width feather: soft glow, no hard edge. */\n  float feather = smoothstep(1.0, 0.0, abs(vSide));\n  feather = pow(feather, 1.4);\n\n  /* Flowing comet along the length: a triangle wave peaked in a short window\n     that slides with uTime. tri is 1 at a comet centre, 0 between comets. */\n  float phase = fract(vAlong * uDash - uTime * uSpeed);\n  float tri   = 1.0 - abs(phase - 0.5) * 2.0;\n  float comet = smoothstep(0.55, 1.0, tri);\n\n  /* Base rail glow (dim, always present) + bright moving comet on top. */\n  float bright = 0.35 + 1.9 * comet;\n\n  vec3 col = uColor * feather * bright;\n  gl_FragColor = vec4(col, feather);   \n}";
+var rS = "uniform float uTime;\n\nattribute float aSize;    \nattribute float aPhase;   \n\nvarying vec2  vUv;\nvarying float vPulse;\n\nvoid main() {\n  vUv = uv;\n\n  /* Twinkle: brightness breathes 0.55 → 1.0, staggered by aPhase so the field\n     never pulses in unison. */\n  vPulse = 0.55 + 0.45 * (0.5 + 0.5 * sin(uTime * 1.5 + aPhase));\n\n  /* Instance centre in view space (instanceMatrix = node translation). */\n  vec3 centerView = (modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n\n  /* Quad corner (PlaneGeometry(1,1): position.xy ∈ [-0.5, 0.5]) → camera-facing offset. */\n  vec2 corner = position.xy * aSize;\n\n  gl_Position = projectionMatrix * vec4(centerView + vec3(corner, 0.0), 1.0);\n}", iS = "precision highp float;\n\nuniform vec3 uColor;   \n\nvarying vec2  vUv;\nvarying float vPulse;\n\nvoid main() {\n  /* Distance from disc centre: 0 at centre → 1 at the quad edge. */\n  float d = length(vUv - 0.5) * 2.0;\n\n  /* Two-part glow: a bright tight core + a soft wide halo. Both feather to 0 at\n     the rim so there is no hard sprite edge. */\n  float core = smoothstep(0.35, 0.0, d);\n  float halo = smoothstep(1.0,  0.0, d);\n  halo = pow(halo, 2.0);\n\n  float glow = halo + core * 1.6;          \n  vec3  col  = uColor * glow * vPulse * 1.5;\n\n  gl_FragColor = vec4(col, halo);          \n}", aS = "uniform float uWidth;   \n\nattribute vec3  aEndA;\nattribute vec3  aEndB;\nattribute float aAlong;\nattribute float aSide;\n\nvarying float vAlong;\nvarying float vSide;\n\nvoid main() {\n  vAlong = aAlong;\n  vSide  = aSide;\n\n  /* Endpoints → view space (tracks the group's slow rotation/drift). */\n  vec3 aV = (modelViewMatrix * vec4(aEndA, 1.0)).xyz;\n  vec3 bV = (modelViewMatrix * vec4(aEndB, 1.0)).xyz;\n\n  vec3 baseV = mix(aV, bV, aAlong);\n\n  /* Screen-plane perpendicular of the edge (epsilon guards a degenerate\n     end-on edge where both endpoints project to the same xy). */\n  vec2 dir  = bV.xy - aV.xy;\n  dir = normalize(dir + vec2(1e-6, 0.0));\n  vec2 perp = vec2(-dir.y, dir.x);\n\n  baseV.xy += perp * aSide * uWidth;\n\n  gl_Position = projectionMatrix * vec4(baseV, 1.0);\n}", oS = "precision highp float;\n\nuniform vec3  uColor;   \nuniform float uTime;    \nuniform float uSpeed;   \nuniform float uDash;    \n\nvarying float vAlong;\nvarying float vSide;\n\nvoid main() {\n  /* Across-width feather: soft glow, no hard edge. */\n  float feather = smoothstep(1.0, 0.0, abs(vSide));\n  feather = pow(feather, 1.4);\n\n  /* Flowing comet along the length: a triangle wave peaked in a short window\n     that slides with uTime. tri is 1 at a comet centre, 0 between comets. */\n  float phase = fract(vAlong * uDash - uTime * uSpeed);\n  float tri   = 1.0 - abs(phase - 0.5) * 2.0;\n  float comet = smoothstep(0.55, 1.0, tri);\n\n  /* Base rail glow (dim, always present) + bright moving comet on top. */\n  float bright = 0.35 + 1.9 * comet;\n\n  vec3 col = uColor * feather * bright;\n  gl_FragColor = vec4(col, feather);   \n}";
 //#endregion
 //#region src/hero/edge-geometry.js
-function iS(e, t) {
+function sS(e, t) {
 	let n = e[t];
 	if (n && typeof n.x == "number") return [
 		n.x,
@@ -25434,7 +25512,7 @@ function iS(e, t) {
 		e[r + 2]
 	];
 }
-function aS(e = 1) {
+function cS(e = 1) {
 	let t = Math.max(1, Math.floor(e)), n = (t + 1) * 2, r = new Float32Array(n * 3), i = new Float32Array(n), a = new Float32Array(n), o = new Uint32Array(t * 6);
 	for (let e = 0; e <= t; e++) {
 		let n = e / t, o = e * 2, s = o + 1;
@@ -25452,10 +25530,10 @@ function aS(e = 1) {
 		vertsPerEdge: n
 	};
 }
-function oS({ positions: e, pairs: t }) {
+function lS({ positions: e, pairs: t }) {
 	let n = t.length, r = new Float32Array(n * 3), i = new Float32Array(n * 3);
 	for (let a = 0; a < n; a++) {
-		let [n, o] = t[a], s = iS(e, n), c = iS(e, o);
+		let [n, o] = t[a], s = sS(e, n), c = sS(e, o);
 		r[a * 3] = s[0], r[a * 3 + 1] = s[1], r[a * 3 + 2] = s[2], i[a * 3] = c[0], i[a * 3 + 1] = c[1], i[a * 3 + 2] = c[2];
 	}
 	return {
@@ -25466,8 +25544,8 @@ function oS({ positions: e, pairs: t }) {
 }
 //#endregion
 //#region src/createEdgeField.js
-function sS({ positions: e, pairs: t, color: n, width: r = .05, speed: i = .35, dash: a = 2, segments: o = 1, dynamic: s = !1, material: c = null }) {
-	let l = aS(o), { aEndA: u, aEndB: d, nEdges: f } = oS({
+function uS({ positions: e, pairs: t, color: n, width: r = .05, speed: i = .35, dash: a = 2, segments: o = 1, dynamic: s = !1, material: c = null }) {
+	let l = cS(o), { aEndA: u, aEndB: d, nEdges: f } = lS({
 		positions: e,
 		pairs: t
 	}), p = new Su();
@@ -25475,8 +25553,8 @@ function sS({ positions: e, pairs: t, color: n, width: r = .05, speed: i = .35, 
 	let m = new Fa(u, 3), h = new Fa(d, 3);
 	s && (m.setUsage(ut), h.setUsage(ut)), p.setAttribute("aEndA", m), p.setAttribute("aEndB", h);
 	let g = c || new $c({
-		vertexShader: nS,
-		fragmentShader: rS,
+		vertexShader: aS,
+		fragmentShader: oS,
 		uniforms: {
 			uWidth: { value: r },
 			uColor: { value: new J(n) },
@@ -25513,7 +25591,7 @@ function sS({ positions: e, pairs: t, color: n, width: r = .05, speed: i = .35, 
 }
 //#endregion
 //#region src/hero/createConstellation.js
-function cS(e) {
+function dS(e) {
 	let t = e >>> 0;
 	return function() {
 		t |= 0, t = t + 1831565813 | 0;
@@ -25521,22 +25599,22 @@ function cS(e) {
 		return e = e + Math.imul(e ^ e >>> 7, 61 | e) ^ e, ((e ^ e >>> 14) >>> 0) / 4294967296;
 	};
 }
-var lS = new J(1, .258, .101), uS = new J(328714);
-function dS(e, { count: t = 44, seed: n = 24301, spanX: r = 8.5, spanY: i = 5, spanZ: a = 2.6, gold: o = lS, backdrop: s = uS } = {}) {
+var fS = new J(1, .258, .101), pS = new J(328714);
+function mS(e, { count: t = 44, seed: n = 24301, spanX: r = 8.5, spanY: i = 5, spanZ: a = 2.6, gold: o = fS, backdrop: s = pS } = {}) {
 	let c = new wr();
 	c.background = new J().copy(s);
 	let { x: l, y: u } = e.drawBuffer, d = new cu(50, l / u, .1, 200);
 	d.position.set(0, 0, 14), d.lookAt(0, 0, 0);
 	let f = new mr();
 	c.add(f);
-	let p = cS(n), m = new Float32Array(t * 3);
+	let p = dS(n), m = new Float32Array(t * 3);
 	for (let e = 0; e < t; e++) m[e * 3] = (p() * 2 - 1) * r, m[e * 3 + 1] = (p() * 2 - 1) * i, m[e * 3 + 2] = (p() * 2 - 1) * a;
 	let h = new Mc(1, 1), g = new Float32Array(t), _ = new Float32Array(t);
 	for (let e = 0; e < t; e++) g[e] = .32 + p() * .62, _[e] = p() * Math.PI * 2;
 	h.setAttribute("aSize", new Fa(g, 1)), h.setAttribute("aPhase", new Fa(_, 1));
 	let v = new $c({
-		vertexShader: eS,
-		fragmentShader: tS,
+		vertexShader: rS,
+		fragmentShader: iS,
 		uniforms: {
 			uTime: { value: 0 },
 			uColor: { value: o.clone() }
@@ -25564,7 +25642,7 @@ function dS(e, { count: t = 44, seed: n = 24301, spanX: r = 8.5, spanY: i = 5, s
 			S.has(n) || (S.add(n), x.push([e, t]));
 		}
 	}
-	let C = sS({
+	let C = uS({
 		positions: m,
 		pairs: x,
 		color: o.clone(),
@@ -25590,7 +25668,7 @@ function dS(e, { count: t = 44, seed: n = 24301, spanX: r = 8.5, spanY: i = 5, s
 }
 //#endregion
 //#region src/shaders/aurora.vert
-var fS = "uniform float uTime;\nuniform float uPhase;   \n\nvarying vec2  vUv;\nvarying float vWave;\n\nvoid main() {\n  vUv = uv;\n  vec3 p = position;\n\n  /* Two horizontal folds at different wavelengths/speeds → organic drape. */\n  float w =\n      sin(p.y * 0.45 + uTime * 0.28 + uPhase)        * 1.30\n    + sin(p.y * 1.20 - uTime * 0.17 + uPhase * 1.7)  * 0.55;\n\n  p.x += w;\n  vWave = w;\n\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);\n}", pS = "precision highp float;\n\nuniform float uTime;\nuniform vec3  uColorLow;    \nuniform vec3  uColorHigh;   \nuniform float uPhase;\n\nvarying vec2  vUv;\nvarying float vWave;\n\nvoid main() {\n  /* Vertical envelope: 0 at top & bottom, 1 across the middle band. */\n  float vgrad = smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.62, vUv.y);\n\n  /* Horizontal envelope: soft left/right edges so each curtain reads as a\n     distinct vertical light RIBBON, not a hard-edged sheet. */\n  float hgrad = smoothstep(0.0, 0.32, vUv.x) * smoothstep(1.0, 0.68, vUv.x);\n\n  /* Slow vertical shimmer striations, nudged by the curtain's wave. */\n  float shimmer = 0.60 + 0.40 * sin(vUv.x * 9.0 + uTime * 0.7 + uPhase + vWave * 2.2);\n\n  float alpha = vgrad * hgrad * shimmer * 0.72;   \n\n  /* Gold base → cream crown. Cream rises through the upper curtain so the crests\n     read as luminous light (not a red smear), while the base stays warm gold.\n     Brightness capped (peak ≈ 1.5×) — trips bloom on the crests, no blow-out. */\n  vec3 col = mix(uColorLow, uColorHigh, smoothstep(0.15, 1.0, vUv.y)) * alpha * 1.5;\n  gl_FragColor = vec4(col, alpha);\n}", mS = new J(1, .258, .101), hS = new J(.65, .563, .474), gS = new J(262922), _S = [
+var hS = "uniform float uTime;\nuniform float uPhase;   \n\nvarying vec2  vUv;\nvarying float vWave;\n\nvoid main() {\n  vUv = uv;\n  vec3 p = position;\n\n  /* Two horizontal folds at different wavelengths/speeds → organic drape. */\n  float w =\n      sin(p.y * 0.45 + uTime * 0.28 + uPhase)        * 1.30\n    + sin(p.y * 1.20 - uTime * 0.17 + uPhase * 1.7)  * 0.55;\n\n  p.x += w;\n  vWave = w;\n\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);\n}", gS = "precision highp float;\n\nuniform float uTime;\nuniform vec3  uColorLow;    \nuniform vec3  uColorHigh;   \nuniform float uPhase;\n\nvarying vec2  vUv;\nvarying float vWave;\n\nvoid main() {\n  /* Vertical envelope: 0 at top & bottom, 1 across the middle band. */\n  float vgrad = smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.62, vUv.y);\n\n  /* Horizontal envelope: soft left/right edges so each curtain reads as a\n     distinct vertical light RIBBON, not a hard-edged sheet. */\n  float hgrad = smoothstep(0.0, 0.32, vUv.x) * smoothstep(1.0, 0.68, vUv.x);\n\n  /* Slow vertical shimmer striations, nudged by the curtain's wave. */\n  float shimmer = 0.60 + 0.40 * sin(vUv.x * 9.0 + uTime * 0.7 + uPhase + vWave * 2.2);\n\n  float alpha = vgrad * hgrad * shimmer * 0.72;   \n\n  /* Gold base → cream crown. Cream rises through the upper curtain so the crests\n     read as luminous light (not a red smear), while the base stays warm gold.\n     Brightness capped (peak ≈ 1.5×) — trips bloom on the crests, no blow-out. */\n  vec3 col = mix(uColorLow, uColorHigh, smoothstep(0.15, 1.0, vUv.y)) * alpha * 1.5;\n  gl_FragColor = vec4(col, alpha);\n}", _S = new J(1, .258, .101), vS = new J(.65, .563, .474), yS = new J(262922), bS = [
 	{
 		z: -6.5,
 		x: -6.4,
@@ -25634,16 +25712,16 @@ var fS = "uniform float uTime;\nuniform float uPhase;   \n\nvarying vec2  vUv;\n
 		h: 16
 	}
 ];
-function vS(e, { gold: t = mS, cream: n = hS, backdrop: r = gS } = {}) {
+function xS(e, { gold: t = _S, cream: n = vS, backdrop: r = yS } = {}) {
 	let i = new wr();
 	i.background = new J().copy(r);
 	let { x: a, y: o } = e.drawBuffer, s = new cu(55, a / o, .1, 200);
 	s.position.set(0, .5, 9), s.lookAt(0, .5, 0);
 	let c = [], l = [], u = [];
-	for (let e of _S) {
+	for (let e of bS) {
 		let r = new Mc(e.w, e.h, 24, 40), a = new $c({
-			vertexShader: fS,
-			fragmentShader: pS,
+			vertexShader: hS,
+			fragmentShader: gS,
 			uniforms: {
 				uTime: { value: 0 },
 				uPhase: { value: e.phase },
@@ -25679,24 +25757,24 @@ function vS(e, { gold: t = mS, cream: n = hS, backdrop: r = gS } = {}) {
 }
 //#endregion
 //#region src/hero/createProductMoment.js
-var yS = new J("#d8a55e"), bS = new J("#d8b98a"), xS = {
+var SS = new J("#d8a55e"), CS = new J("#d8b98a"), wS = {
 	tint: new J(1, .985, .96),
 	lift: new J(.01, .006, .003),
 	sat: .96,
 	contrast: 1.05
 };
-function SS(e, { envIntensity: t = 1, metal: n = yS, backdrop: r = bS, filmic: i = xS } = {}) {
-	let { renderer: a } = e, o = new wr();
-	o.background = new J().copy(r);
-	let { x: s, y: c } = e.drawBuffer, l = new cu(38, s / c, .05, 100);
-	l.position.set(0, .9, 7.6), l.lookAt(0, 0, 0);
-	let u = new ep(a), d = new tb(), f = u.fromScene(d, .04);
-	o.environment = f.texture, o.environmentIntensity = t, u.dispose(), d.traverse((e) => {
+function TS(e, { envIntensity: t = 1, metal: n = SS, backdrop: r = CS, filmic: i = wS, shadows: a = !0 } = {}) {
+	let { renderer: o } = e, s = new wr();
+	s.background = new J().copy(r);
+	let { x: c, y: l } = e.drawBuffer, u = new cu(38, c / l, .05, 100);
+	u.position.set(0, .9, 7.6), u.lookAt(0, 0, 0);
+	let d = new ep(o), f = new tb(), p = d.fromScene(f, .04);
+	s.environment = p.texture, s.environmentIntensity = t, d.dispose(), f.traverse((e) => {
 		e.geometry && e.geometry.dispose(), e.material && e.material.dispose?.();
 	});
-	let p = new hu(16773858, 2.2);
-	p.position.set(2.6, 4.2, 2.4), o.add(p);
-	let m = new zc(1, .3, 220, 32), h = new nl({
+	let m = 16773858, h = 2.2, g = new K(2.6, 4.2, 2.4), _ = null;
+	a || (_ = new hu(m, h), _.position.copy(g), s.add(_));
+	let v = new zc(1, .3, 220, 32), y = new nl({
 		color: new J().copy(n),
 		metalness: 1,
 		roughness: .42,
@@ -25704,19 +25782,46 @@ function SS(e, { envIntensity: t = 1, metal: n = yS, backdrop: r = bS, filmic: i
 		anisotropyRotation: Math.PI * .25,
 		envMapIntensity: 1,
 		clearcoat: 0
-	}), g = new Z(m, h);
-	o.add(g);
-	function _(e, t) {
-		g.rotation.y = t * .35, g.rotation.x = Math.sin(t * .25) * .12, g.position.y = Math.sin(t * .6) * .14;
+	}), b = new Z(v, y);
+	s.add(b);
+	let x = -2.15, S = null, C = null;
+	if (a) {
+		b.castShadow = !0, b.receiveShadow = !0;
+		let t = new Mc(60, 60);
+		t.rotateX(-Math.PI / 2), C = new Z(t, new tl({
+			color: new J().copy(r).multiplyScalar(.62),
+			roughness: .95,
+			metalness: 0,
+			envMapIntensity: .35
+		})), C.position.y = x, C.receiveShadow = !0, s.add(C), S = Jx(e, {
+			scene: s,
+			color: m,
+			intensity: h,
+			center: [
+				0,
+				x * .5,
+				0
+			],
+			radius: 4,
+			distance: 24,
+			mapSize: 2048,
+			bias: -6e-4,
+			normalBias: .03,
+			softness: 4,
+			animatedCaster: !0
+		}), S.setSunDir(g);
 	}
-	function v() {
-		m.dispose(), h.dispose(), f.dispose(), o.environment = null, o.remove(g, p);
+	function w(e, t) {
+		b.rotation.y = t * .35, b.rotation.x = Math.sin(t * .25) * .12, b.position.y = Math.sin(t * .6) * .14, S && S.update();
+	}
+	function T() {
+		v.dispose(), y.dispose(), p.dispose(), s.environment = null, s.remove(b), _ && s.remove(_), C && (C.geometry.dispose(), C.material.dispose(), s.remove(C)), S && S.dispose();
 	}
 	return {
-		scene: o,
-		camera: l,
-		update: _,
-		dispose: v,
+		scene: s,
+		camera: u,
+		update: w,
+		dispose: T,
 		usesBloom: !0,
 		tone: "bright",
 		filmic: i
@@ -25724,10 +25829,10 @@ function SS(e, { envIntensity: t = 1, metal: n = yS, backdrop: r = bS, filmic: i
 }
 //#endregion
 //#region src/shaders/starfield.vert
-var CS = "attribute float aSize;\nattribute float aBright;\nattribute float aPhase;\n\nuniform float uTime;       \nuniform float uTwinkle;    \nuniform float uSizeScale;  \n\nvarying float vBright;\n\nvoid main() {\n  \n  float tw = 1.0 - uTwinkle * 0.3 * (0.5 + 0.5 * sin(uTime * 2.2 + aPhase));\n  vBright = aBright * tw;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  gl_PointSize = aSize * uSizeScale;\n}", wS = "precision highp float;\n\nuniform vec3  uColor;\nuniform float uNight;\nuniform float uMode;\n\nvarying float vBright;\n\nvoid main() {\n  vec2 p = gl_PointCoord - 0.5;\n  float d = length(p);\n  float a;\n  if (uMode > 1.5)      a = 1.0;                       \n  else if (uMode > 0.5) a = step(d, 0.45);             \n  else                  a = smoothstep(0.5, 0.06, d);  \n  float alpha = a * vBright * uNight;\n  if (alpha < 0.01) discard;\n  gl_FragColor = vec4(uColor, alpha);\n}", TS = "precision highp float;\n\nattribute vec2 aCorner;\nattribute float aSize;\n\nvarying vec2 vC;   \n\nvoid main() {\n  vC = aCorner;\n  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n  mv.xy += aCorner * aSize;\n  gl_Position = projectionMatrix * mv;\n}", ES = "precision highp float;\n\nuniform vec3  uColor;\nuniform float uIntensity;\n\nvarying vec2 vC;   \n\nvoid main() {\n  vec2 c = vC;\n  float core = exp(-dot(c, c) * 160.0);\n  \n  float armH = exp(-c.y * c.y * 2600.0) * exp(-c.x * c.x * 22.0);\n  float armV = exp(-c.x * c.x * 2600.0) * exp(-c.y * c.y * 22.0);\n  float g = core + (armH + armV) * 0.55;\n  gl_FragColor = vec4(uColor, 1.0) * g * uIntensity;   \n}", DS = "varying vec2 vUv;\n\nvoid main() {\n  vUv = uv;\n  gl_Position = vec4(position.xy * 2.0, 1.0, 1.0);   \n}", OS = "precision highp float;\n\nuniform float uTime;\nuniform float uDrift;      \n                           \nuniform float uIntensity;  \nuniform vec3  uColorA;     \nuniform vec3  uColorB;     \nuniform vec3  uColorC;     \nuniform vec3  uBg;         \nuniform float uAspect;\nuniform vec2  uPan;\nuniform float uBandMul;   \nuniform float uDustMul;\nuniform float uExtraSmudge;  \n                             \n                             \nuniform float uArt;          \n                             \nuniform float uClearing;     \n                             \n                             \nuniform float uStars;        \n                             \n                             \n                             \n                             \n                             \n                             \nuniform float uStarTwinkle;  \nuniform float uStarShape;    \n                             \n                             \n                             \n                           \n                           \n                           \n\nvarying vec2 vUv;\n\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);\n}\n\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  float a = hash(i);\n  float b = hash(i + vec2(1.0, 0.0));\n  float c = hash(i + vec2(0.0, 1.0));\n  float d = hash(i + vec2(1.0, 1.0));\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec3 goldRamp(float t) {\n  vec3 c0 = vec3(0.271, 0.157, 0.235);   \n  vec3 c1 = vec3(0.400, 0.224, 0.192);   \n  vec3 c2 = vec3(0.561, 0.337, 0.231);   \n  vec3 c3 = vec3(0.875, 0.443, 0.149);   \n  vec3 c4 = vec3(0.851, 0.627, 0.400);   \n  vec3 c5 = vec3(0.933, 0.765, 0.604);   \n  float s = clamp(t, 0.0, 1.0) * 5.0;\n  vec3 col = mix(c0, c1, clamp(s, 0.0, 1.0));\n  col = mix(col, c2, clamp(s - 1.0, 0.0, 1.0));\n  col = mix(col, c3, clamp(s - 2.0, 0.0, 1.0));\n  col = mix(col, c4, clamp(s - 3.0, 0.0, 1.0));\n  col = mix(col, c5, clamp(s - 4.0, 0.0, 1.0));\n  return col;\n}\n\nvec3 coolRamp(float t) {\n  vec3 c0 = vec3(0.247, 0.247, 0.455);   \n  vec3 c1 = vec3(0.357, 0.431, 0.882);   \n  vec3 c2 = vec3(0.388, 0.608, 1.000);   \n  float s = clamp(t, 0.0, 1.0) * 2.0;\n  vec3 col = mix(c0, c1, clamp(s, 0.0, 1.0));\n  return mix(col, c2, clamp(s - 1.0, 0.0, 1.0));\n}\n\n/* --- SLICE 22: THE PROCEDURAL STARFIELD (screen space, edge-to-edge, endless) ---\n   The trick is the classic one: chop the plane into cells, put at most ONE star in each, and hash the\n   cell to decide where it sits and how bright it is. Because the cells are generated on demand there is\n   no array, no bound, and no edge -- the field is as big as the screen, at any zoom.\n\n   PARALLAX WITHOUT DEPTH: an orthographic camera gives zero real parallax on translation (the slice-9\n   lesson), so depth is FAKED by sampling two layers at different uPan rates -- the near layer slides\n   more than the far one as you pan, and the eye reads the difference as distance.\n\n   THE QUANTIZER RULE (slice 15's star lesson, again): a star must own a whole virtual pixel or the box\n   filter averages it into the background and DB32 rounds it to black. So these are drawn as small SQUARE\n   cores (a smoothstep on the chebyshev distance), not gaussian points -- a square survives. */\nfloat starLayer(vec2 uv, float cells, float density, float bright, float tw) {\n  vec2 gv = uv * cells;\n  vec2 id = floor(gv);\n  vec2 f  = fract(gv) - 0.5;\n  float h = hash(id);\n  if (h > density) return 0.0;                       \n  vec2 off = vec2(hash(id + 3.7) - 0.5, hash(id + 9.1) - 0.5) * 0.7;   \n  vec2 q = f - off;\n  float dSq = max(abs(q.x), abs(q.y));      \n  float dRo = length(q);                     \n  float d = mix(dRo, dSq, uStarShape);\n  /* LOOK-ROUND 2: at 0.10-0.24 of a cell the stars quantized into 8-16px BLOCKS and the sky read as\n     confetti, not distance. A star must be BRIGHT (to clear DB32's black floor) and SMALL (to read as\n     far away) — those pull in opposite directions, and the resolution is: keep the brightness, shrink\n     the core to ~one virtual pixel. Big and bright is snow; small and bright is a star. */\n  float size = 0.035 + 0.05 * hash(id + 17.3);\n  float core = 1.0 - smoothstep(size, size + 0.035, d);\n  float phase = hash(id + 41.7);\n  float t = 1.0 + tw * 0.5 * (sin(uTime * (0.9 + phase * 1.3) + phase * 6.28318)\n                            + sin(uTime * 1.618 + phase * 4.0));\n  return core * bright * (0.45 + 0.55 * hash(id + 5.5)) * clamp(t, 0.0, 2.0);\n}\n\nfloat fbm(vec2 p) {\n  float v = 0.0;\n  float amp = 0.5;\n  for (int i = 0; i < 3; i++) {\n    v += amp * vnoise(p);\n    p *= 2.02;      \n    amp *= 0.5;\n  }\n  return v;\n}\n\n/* cloudField -- ONE billowed noise sample shared by every authored mass (fbm is the expensive part;\n   masks are cheap). billow = 1-|2n-1| squared: ridged peaks read as lit cumulus, not fog. The three\n   gaussian masks are the COMPOSITION -- a diagonal river of cloud sweeping the upper-right corner\n   region, a counter-mass lower-left, a small connector -- authored, deliberately NOT centered. */\nfloat cloudField(vec2 p, float t) {\n  \n  \n  \n  \n  vec2 d = p * 1.5 + vec2(t * 0.004, t * -0.003);\n  float n = fbm(d + fbm(d * 1.25) * 0.38);\n  float billow = 1.0 - abs(2.0 * n - 1.0);\n  billow *= billow;\n  vec2 q1 = p - vec2(0.62, -0.34);   \n  vec2 a1 = vec2(0.803, 0.596);\n  float m1 = exp(-pow(dot(q1, a1), 2.0) * 1.7 - pow(dot(q1, vec2(-a1.y, a1.x)), 2.0) * 8.0);\n  vec2 q2 = p - vec2(-0.68, 0.42);   \n  vec2 a2 = vec2(0.921, 0.390);\n  float m2 = exp(-pow(dot(q2, a2), 2.0) * 2.8 - pow(dot(q2, vec2(-a2.y, a2.x)), 2.0) * 10.5);\n  vec2 q3 = p - vec2(0.05, -0.55);   \n  float m3 = exp(-dot(q3, q3) * 5.5);\n  return (m1 * 1.15 + m2 * 0.8 + m3 * 0.5) * billow;\n}\n\nvoid main() {\n  vec2 p = vUv - 0.5;\n  p.x *= uAspect;                       \n\n  vec2 q = p * 2.6 + vec2(uTime * 0.006 * uDrift, uTime * -0.004 * uDrift);\n  float n = fbm(q + fbm(q * 1.7) * 0.35);   \n\n  \n  \n  \n  vec2 qd1 = p * 6.3 + uPan * 0.55 + vec2(uTime * 0.0022 * uDrift, uTime * 0.0016 * uDrift);\n  vec2 qd2 = p * 10.7 + uPan * 0.25 + vec2(uTime * -0.0013 * uDrift, uTime * 0.0009 * uDrift);\n  float dust = fbm(qd1);\n  dust = dust * dust * dust * 0.35 * uDustMul;\n  float dust2 = fbm(qd2);\n  dust2 = dust2 * dust2 * dust2 * 0.22 * uDustMul;\n\n  \n  \n  \n  vec2 qp = p * 1.15 + uPan * 0.12 + vec2(uTime * 0.003 * uDrift, 0.0);\n  float wisp = smoothstep(0.62, 0.85, fbm(qp)) * 0.5 * uDustMul;\n\n  \n  \n  vec2 ps = p + uPan * 0.08;\n  vec2 g1 = vec2((ps.x - 0.31) * 0.766 + (ps.y - 0.22) * 0.643, (ps.x - 0.31) * -0.643 + (ps.y - 0.22) * 0.766);\n  float sm1 = exp(-(g1.x * g1.x * 90.0 + g1.y * g1.y * 900.0)) * (0.7 + 0.3 * fbm(g1 * 24.0));\n  vec2 g2 = vec2((ps.x + 0.36) * 0.5 - (ps.y + 0.27) * 0.866, (ps.x + 0.36) * 0.866 + (ps.y + 0.27) * 0.5);\n  float sm2 = exp(-(g2.x * g2.x * 140.0 + g2.y * g2.y * 1200.0)) * (0.7 + 0.3 * fbm(g2 * 24.0));\n  float smudge = (sm1 + sm2) * 0.55;\n  \n  \n  vec2 g3 = vec2((ps.x + 0.42) * 0.906 + (ps.y - 0.30) * 0.423, (ps.x + 0.42) * -0.423 + (ps.y - 0.30) * 0.906);\n  float sm3 = exp(-(g3.x * g3.x * 60.0 + g3.y * g3.y * 520.0)) * (0.7 + 0.3 * fbm(g3 * 18.0));\n  vec2 g4 = vec2((ps.x - 0.44) * 0.259 - (ps.y + 0.33) * 0.966, (ps.x - 0.44) * 0.966 + (ps.y + 0.33) * 0.259);\n  float sm4 = exp(-(g4.x * g4.x * 170.0 + g4.y * g4.y * 1500.0)) * (0.7 + 0.3 * fbm(g4 * 24.0));\n  smudge += (sm3 * 0.7 + sm4 * 0.5) * uExtraSmudge;\n\n  \n  \n  \n  \n  float bandY = p.x * -0.342 + p.y * 0.940;      \n  float band  = exp(-bandY * bandY * 18.0);\n  float boost = 1.0 + band * 1.2 * uBandMul;\n\n  /* THE PROCEDURAL FIELD (slice 22): three layers at different cell sizes and parallax rates -- far\n     (dense, faint, barely moves), mid, and a sparse bright foreground. Sampled in the SCREEN-SPACE uv,\n     so it fills the frame corner to corner no matter where the camera is or how far it is zoomed out. */\n  vec3 stars = vec3(0.0);\n  if (uStars > 0.0) {\n    vec2 sp = p;\n    /* LOOK-ROUND 1 (measured, not guessed): at 26 cells across the frame, a screen CORNER contains ~2\n       cells — at 16% occupancy that is 0.3 expected stars, so corners came up EMPTY (max luminance 18)\n       and the \"full-bleed\" sky still had holes. Finer cells + higher occupancy make coverage a\n       certainty rather than a coin flip: the far layer now lays ~45 cells across at 30%. */\n    float far  = starLayer(sp + uPan * 0.05, 46.0, 0.22, 0.50, uStarTwinkle * 0.5);\n    float mid  = starLayer(sp + uPan * 0.14, 27.0, 0.13, 0.80, uStarTwinkle);\n    float near = starLayer(sp + uPan * 0.30, 13.0, 0.06, 1.15, uStarTwinkle);\n    float s = (far + mid + near) * uStars;\n    \n    stars = mix(vec3(0.796, 0.859, 0.988), vec3(0.933, 0.765, 0.604), step(0.82, hash(floor(sp * 15.0)))) * s;\n  }\n\n  \n  float r   = length(p);\n  float vig = 1.0 - smoothstep(0.15, 0.95, r);\n\n  \n  \n  \n  float clearing = 1.0 - uClearing * (1.0 - smoothstep(0.14, 0.62, r));\n\n  \n  \n  \n  \n  \n  vec3 gold = vec3(0.0);\n  vec3 cool = vec3(0.0);\n  if (uArt > 0.0) {\n    float artVig = 1.0 - smoothstep(0.85, 1.3, r);\n    vec2 L = vec2(-0.55, 0.835);\n    float cd  = cloudField(p, uTime * uDrift);\n    float cdL = cloudField(p + L * 0.05, uTime * uDrift);\n    float rim = clamp((cd - cdL) * 2.4, -0.3, 1.0);\n    \n    \n    \n    float shade = clamp(cd * 0.8 + rim * 0.4, 0.0, 1.0);\n    gold = goldRamp(shade) * smoothstep(0.16, 0.72, cd) * artVig * 0.62;\n    \n    \n    vec2 w1 = p - vec2(-0.72, -0.30);\n    vec2 w2 = p - vec2(0.55, 0.48);\n    float wd = (exp(-dot(w1, w1) * 9.0) * 0.9 + exp(-dot(w2, w2) * 12.0) * 0.7)\n             * (1.0 - abs(2.0 * fbm(p * 3.4 + vec2(17.3, 9.1) + uPan * 0.2) - 1.0));\n    \n    \n    cool = coolRamp(clamp(wd * 0.9, 0.0, 1.0)) * smoothstep(0.22, 0.75, wd) * artVig * 0.4;\n    cool += vec3(0.843, 0.482, 0.729) * exp(-dot(w2, w2) * 16.0) * wd * 0.12 * artVig;\n  }\n\n  \n  \n  \n  \n  float artOwn = 1.0 - clamp((gold.r + gold.g + cool.b) * 1.8, 0.0, 0.95) * step(0.001, uArt);   \n  vec3 neb = mix(uColorA, uColorB, n);\n  vec3 col = uBg\n           + (neb * (n * n) * uIntensity * boost * vig * artOwn            \n           + uColorB * dust  * uIntensity * boost * vig * artOwn           \n           + mix(uColorB, uColorC, 0.5) * dust2 * uIntensity * boost * vig * artOwn \n           + mix(uColorB, uColorC, 0.7) * wisp * uIntensity * 1.6 * vig * artOwn   \n           + mix(uColorC, vec3(1.0), 0.35) * smudge * uIntensity * 1.8 * vig * artOwn \n           + (gold + cool) * uArt                                          \n           + stars                                                          \n           ) * clearing;                                                    \n\n  gl_FragColor = vec4(col, 1.0);\n}";
+var ES = "attribute float aSize;\nattribute float aBright;\nattribute float aPhase;\n\nuniform float uTime;       \nuniform float uTwinkle;    \nuniform float uSizeScale;  \n\nvarying float vBright;\n\nvoid main() {\n  \n  float tw = 1.0 - uTwinkle * 0.3 * (0.5 + 0.5 * sin(uTime * 2.2 + aPhase));\n  vBright = aBright * tw;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  gl_PointSize = aSize * uSizeScale;\n}", DS = "precision highp float;\n\nuniform vec3  uColor;\nuniform float uNight;\nuniform float uMode;\n\nvarying float vBright;\n\nvoid main() {\n  vec2 p = gl_PointCoord - 0.5;\n  float d = length(p);\n  float a;\n  if (uMode > 1.5)      a = 1.0;                       \n  else if (uMode > 0.5) a = step(d, 0.45);             \n  else                  a = smoothstep(0.5, 0.06, d);  \n  float alpha = a * vBright * uNight;\n  if (alpha < 0.01) discard;\n  gl_FragColor = vec4(uColor, alpha);\n}", OS = "precision highp float;\n\nattribute vec2 aCorner;\nattribute float aSize;\n\nvarying vec2 vC;   \n\nvoid main() {\n  vC = aCorner;\n  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n  mv.xy += aCorner * aSize;\n  gl_Position = projectionMatrix * mv;\n}", kS = "precision highp float;\n\nuniform vec3  uColor;\nuniform float uIntensity;\n\nvarying vec2 vC;   \n\nvoid main() {\n  vec2 c = vC;\n  float core = exp(-dot(c, c) * 160.0);\n  \n  float armH = exp(-c.y * c.y * 2600.0) * exp(-c.x * c.x * 22.0);\n  float armV = exp(-c.x * c.x * 2600.0) * exp(-c.y * c.y * 22.0);\n  float g = core + (armH + armV) * 0.55;\n  gl_FragColor = vec4(uColor, 1.0) * g * uIntensity;   \n}", AS = "varying vec2 vUv;\n\nvoid main() {\n  vUv = uv;\n  gl_Position = vec4(position.xy * 2.0, 1.0, 1.0);   \n}", jS = "precision highp float;\n\nuniform float uTime;\nuniform float uDrift;      \n                           \nuniform float uIntensity;  \nuniform vec3  uColorA;     \nuniform vec3  uColorB;     \nuniform vec3  uColorC;     \nuniform vec3  uBg;         \nuniform float uAspect;\nuniform vec2  uPan;\nuniform float uBandMul;   \nuniform float uDustMul;\nuniform float uExtraSmudge;  \n                             \n                             \nuniform float uArt;          \n                             \nuniform float uClearing;     \n                             \n                             \nuniform float uStars;        \n                             \n                             \n                             \n                             \n                             \n                             \nuniform float uStarTwinkle;  \nuniform float uStarShape;    \n                             \n                             \n                             \n                           \n                           \n                           \n\nvarying vec2 vUv;\n\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);\n}\n\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  float a = hash(i);\n  float b = hash(i + vec2(1.0, 0.0));\n  float c = hash(i + vec2(0.0, 1.0));\n  float d = hash(i + vec2(1.0, 1.0));\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec3 goldRamp(float t) {\n  vec3 c0 = vec3(0.271, 0.157, 0.235);   \n  vec3 c1 = vec3(0.400, 0.224, 0.192);   \n  vec3 c2 = vec3(0.561, 0.337, 0.231);   \n  vec3 c3 = vec3(0.875, 0.443, 0.149);   \n  vec3 c4 = vec3(0.851, 0.627, 0.400);   \n  vec3 c5 = vec3(0.933, 0.765, 0.604);   \n  float s = clamp(t, 0.0, 1.0) * 5.0;\n  vec3 col = mix(c0, c1, clamp(s, 0.0, 1.0));\n  col = mix(col, c2, clamp(s - 1.0, 0.0, 1.0));\n  col = mix(col, c3, clamp(s - 2.0, 0.0, 1.0));\n  col = mix(col, c4, clamp(s - 3.0, 0.0, 1.0));\n  col = mix(col, c5, clamp(s - 4.0, 0.0, 1.0));\n  return col;\n}\n\nvec3 coolRamp(float t) {\n  vec3 c0 = vec3(0.247, 0.247, 0.455);   \n  vec3 c1 = vec3(0.357, 0.431, 0.882);   \n  vec3 c2 = vec3(0.388, 0.608, 1.000);   \n  float s = clamp(t, 0.0, 1.0) * 2.0;\n  vec3 col = mix(c0, c1, clamp(s, 0.0, 1.0));\n  return mix(col, c2, clamp(s - 1.0, 0.0, 1.0));\n}\n\n/* --- SLICE 22: THE PROCEDURAL STARFIELD (screen space, edge-to-edge, endless) ---\n   The trick is the classic one: chop the plane into cells, put at most ONE star in each, and hash the\n   cell to decide where it sits and how bright it is. Because the cells are generated on demand there is\n   no array, no bound, and no edge -- the field is as big as the screen, at any zoom.\n\n   PARALLAX WITHOUT DEPTH: an orthographic camera gives zero real parallax on translation (the slice-9\n   lesson), so depth is FAKED by sampling two layers at different uPan rates -- the near layer slides\n   more than the far one as you pan, and the eye reads the difference as distance.\n\n   THE QUANTIZER RULE (slice 15's star lesson, again): a star must own a whole virtual pixel or the box\n   filter averages it into the background and DB32 rounds it to black. So these are drawn as small SQUARE\n   cores (a smoothstep on the chebyshev distance), not gaussian points -- a square survives. */\nfloat starLayer(vec2 uv, float cells, float density, float bright, float tw) {\n  vec2 gv = uv * cells;\n  vec2 id = floor(gv);\n  vec2 f  = fract(gv) - 0.5;\n  float h = hash(id);\n  if (h > density) return 0.0;                       \n  vec2 off = vec2(hash(id + 3.7) - 0.5, hash(id + 9.1) - 0.5) * 0.7;   \n  vec2 q = f - off;\n  float dSq = max(abs(q.x), abs(q.y));      \n  float dRo = length(q);                     \n  float d = mix(dRo, dSq, uStarShape);\n  /* LOOK-ROUND 2: at 0.10-0.24 of a cell the stars quantized into 8-16px BLOCKS and the sky read as\n     confetti, not distance. A star must be BRIGHT (to clear DB32's black floor) and SMALL (to read as\n     far away) — those pull in opposite directions, and the resolution is: keep the brightness, shrink\n     the core to ~one virtual pixel. Big and bright is snow; small and bright is a star. */\n  float size = 0.035 + 0.05 * hash(id + 17.3);\n  float core = 1.0 - smoothstep(size, size + 0.035, d);\n  float phase = hash(id + 41.7);\n  float t = 1.0 + tw * 0.5 * (sin(uTime * (0.9 + phase * 1.3) + phase * 6.28318)\n                            + sin(uTime * 1.618 + phase * 4.0));\n  return core * bright * (0.45 + 0.55 * hash(id + 5.5)) * clamp(t, 0.0, 2.0);\n}\n\nfloat fbm(vec2 p) {\n  float v = 0.0;\n  float amp = 0.5;\n  for (int i = 0; i < 3; i++) {\n    v += amp * vnoise(p);\n    p *= 2.02;      \n    amp *= 0.5;\n  }\n  return v;\n}\n\n/* cloudField -- ONE billowed noise sample shared by every authored mass (fbm is the expensive part;\n   masks are cheap). billow = 1-|2n-1| squared: ridged peaks read as lit cumulus, not fog. The three\n   gaussian masks are the COMPOSITION -- a diagonal river of cloud sweeping the upper-right corner\n   region, a counter-mass lower-left, a small connector -- authored, deliberately NOT centered. */\nfloat cloudField(vec2 p, float t) {\n  \n  \n  \n  \n  vec2 d = p * 1.5 + vec2(t * 0.004, t * -0.003);\n  float n = fbm(d + fbm(d * 1.25) * 0.38);\n  float billow = 1.0 - abs(2.0 * n - 1.0);\n  billow *= billow;\n  vec2 q1 = p - vec2(0.62, -0.34);   \n  vec2 a1 = vec2(0.803, 0.596);\n  float m1 = exp(-pow(dot(q1, a1), 2.0) * 1.7 - pow(dot(q1, vec2(-a1.y, a1.x)), 2.0) * 8.0);\n  vec2 q2 = p - vec2(-0.68, 0.42);   \n  vec2 a2 = vec2(0.921, 0.390);\n  float m2 = exp(-pow(dot(q2, a2), 2.0) * 2.8 - pow(dot(q2, vec2(-a2.y, a2.x)), 2.0) * 10.5);\n  vec2 q3 = p - vec2(0.05, -0.55);   \n  float m3 = exp(-dot(q3, q3) * 5.5);\n  return (m1 * 1.15 + m2 * 0.8 + m3 * 0.5) * billow;\n}\n\nvoid main() {\n  vec2 p = vUv - 0.5;\n  p.x *= uAspect;                       \n\n  vec2 q = p * 2.6 + vec2(uTime * 0.006 * uDrift, uTime * -0.004 * uDrift);\n  float n = fbm(q + fbm(q * 1.7) * 0.35);   \n\n  \n  \n  \n  vec2 qd1 = p * 6.3 + uPan * 0.55 + vec2(uTime * 0.0022 * uDrift, uTime * 0.0016 * uDrift);\n  vec2 qd2 = p * 10.7 + uPan * 0.25 + vec2(uTime * -0.0013 * uDrift, uTime * 0.0009 * uDrift);\n  float dust = fbm(qd1);\n  dust = dust * dust * dust * 0.35 * uDustMul;\n  float dust2 = fbm(qd2);\n  dust2 = dust2 * dust2 * dust2 * 0.22 * uDustMul;\n\n  \n  \n  \n  vec2 qp = p * 1.15 + uPan * 0.12 + vec2(uTime * 0.003 * uDrift, 0.0);\n  float wisp = smoothstep(0.62, 0.85, fbm(qp)) * 0.5 * uDustMul;\n\n  \n  \n  vec2 ps = p + uPan * 0.08;\n  vec2 g1 = vec2((ps.x - 0.31) * 0.766 + (ps.y - 0.22) * 0.643, (ps.x - 0.31) * -0.643 + (ps.y - 0.22) * 0.766);\n  float sm1 = exp(-(g1.x * g1.x * 90.0 + g1.y * g1.y * 900.0)) * (0.7 + 0.3 * fbm(g1 * 24.0));\n  vec2 g2 = vec2((ps.x + 0.36) * 0.5 - (ps.y + 0.27) * 0.866, (ps.x + 0.36) * 0.866 + (ps.y + 0.27) * 0.5);\n  float sm2 = exp(-(g2.x * g2.x * 140.0 + g2.y * g2.y * 1200.0)) * (0.7 + 0.3 * fbm(g2 * 24.0));\n  float smudge = (sm1 + sm2) * 0.55;\n  \n  \n  vec2 g3 = vec2((ps.x + 0.42) * 0.906 + (ps.y - 0.30) * 0.423, (ps.x + 0.42) * -0.423 + (ps.y - 0.30) * 0.906);\n  float sm3 = exp(-(g3.x * g3.x * 60.0 + g3.y * g3.y * 520.0)) * (0.7 + 0.3 * fbm(g3 * 18.0));\n  vec2 g4 = vec2((ps.x - 0.44) * 0.259 - (ps.y + 0.33) * 0.966, (ps.x - 0.44) * 0.966 + (ps.y + 0.33) * 0.259);\n  float sm4 = exp(-(g4.x * g4.x * 170.0 + g4.y * g4.y * 1500.0)) * (0.7 + 0.3 * fbm(g4 * 24.0));\n  smudge += (sm3 * 0.7 + sm4 * 0.5) * uExtraSmudge;\n\n  \n  \n  \n  \n  float bandY = p.x * -0.342 + p.y * 0.940;      \n  float band  = exp(-bandY * bandY * 18.0);\n  float boost = 1.0 + band * 1.2 * uBandMul;\n\n  /* THE PROCEDURAL FIELD (slice 22): three layers at different cell sizes and parallax rates -- far\n     (dense, faint, barely moves), mid, and a sparse bright foreground. Sampled in the SCREEN-SPACE uv,\n     so it fills the frame corner to corner no matter where the camera is or how far it is zoomed out. */\n  vec3 stars = vec3(0.0);\n  if (uStars > 0.0) {\n    vec2 sp = p;\n    /* LOOK-ROUND 1 (measured, not guessed): at 26 cells across the frame, a screen CORNER contains ~2\n       cells — at 16% occupancy that is 0.3 expected stars, so corners came up EMPTY (max luminance 18)\n       and the \"full-bleed\" sky still had holes. Finer cells + higher occupancy make coverage a\n       certainty rather than a coin flip: the far layer now lays ~45 cells across at 30%. */\n    float far  = starLayer(sp + uPan * 0.05, 46.0, 0.22, 0.50, uStarTwinkle * 0.5);\n    float mid  = starLayer(sp + uPan * 0.14, 27.0, 0.13, 0.80, uStarTwinkle);\n    float near = starLayer(sp + uPan * 0.30, 13.0, 0.06, 1.15, uStarTwinkle);\n    float s = (far + mid + near) * uStars;\n    \n    stars = mix(vec3(0.796, 0.859, 0.988), vec3(0.933, 0.765, 0.604), step(0.82, hash(floor(sp * 15.0)))) * s;\n  }\n\n  \n  float r   = length(p);\n  float vig = 1.0 - smoothstep(0.15, 0.95, r);\n\n  \n  \n  \n  float clearing = 1.0 - uClearing * (1.0 - smoothstep(0.14, 0.62, r));\n\n  \n  \n  \n  \n  \n  vec3 gold = vec3(0.0);\n  vec3 cool = vec3(0.0);\n  if (uArt > 0.0) {\n    float artVig = 1.0 - smoothstep(0.85, 1.3, r);\n    vec2 L = vec2(-0.55, 0.835);\n    float cd  = cloudField(p, uTime * uDrift);\n    float cdL = cloudField(p + L * 0.05, uTime * uDrift);\n    float rim = clamp((cd - cdL) * 2.4, -0.3, 1.0);\n    \n    \n    \n    float shade = clamp(cd * 0.8 + rim * 0.4, 0.0, 1.0);\n    gold = goldRamp(shade) * smoothstep(0.16, 0.72, cd) * artVig * 0.62;\n    \n    \n    vec2 w1 = p - vec2(-0.72, -0.30);\n    vec2 w2 = p - vec2(0.55, 0.48);\n    float wd = (exp(-dot(w1, w1) * 9.0) * 0.9 + exp(-dot(w2, w2) * 12.0) * 0.7)\n             * (1.0 - abs(2.0 * fbm(p * 3.4 + vec2(17.3, 9.1) + uPan * 0.2) - 1.0));\n    \n    \n    cool = coolRamp(clamp(wd * 0.9, 0.0, 1.0)) * smoothstep(0.22, 0.75, wd) * artVig * 0.4;\n    cool += vec3(0.843, 0.482, 0.729) * exp(-dot(w2, w2) * 16.0) * wd * 0.12 * artVig;\n  }\n\n  \n  \n  \n  \n  float artOwn = 1.0 - clamp((gold.r + gold.g + cool.b) * 1.8, 0.0, 0.95) * step(0.001, uArt);   \n  vec3 neb = mix(uColorA, uColorB, n);\n  vec3 col = uBg\n           + (neb * (n * n) * uIntensity * boost * vig * artOwn            \n           + uColorB * dust  * uIntensity * boost * vig * artOwn           \n           + mix(uColorB, uColorC, 0.5) * dust2 * uIntensity * boost * vig * artOwn \n           + mix(uColorB, uColorC, 0.7) * wisp * uIntensity * 1.6 * vig * artOwn   \n           + mix(uColorC, vec3(1.0), 0.35) * smudge * uIntensity * 1.8 * vig * artOwn \n           + (gold + cool) * uArt                                          \n           + stars                                                          \n           ) * clearing;                                                    \n\n  gl_FragColor = vec4(col, 1.0);\n}";
 //#endregion
 //#region src/hero/createObservatory.js
-function kS(e) {
+function MS(e) {
 	let t = e >>> 0;
 	return function() {
 		t |= 0, t = t + 1831565813 | 0;
@@ -25735,15 +25840,15 @@ function kS(e) {
 		return e = e + Math.imul(e ^ e >>> 7, 61 | e) ^ e, ((e ^ e >>> 14) >>> 0) / 4294967296;
 	};
 }
-var AS = new J(.62, .72, 1), jS = new J(.86, .92, 1), MS = new J(527132), NS = new J(2768762), PS = new J(1924206);
-function FS(e, { count: t = 3400, glints: n = 14, seed: r = 677860, radius: i = 62, band: a = .55, nebula: o = 1.15, star: s = AS, glow: c = jS, backdrop: l = MS, haze: u = NS, hazeAlt: d = PS } = {}) {
+var NS = new J(.62, .72, 1), PS = new J(.86, .92, 1), FS = new J(527132), IS = new J(2768762), LS = new J(1924206);
+function RS(e, { count: t = 3400, glints: n = 14, seed: r = 677860, radius: i = 62, band: a = .55, nebula: o = 1.15, star: s = NS, glow: c = PS, backdrop: l = FS, haze: u = IS, hazeAlt: d = LS } = {}) {
 	let f = new wr();
 	f.background = new J().copy(l);
 	let { x: p, y: m } = e.drawBuffer, h = new cu(52, p / m, .1, 400);
 	h.position.set(0, 0, .001), h.lookAt(0, 0, -1);
 	let g = new $c({
-		vertexShader: DS,
-		fragmentShader: OS,
+		vertexShader: AS,
+		fragmentShader: jS,
 		depthTest: !1,
 		depthWrite: !1,
 		uniforms: {
@@ -25763,7 +25868,7 @@ function FS(e, { count: t = 3400, glints: n = 14, seed: r = 677860, radius: i = 
 	_.frustumCulled = !1, _.renderOrder = -10, f.add(_);
 	let v = new mr();
 	f.add(v);
-	let y = kS(r), b = new Float32Array(t * 3), x = new Float32Array(t), S = new Float32Array(t), C = new Float32Array(t);
+	let y = MS(r), b = new Float32Array(t * 3), x = new Float32Array(t), S = new Float32Array(t), C = new Float32Array(t);
 	for (let e = 0; e < t; e++) {
 		let t = y() * Math.PI * 2, n = y() * 2 - 1, r = n * (1 - a) + n * Math.abs(n) * a * .35, o = Math.sqrt(Math.max(0, 1 - r * r)), s = i * (.82 + y() * .18);
 		b[e * 3] = Math.cos(t) * o * s, b[e * 3 + 1] = r * s, b[e * 3 + 2] = Math.sin(t) * o * s;
@@ -25773,8 +25878,8 @@ function FS(e, { count: t = 3400, glints: n = 14, seed: r = 677860, radius: i = 
 	let w = new Di();
 	w.setAttribute("position", new Y(b, 3)), w.setAttribute("aSize", new Y(x, 1)), w.setAttribute("aBright", new Y(S, 1)), w.setAttribute("aPhase", new Y(C, 1));
 	let T = new $c({
-		vertexShader: CS,
-		fragmentShader: wS,
+		vertexShader: ES,
+		fragmentShader: DS,
 		uniforms: {
 			uTime: { value: 0 },
 			uTwinkle: { value: 1 },
@@ -25807,8 +25912,8 @@ function FS(e, { count: t = 3400, glints: n = 14, seed: r = 677860, radius: i = 
 	let M = new Di();
 	M.setAttribute("position", new Y(D, 3)), M.setAttribute("aCorner", new Y(O, 2)), M.setAttribute("aSize", new Y(k, 1)), M.setIndex(new Y(A, 1));
 	let N = new $c({
-		vertexShader: TS,
-		fragmentShader: ES,
+		vertexShader: OS,
+		fragmentShader: kS,
 		uniforms: {
 			uColor: { value: c.clone() },
 			uIntensity: { value: 1.7 }
@@ -25836,15 +25941,15 @@ function FS(e, { count: t = 3400, glints: n = 14, seed: r = 677860, radius: i = 
 }
 //#endregion
 //#region src/shaders/pixel-morph.frag
-var IS = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uRaw;    \nuniform sampler2D uPix;    \nuniform float     uMorph;  \n\nvoid main() {\n  vec3 raw = texture2D(uRaw, vUv).rgb;\n  vec3 pix = texture2D(uPix, vUv).rgb;\n  gl_FragColor = vec4(mix(raw, pix, uMorph), 1.0);\n}", LS = new J(.85, .55, .18), RS = new J(1, .78, .42), zS = new J(.35, .62, 1), BS = new J(722708), VS = {
+var zS = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uRaw;    \nuniform sampler2D uPix;    \nuniform float     uMorph;  \n\nvoid main() {\n  vec3 raw = texture2D(uRaw, vUv).rgb;\n  vec3 pix = texture2D(uPix, vUv).rgb;\n  gl_FragColor = vec4(mix(raw, pix, uMorph), 1.0);\n}", BS = new J(.85, .55, .18), VS = new J(1, .78, .42), HS = new J(.35, .62, 1), US = new J(722708), WS = {
 	sat: 1,
 	contrast: 1
-}, HS = 5, US = 3, WS = 16, GS = (e) => e * e * (3 - 2 * e);
-function KS(e) {
-	let t = (e % WS + WS) % WS;
-	return t < HS ? 0 : t < 8 ? GS((t - HS) / US) : t < 13 ? 1 : 1 - GS((t - HS - US - HS) / US);
+}, GS = 5, KS = 3, qS = 16, JS = (e) => e * e * (3 - 2 * e);
+function YS(e) {
+	let t = (e % qS + qS) % qS;
+	return t < GS ? 0 : t < 8 ? JS((t - GS) / KS) : t < 13 ? 1 : 1 - JS((t - GS - KS - GS) / KS);
 }
-function qS(e, { era: t = "16-bit", palette: n = zg["warm (sunset)"], solid: r = LS, key: i = RS, rim: a = zS, backdrop: o = BS, detail: s = 0, filmic: c = VS } = {}) {
+function XS(e, { era: t = "16-bit", palette: n = zg["warm (sunset)"], solid: r = BS, key: i = VS, rim: a = HS, backdrop: o = US, detail: s = 0, filmic: c = WS } = {}) {
 	let { renderer: u, drawBuffer: d, runPass: f } = e, p = Ig[t] ?? Ig["16-bit"], h = new wr();
 	h.background = new J().copy(o);
 	let g = new cu(45, d.x / d.y, .1, 100);
@@ -25888,7 +25993,7 @@ function qS(e, { era: t = "16-bit", palette: n = zg["warm (sunset)"], solid: r =
 		}
 	}), O = new wr(), k = new pu(-1, 1, 1, -1, 0, 1), A = new $c({
 		vertexShader: d_,
-		fragmentShader: IS,
+		fragmentShader: zS,
 		uniforms: {
 			uRaw: { value: C.texture },
 			uPix: { value: w.texture },
@@ -25905,7 +26010,7 @@ function qS(e, { era: t = "16-bit", palette: n = zg["warm (sunset)"], solid: r =
 	}
 	function I(e, t) {
 		F(), y.rotation.y = t * .28, y.rotation.x = Math.sin(t * .19) * .35;
-		let n = KS(t);
+		let n = YS(t);
 		A.uniforms.uMorph.value = n, D.uniforms.uGridWidth.value = 460 - (460 - p.gridWidth) * n, u.setRenderTarget(C), u.render(h, g), f(D, w);
 	}
 	function L() {
@@ -25923,7 +26028,7 @@ function qS(e, { era: t = "16-bit", palette: n = zg["warm (sunset)"], solid: r =
 }
 //#endregion
 //#region src/hero/createMaterialStudy.js
-var JS = new J("#aebecb"), YS = new J("#d8a55e"), XS = new J("#dff0f4"), ZS = new J("#f2ece0"), QS = 5, $S = 3, eC = 8, tC = eC * 3, nC = (e) => e * e * (3 - 2 * e), rC = [
+var ZS = new J("#aebecb"), QS = new J("#d8a55e"), $S = new J("#dff0f4"), eC = new J("#f2ece0"), tC = 5, nC = 3, rC = 8, iC = rC * 3, aC = (e) => e * e * (3 - 2 * e), oC = [
 	{
 		metalness: 1,
 		roughness: .24,
@@ -25948,13 +26053,13 @@ var JS = new J("#aebecb"), YS = new J("#d8a55e"), XS = new J("#dff0f4"), ZS = ne
 		ior: 1.4,
 		env: .9
 	}
-], iC = {
+], sC = {
 	tint: new J(1, .88, .85),
 	lift: new J(.012, .006, .006),
 	sat: 1.06,
 	contrast: 1.05
 };
-function aC(e, { backdrop: t = JS, metal: n = YS, glass: r = XS, ceramic: i = ZS, envIntensity: a = 1, filmic: o = iC } = {}) {
+function cC(e, { backdrop: t = ZS, metal: n = QS, glass: r = $S, ceramic: i = eC, envIntensity: a = 1, filmic: o = sC } = {}) {
 	let { renderer: s } = e, c = new wr();
 	c.background = new J().copy(t);
 	let { x: l, y: u } = e.drawBuffer, d = new cu(40, l / u, .05, 100);
@@ -25967,13 +26072,13 @@ function aC(e, { backdrop: t = JS, metal: n = YS, glass: r = XS, ceramic: i = ZS
 	h.position.set(2.2, 3.8, 3), c.add(h);
 	let g = new zc(1.05, .32, 240, 40, 3, 5), _ = new nl({
 		color: new J().copy(n),
-		metalness: rC[0].metalness,
-		roughness: rC[0].roughness,
-		clearcoat: rC[0].clearcoat,
-		ior: rC[0].ior,
-		envMapIntensity: rC[0].env,
+		metalness: oC[0].metalness,
+		roughness: oC[0].roughness,
+		clearcoat: oC[0].clearcoat,
+		ior: oC[0].ior,
+		envMapIntensity: oC[0].env,
 		transparent: !0,
-		opacity: rC[0].opacity,
+		opacity: oC[0].opacity,
 		depthWrite: !0
 	}), v = new Z(g, _);
 	c.add(v);
@@ -25984,7 +26089,7 @@ function aC(e, { backdrop: t = JS, metal: n = YS, glass: r = XS, ceramic: i = ZS
 	];
 	function b(e, t) {
 		v.rotation.y = t * .3, v.rotation.x = Math.sin(t * .22) * .14;
-		let n = (t % tC + tC) % tC, r = Math.floor(n / eC), i = n - r * eC, a = i <= QS ? 0 : nC((i - QS) / $S), o = rC[r], s = rC[(r + 1) % 3];
+		let n = (t % iC + iC) % iC, r = Math.floor(n / rC), i = n - r * rC, a = i <= tC ? 0 : aC((i - tC) / nC), o = oC[r], s = oC[(r + 1) % 3];
 		_.metalness = o.metalness + (s.metalness - o.metalness) * a, _.roughness = o.roughness + (s.roughness - o.roughness) * a, _.opacity = o.opacity + (s.opacity - o.opacity) * a, _.clearcoat = o.clearcoat + (s.clearcoat - o.clearcoat) * a, _.ior = o.ior + (s.ior - o.ior) * a, _.envMapIntensity = o.env + (s.env - o.env) * a, _.color.copy(y[r]).lerp(y[(r + 1) % 3], a);
 	}
 	function x() {
@@ -26006,13 +26111,13 @@ function aC(e, { backdrop: t = JS, metal: n = YS, glass: r = XS, ceramic: i = ZS
 }
 //#endregion
 //#region src/shaders/edge-ink.frag
-var oC = "precision highp float;\n\nuniform vec3  uColor;   \nuniform float uTime;    \nuniform float uSpeed;   \nuniform float uDash;    \nuniform float uFlow;    \n\nvarying float vAlong;\nvarying float vSide;\n\nvoid main() {\n  /* Across-width feather — but TIGHTER than edge-flow's glow: a drawn line has a crisp\n     core and only a hair of softness at the rim (that hair is the anti-alias). A wide\n     feather here would read as an airbrush, not a pen. */\n  float feather = smoothstep(1.0, 0.55, abs(vSide));\n\n  /* The draw-on pulse: a slow bright-DARK wave along the length. It modulates OPACITY,\n     never luminance — the ink can get denser, never lighter than the page. */\n  float phase = fract(vAlong * uDash - uTime * uSpeed);\n  float tri   = 1.0 - abs(phase - 0.5) * 2.0;\n  float pulse = smoothstep(0.35, 1.0, tri);\n\n  float ink = feather * (0.62 + uFlow * 0.38 * pulse);\n\n  /* Alpha-blended: the fragment IS the ink colour; alpha decides how much page shows\n     through. (Additive would do the opposite and wash the page out.) */\n  gl_FragColor = vec4(uColor, ink);\n}", sC = new J("#e8e0cd"), cC = new J("#16233d"), lC = new J("#8c3b2e"), uC = {
+var lC = "precision highp float;\n\nuniform vec3  uColor;   \nuniform float uTime;    \nuniform float uSpeed;   \nuniform float uDash;    \nuniform float uFlow;    \n\nvarying float vAlong;\nvarying float vSide;\n\nvoid main() {\n  /* Across-width feather — but TIGHTER than edge-flow's glow: a drawn line has a crisp\n     core and only a hair of softness at the rim (that hair is the anti-alias). A wide\n     feather here would read as an airbrush, not a pen. */\n  float feather = smoothstep(1.0, 0.55, abs(vSide));\n\n  /* The draw-on pulse: a slow bright-DARK wave along the length. It modulates OPACITY,\n     never luminance — the ink can get denser, never lighter than the page. */\n  float phase = fract(vAlong * uDash - uTime * uSpeed);\n  float tri   = 1.0 - abs(phase - 0.5) * 2.0;\n  float pulse = smoothstep(0.35, 1.0, tri);\n\n  float ink = feather * (0.62 + uFlow * 0.38 * pulse);\n\n  /* Alpha-blended: the fragment IS the ink colour; alpha decides how much page shows\n     through. (Additive would do the opposite and wash the page out.) */\n  gl_FragColor = vec4(uColor, ink);\n}", uC = new J("#e8e0cd"), dC = new J("#16233d"), fC = new J("#8c3b2e"), pC = {
 	tint: new J(.96, .92, .86),
 	lift: new J(0, 0, 0),
 	sat: .94,
 	contrast: 1.22
 };
-function dC(e, { detail: t = 1, radius: n = 3.1, paper: r = sC, ink: i = cC, node: a = lC, width: o = .022, flow: s = 1, filmic: c = uC } = {}) {
+function mC(e, { detail: t = 1, radius: n = 3.1, paper: r = uC, ink: i = dC, node: a = fC, width: o = .022, flow: s = 1, filmic: c = pC } = {}) {
 	let l = new wr();
 	l.background = new J().copy(r);
 	let { x: u, y: d } = e.drawBuffer, f = new cu(46, u / d, .1, 100);
@@ -26043,14 +26148,14 @@ function dC(e, { detail: t = 1, radius: n = 3.1, paper: r = sC, ink: i = cC, nod
 	v.forEach((e, t) => {
 		S[t * 3] = e[0], S[t * 3 + 1] = e[1], S[t * 3 + 2] = e[2];
 	});
-	let C = sS({
+	let C = uS({
 		positions: S,
 		pairs: x,
 		color: i,
 		width: o,
 		material: new $c({
-			vertexShader: nS,
-			fragmentShader: oC,
+			vertexShader: aS,
+			fragmentShader: lC,
 			uniforms: {
 				uWidth: { value: o },
 				uColor: { value: new J().copy(i) },
@@ -26089,8 +26194,8 @@ function dC(e, { detail: t = 1, radius: n = 3.1, paper: r = sC, ink: i = cC, nod
 }
 //#endregion
 //#region src/shaders/liquid-metal.frag
-var fC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uRes;      \nuniform vec3  uTint;     \nuniform vec3  uBgTop;    \nuniform vec3  uBgBot;\nuniform float uBlobs;    \n\nconst int   STEPS   = 64;      \nconst float MAX_D   = 14.0;    \nconst float HIT_D   = 0.0022;  \nconst float BOUND_R = 3.4;     \n\n/* Smooth minimum (polynomial, iq). k controls how wide the merge is: the bigger k, the more the two\n   surfaces \"reach\" for each other before they touch. This is the mercury. */\nfloat smin(float a, float b, float k) {\n  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);\n  return mix(b, a, h) - k * h * (1.0 - h);\n}\n\n/* THE SCENE, as a function. Six drifting spheres, smooth-min'd into one body.\n   Each blob rides its own slow Lissajous path, so the cluster never repeats and never quite settles. */\nfloat sdf(vec3 p) {\n  float t = uTime * 0.35;\n\n  vec3 c0 = vec3(sin(t * 0.9) * 0.75, cos(t * 0.7) * 0.60, sin(t * 0.5) * 0.5);\n  float d = length(p - c0) - 1.20;\n\n  vec3 c1 = vec3(cos(t * 0.6) * 0.95, sin(t * 1.1) * 0.70, cos(t * 0.8) * 0.45);\n  d = smin(d, length(p - c1) - 1.00, 0.75);\n\n  vec3 c2 = vec3(sin(t * 1.3 + 2.0) * 0.85, cos(t * 0.5 + 1.0) * 0.85, sin(t * 0.9) * 0.6);\n  d = smin(d, length(p - c2) - 0.90, 0.75);\n\n  if (uBlobs > 3.5) {\n    vec3 c3 = vec3(cos(t * 0.8 + 4.0) * 1.05, sin(t * 0.6 + 3.0) * 0.55, cos(t * 1.2) * 0.55);\n    d = smin(d, length(p - c3) - 0.80, 0.70);\n  }\n  if (uBlobs > 4.5) {\n    vec3 c4 = vec3(sin(t * 0.4 + 1.5) * 0.65, cos(t * 1.0 + 2.5) * 0.95, sin(t * 0.7 + 1.0) * 0.7);\n    d = smin(d, length(p - c4) - 0.72, 0.68);\n  }\n  if (uBlobs > 5.5) {\n    vec3 c5 = vec3(cos(t * 1.1 + 0.5) * 0.70, sin(t * 0.9 + 4.5) * 0.70, cos(t * 0.6 + 2.0) * 0.8);\n    d = smin(d, length(p - c5) - 0.68, 0.68);\n  }\n  return d;\n}\n\n/* Normal by gradient — the 4-tap tetrahedron form: 4 SDF evaluations instead of the naive 6. */\nvec3 normalAt(vec3 p) {\n  const vec2 k = vec2(1.0, -1.0);\n  const float h = 0.0015;\n  return normalize(k.xyy * sdf(p + k.xyy * h) +\n                   k.yyx * sdf(p + k.yyx * h) +\n                   k.yxy * sdf(p + k.yxy * h) +\n                   k.xxx * sdf(p + k.xxx * h));\n}\n\n/* THE STUDIO THE METAL REFLECTS — and it is the difference between chrome and rubber.\n   Metal has no colour of its own: it is a mirror with a tint. So the ONLY thing that makes a blob look\n   metallic is what it reflects. The first cut of this function was a soft gradient, and the blobs came\n   out looking like matte blue putty — a smooth reflection of a smooth nothing is indistinguishable from\n   diffuse shading. A mirror needs something with EDGES to mirror.\n   So this is a real (if cheap) studio: a HARD HORIZON, a bright overhead softbox, a dark floor, and a\n   couple of soft kickers. When those slide across a curved surface you read \"polished\", instantly. */\nvec3 env(vec3 rd) {\n  /* Hard horizon — the single most important line in this shader. */\n  float h = smoothstep(-0.015, 0.015, rd.y);\n  vec3 floorC = uBgBot * 0.55;\n  vec3 skyC   = mix(uBgTop * 1.35, uBgTop * 0.45, smoothstep(0.0, 0.9, rd.y));\n  vec3 c = mix(floorC, skyC, h);\n\n  /* The softbox: a bright, sharply-bounded overhead panel — this is the highlight that slides. */\n  float box = smoothstep(0.42, 0.60, rd.y) * (1.0 - smoothstep(0.86, 0.99, rd.y));\n  c += vec3(1.00, 0.98, 0.95) * box * 2.6;\n\n  /* A bright strip just above the horizon: the classic chrome \"waistline\" reflection. */\n  c += vec3(0.85, 0.90, 1.00) * smoothstep(0.10, 0.02, abs(rd.y - 0.06)) * 0.55;\n\n  /* Cool kickers at the sides so the silhouette edges stay alive against the backdrop. */\n  c += vec3(0.30, 0.42, 0.62) * smoothstep(0.62, 1.0, abs(rd.x)) * 0.45;\n  return c;\n}\n\nvoid main() {\n  /* Build the camera ray for this pixel. */\n  vec2 uv = (vUv * 2.0 - 1.0);\n  uv.x *= uRes.x / max(uRes.y, 1.0);\n\n  vec3 ro = vec3(0.0, 0.0, 6.2);                  \n  vec3 rd = normalize(vec3(uv * 0.62, -1.0));     \n\n  vec3 bg = mix(uBgBot, uBgTop, vUv.y);\n\n  /* BOUNDING-SPHERE REJECT — the big perf win. Solve the ray/sphere intersection first; if the ray\n     misses the volume the blobs live in, there is nothing to march and we bail immediately. Most of a\n     typical frame is background, so most pixels take this path and never enter the loop at all. */\n  float b = dot(ro, rd);\n  float c = dot(ro, ro) - BOUND_R * BOUND_R;\n  float disc = b * b - c;\n  if (disc < 0.0) { gl_FragColor = vec4(bg, 1.0); return; }\n\n  float tEnter = max(-b - sqrt(disc), 0.0);       \n  float tExit  = min(-b + sqrt(disc), MAX_D);\n\n  /* SPHERE-TRACE. */\n  float t = tEnter;\n  bool hit = false;\n  for (int i = 0; i < STEPS; i++) {\n    vec3 p = ro + rd * t;\n    float d = sdf(p);\n    if (d < HIT_D) { hit = true; break; }         \n    t += d;                                        \n    if (t > tExit) break;                          \n  }\n\n  if (!hit) { gl_FragColor = vec4(bg, 1.0); return; }\n\n  vec3 p = ro + rd * t;\n  vec3 n = normalAt(p);\n\n  /* METAL: it's a mirror with a tint. Reflect the view ray and look up the environment; multiply by\n     the metal's colour (that IS what \"metallic\" means — the reflection takes the metal's hue). The\n     Fresnel term brightens grazing angles toward white, which is what stops it reading as plastic. */\n  vec3 refl = reflect(rd, n);\n  vec3 base = env(refl) * uTint;\n\n  float fres = pow(1.0 - max(dot(n, -rd), 0.0), 4.0);\n  vec3 col = mix(base, env(refl) * 1.15, fres * 0.75);\n\n  /* A tight specular from the overhead band, so the blobs get a liquid highlight that slides as they move. */\n  vec3 lightDir = normalize(vec3(0.35, 0.9, 0.35));\n  float spec = pow(max(dot(refl, lightDir), 0.0), 48.0);\n  col += vec3(1.0, 0.98, 0.94) * spec * 1.6;\n\n  /* Fade the far edge of the body into the backdrop so the silhouette doesn't cut like a sticker. */\n  float edge = smoothstep(MAX_D * 0.75, MAX_D, t);\n  col = mix(col, bg, edge);\n\n  gl_FragColor = vec4(col, 1.0);\n}", pC = "precision highp float;\n\nvarying vec2 vUv;\nuniform sampler2D uTex;\n\nvoid main() {\n  gl_FragColor = vec4(texture2D(uTex, vUv).rgb, 1.0);\n}", mC = new J(.82, .84, .9), hC = new J(.17, .18, .205), gC = new J(.03, .032, .042);
-function _C(e, { scale: t = .5, blobs: n = 6, tint: r = mC, bgTop: i = hC, bgBot: a = gC } = {}) {
+var hC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uRes;      \nuniform vec3  uTint;     \nuniform vec3  uBgTop;    \nuniform vec3  uBgBot;\nuniform float uBlobs;    \n\nconst int   STEPS   = 64;      \nconst float MAX_D   = 14.0;    \nconst float HIT_D   = 0.0022;  \nconst float BOUND_R = 3.4;     \n\n/* Smooth minimum (polynomial, iq). k controls how wide the merge is: the bigger k, the more the two\n   surfaces \"reach\" for each other before they touch. This is the mercury. */\nfloat smin(float a, float b, float k) {\n  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);\n  return mix(b, a, h) - k * h * (1.0 - h);\n}\n\n/* THE SCENE, as a function. Six drifting spheres, smooth-min'd into one body.\n   Each blob rides its own slow Lissajous path, so the cluster never repeats and never quite settles. */\nfloat sdf(vec3 p) {\n  float t = uTime * 0.35;\n\n  vec3 c0 = vec3(sin(t * 0.9) * 0.75, cos(t * 0.7) * 0.60, sin(t * 0.5) * 0.5);\n  float d = length(p - c0) - 1.20;\n\n  vec3 c1 = vec3(cos(t * 0.6) * 0.95, sin(t * 1.1) * 0.70, cos(t * 0.8) * 0.45);\n  d = smin(d, length(p - c1) - 1.00, 0.75);\n\n  vec3 c2 = vec3(sin(t * 1.3 + 2.0) * 0.85, cos(t * 0.5 + 1.0) * 0.85, sin(t * 0.9) * 0.6);\n  d = smin(d, length(p - c2) - 0.90, 0.75);\n\n  if (uBlobs > 3.5) {\n    vec3 c3 = vec3(cos(t * 0.8 + 4.0) * 1.05, sin(t * 0.6 + 3.0) * 0.55, cos(t * 1.2) * 0.55);\n    d = smin(d, length(p - c3) - 0.80, 0.70);\n  }\n  if (uBlobs > 4.5) {\n    vec3 c4 = vec3(sin(t * 0.4 + 1.5) * 0.65, cos(t * 1.0 + 2.5) * 0.95, sin(t * 0.7 + 1.0) * 0.7);\n    d = smin(d, length(p - c4) - 0.72, 0.68);\n  }\n  if (uBlobs > 5.5) {\n    vec3 c5 = vec3(cos(t * 1.1 + 0.5) * 0.70, sin(t * 0.9 + 4.5) * 0.70, cos(t * 0.6 + 2.0) * 0.8);\n    d = smin(d, length(p - c5) - 0.68, 0.68);\n  }\n  return d;\n}\n\n/* Normal by gradient — the 4-tap tetrahedron form: 4 SDF evaluations instead of the naive 6. */\nvec3 normalAt(vec3 p) {\n  const vec2 k = vec2(1.0, -1.0);\n  const float h = 0.0015;\n  return normalize(k.xyy * sdf(p + k.xyy * h) +\n                   k.yyx * sdf(p + k.yyx * h) +\n                   k.yxy * sdf(p + k.yxy * h) +\n                   k.xxx * sdf(p + k.xxx * h));\n}\n\n/* THE STUDIO THE METAL REFLECTS — and it is the difference between chrome and rubber.\n   Metal has no colour of its own: it is a mirror with a tint. So the ONLY thing that makes a blob look\n   metallic is what it reflects. The first cut of this function was a soft gradient, and the blobs came\n   out looking like matte blue putty — a smooth reflection of a smooth nothing is indistinguishable from\n   diffuse shading. A mirror needs something with EDGES to mirror.\n   So this is a real (if cheap) studio: a HARD HORIZON, a bright overhead softbox, a dark floor, and a\n   couple of soft kickers. When those slide across a curved surface you read \"polished\", instantly. */\nvec3 env(vec3 rd) {\n  /* Hard horizon — the single most important line in this shader. */\n  float h = smoothstep(-0.015, 0.015, rd.y);\n  vec3 floorC = uBgBot * 0.55;\n  vec3 skyC   = mix(uBgTop * 1.35, uBgTop * 0.45, smoothstep(0.0, 0.9, rd.y));\n  vec3 c = mix(floorC, skyC, h);\n\n  /* The softbox: a bright, sharply-bounded overhead panel — this is the highlight that slides. */\n  float box = smoothstep(0.42, 0.60, rd.y) * (1.0 - smoothstep(0.86, 0.99, rd.y));\n  c += vec3(1.00, 0.98, 0.95) * box * 2.6;\n\n  /* A bright strip just above the horizon: the classic chrome \"waistline\" reflection. */\n  c += vec3(0.85, 0.90, 1.00) * smoothstep(0.10, 0.02, abs(rd.y - 0.06)) * 0.55;\n\n  /* Cool kickers at the sides so the silhouette edges stay alive against the backdrop. */\n  c += vec3(0.30, 0.42, 0.62) * smoothstep(0.62, 1.0, abs(rd.x)) * 0.45;\n  return c;\n}\n\nvoid main() {\n  /* Build the camera ray for this pixel. */\n  vec2 uv = (vUv * 2.0 - 1.0);\n  uv.x *= uRes.x / max(uRes.y, 1.0);\n\n  vec3 ro = vec3(0.0, 0.0, 6.2);                  \n  vec3 rd = normalize(vec3(uv * 0.62, -1.0));     \n\n  vec3 bg = mix(uBgBot, uBgTop, vUv.y);\n\n  /* BOUNDING-SPHERE REJECT — the big perf win. Solve the ray/sphere intersection first; if the ray\n     misses the volume the blobs live in, there is nothing to march and we bail immediately. Most of a\n     typical frame is background, so most pixels take this path and never enter the loop at all. */\n  float b = dot(ro, rd);\n  float c = dot(ro, ro) - BOUND_R * BOUND_R;\n  float disc = b * b - c;\n  if (disc < 0.0) { gl_FragColor = vec4(bg, 1.0); return; }\n\n  float tEnter = max(-b - sqrt(disc), 0.0);       \n  float tExit  = min(-b + sqrt(disc), MAX_D);\n\n  /* SPHERE-TRACE. */\n  float t = tEnter;\n  bool hit = false;\n  for (int i = 0; i < STEPS; i++) {\n    vec3 p = ro + rd * t;\n    float d = sdf(p);\n    if (d < HIT_D) { hit = true; break; }         \n    t += d;                                        \n    if (t > tExit) break;                          \n  }\n\n  if (!hit) { gl_FragColor = vec4(bg, 1.0); return; }\n\n  vec3 p = ro + rd * t;\n  vec3 n = normalAt(p);\n\n  /* METAL: it's a mirror with a tint. Reflect the view ray and look up the environment; multiply by\n     the metal's colour (that IS what \"metallic\" means — the reflection takes the metal's hue). The\n     Fresnel term brightens grazing angles toward white, which is what stops it reading as plastic. */\n  vec3 refl = reflect(rd, n);\n  vec3 base = env(refl) * uTint;\n\n  float fres = pow(1.0 - max(dot(n, -rd), 0.0), 4.0);\n  vec3 col = mix(base, env(refl) * 1.15, fres * 0.75);\n\n  /* A tight specular from the overhead band, so the blobs get a liquid highlight that slides as they move. */\n  vec3 lightDir = normalize(vec3(0.35, 0.9, 0.35));\n  float spec = pow(max(dot(refl, lightDir), 0.0), 48.0);\n  col += vec3(1.0, 0.98, 0.94) * spec * 1.6;\n\n  /* Fade the far edge of the body into the backdrop so the silhouette doesn't cut like a sticker. */\n  float edge = smoothstep(MAX_D * 0.75, MAX_D, t);\n  col = mix(col, bg, edge);\n\n  gl_FragColor = vec4(col, 1.0);\n}", gC = "precision highp float;\n\nvarying vec2 vUv;\nuniform sampler2D uTex;\n\nvoid main() {\n  gl_FragColor = vec4(texture2D(uTex, vUv).rgb, 1.0);\n}", _C = new J(.82, .84, .9), vC = new J(.17, .18, .205), yC = new J(.03, .032, .042);
+function bC(e, { scale: t = .5, blobs: n = 6, tint: r = _C, bgTop: i = vC, bgBot: a = yC } = {}) {
 	let { drawBuffer: o, runPass: s } = e, c = () => Math.max(1, Math.floor(o.x * t)), l = () => Math.max(1, Math.floor(o.y * t)), u = new In(c(), l(), {
 		minFilter: m,
 		magFilter: m,
@@ -26099,7 +26204,7 @@ function _C(e, { scale: t = .5, blobs: n = 6, tint: r = mC, bgTop: i = hC, bgBot
 		type: E
 	}), d = new $c({
 		vertexShader: d_,
-		fragmentShader: fC,
+		fragmentShader: hC,
 		uniforms: {
 			uTime: { value: 0 },
 			uRes: { value: new G(c(), l()) },
@@ -26110,7 +26215,7 @@ function _C(e, { scale: t = .5, blobs: n = 6, tint: r = mC, bgTop: i = hC, bgBot
 		}
 	}), f = new wr(), p = new pu(-1, 1, 1, -1, 0, 1), h = new $c({
 		vertexShader: d_,
-		fragmentShader: pC,
+		fragmentShader: gC,
 		uniforms: { uTex: { value: u.texture } },
 		depthTest: !1,
 		depthWrite: !1
@@ -26138,8 +26243,8 @@ function _C(e, { scale: t = .5, blobs: n = 6, tint: r = mC, bgTop: i = hC, bgBot
 }
 //#endregion
 //#region src/shaders/living-ink-sim.frag
-var vC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform vec2      uTexel;   \nuniform float     uFeed;    \nuniform float     uKill;    \nuniform float     uDt;      \n\nvoid main() {\n  vec2 s = texture2D(uState, vUv).rg;\n\n  /* The 9-point Laplacian: neighbours pull, the centre pushes back. */\n  vec2 lap = vec2(0.0);\n  lap += texture2D(uState, vUv + vec2(-uTexel.x, -uTexel.y)).rg * 0.05;\n  lap += texture2D(uState, vUv + vec2( 0.0,      -uTexel.y)).rg * 0.20;\n  lap += texture2D(uState, vUv + vec2( uTexel.x, -uTexel.y)).rg * 0.05;\n  lap += texture2D(uState, vUv + vec2(-uTexel.x,  0.0)).rg     * 0.20;\n  lap += s * -1.0;\n  lap += texture2D(uState, vUv + vec2( uTexel.x,  0.0)).rg     * 0.20;\n  lap += texture2D(uState, vUv + vec2(-uTexel.x,  uTexel.y)).rg * 0.05;\n  lap += texture2D(uState, vUv + vec2( 0.0,       uTexel.y)).rg * 0.20;\n  lap += texture2D(uState, vUv + vec2( uTexel.x,  uTexel.y)).rg * 0.05;\n\n  float A = s.r, B = s.g;\n  float reaction = A * B * B;            \n\n  float dA = 1.00 * lap.r - reaction + uFeed * (1.0 - A);\n  float dB = 0.50 * lap.g + reaction - (uKill + uFeed) * B;\n\n  /* Clamp: the system is only conditionally stable, and one NaN would poison the whole field forever\n     (it would ping-pong back in next frame and spread through the Laplacian). Cheap insurance. */\n  gl_FragColor = vec4(clamp(A + dA * uDt, 0.0, 1.0),\n                      clamp(B + dB * uDt, 0.0, 1.0),\n                      0.0, 1.0);\n}", yC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;\nuniform vec2      uTexel;\nuniform vec3      uPaper;   \nuniform vec3      uInk;     \nuniform vec3      uGlow;    \n\nvoid main() {\n  float b = texture2D(uState, vUv).g;\n\n  /* Gradient of B → where is the pattern GROWING right now. */\n  float bx = texture2D(uState, vUv + vec2(uTexel.x, 0.0)).g - texture2D(uState, vUv - vec2(uTexel.x, 0.0)).g;\n  float by = texture2D(uState, vUv + vec2(0.0, uTexel.y)).g - texture2D(uState, vUv - vec2(0.0, uTexel.y)).g;\n  float edge = clamp(length(vec2(bx, by)) * 9.0, 0.0, 1.0);\n\n  /* Paper → ink through the concentration, then the glowing front laid on top. */\n  vec3 col = mix(uPaper, uInk, smoothstep(0.08, 0.34, b));\n  col = mix(col, uGlow, edge * 0.60);\n\n  gl_FragColor = vec4(col, 1.0);\n}", bC = new J(.105, .045, .15), xC = new J(.62, .28, .95), SC = new J(1, .94, .86);
-function CC(e) {
+var xC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform vec2      uTexel;   \nuniform float     uFeed;    \nuniform float     uKill;    \nuniform float     uDt;      \n\nvoid main() {\n  vec2 s = texture2D(uState, vUv).rg;\n\n  /* The 9-point Laplacian: neighbours pull, the centre pushes back. */\n  vec2 lap = vec2(0.0);\n  lap += texture2D(uState, vUv + vec2(-uTexel.x, -uTexel.y)).rg * 0.05;\n  lap += texture2D(uState, vUv + vec2( 0.0,      -uTexel.y)).rg * 0.20;\n  lap += texture2D(uState, vUv + vec2( uTexel.x, -uTexel.y)).rg * 0.05;\n  lap += texture2D(uState, vUv + vec2(-uTexel.x,  0.0)).rg     * 0.20;\n  lap += s * -1.0;\n  lap += texture2D(uState, vUv + vec2( uTexel.x,  0.0)).rg     * 0.20;\n  lap += texture2D(uState, vUv + vec2(-uTexel.x,  uTexel.y)).rg * 0.05;\n  lap += texture2D(uState, vUv + vec2( 0.0,       uTexel.y)).rg * 0.20;\n  lap += texture2D(uState, vUv + vec2( uTexel.x,  uTexel.y)).rg * 0.05;\n\n  float A = s.r, B = s.g;\n  float reaction = A * B * B;            \n\n  float dA = 1.00 * lap.r - reaction + uFeed * (1.0 - A);\n  float dB = 0.50 * lap.g + reaction - (uKill + uFeed) * B;\n\n  /* Clamp: the system is only conditionally stable, and one NaN would poison the whole field forever\n     (it would ping-pong back in next frame and spread through the Laplacian). Cheap insurance. */\n  gl_FragColor = vec4(clamp(A + dA * uDt, 0.0, 1.0),\n                      clamp(B + dB * uDt, 0.0, 1.0),\n                      0.0, 1.0);\n}", SC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;\nuniform vec2      uTexel;\nuniform vec3      uPaper;   \nuniform vec3      uInk;     \nuniform vec3      uGlow;    \n\nvoid main() {\n  float b = texture2D(uState, vUv).g;\n\n  /* Gradient of B → where is the pattern GROWING right now. */\n  float bx = texture2D(uState, vUv + vec2(uTexel.x, 0.0)).g - texture2D(uState, vUv - vec2(uTexel.x, 0.0)).g;\n  float by = texture2D(uState, vUv + vec2(0.0, uTexel.y)).g - texture2D(uState, vUv - vec2(0.0, uTexel.y)).g;\n  float edge = clamp(length(vec2(bx, by)) * 9.0, 0.0, 1.0);\n\n  /* Paper → ink through the concentration, then the glowing front laid on top. */\n  vec3 col = mix(uPaper, uInk, smoothstep(0.08, 0.34, b));\n  col = mix(col, uGlow, edge * 0.60);\n\n  gl_FragColor = vec4(col, 1.0);\n}", CC = new J(.105, .045, .15), wC = new J(.62, .28, .95), TC = new J(1, .94, .86);
+function EC(e) {
 	let t = e >>> 0;
 	return function() {
 		t |= 0, t = t + 1831565813 | 0;
@@ -26147,7 +26252,7 @@ function CC(e) {
 		return e = e + Math.imul(e ^ e >>> 7, 61 | e) ^ e, ((e ^ e >>> 14) >>> 0) / 4294967296;
 	};
 }
-function wC(e, { simRes: t = 256, iters: n = 12, feed: r = .0545, kill: i = .062, seed: a = 12648430, paper: s = bC, ink: c = xC, glow: l = SC } = {}) {
+function DC(e, { simRes: t = 256, iters: n = 12, feed: r = .0545, kill: i = .062, seed: a = 12648430, paper: s = CC, ink: c = wC, glow: l = TC } = {}) {
 	let { renderer: u, runPass: d } = e, f = {
 		minFilter: m,
 		magFilter: m,
@@ -26156,7 +26261,7 @@ function wC(e, { simRes: t = 256, iters: n = 12, feed: r = .0545, kill: i = .062
 		type: T,
 		wrapS: o,
 		wrapT: o
-	}, p = new In(t, t, f), h = new In(t, t, f), g = new Float32Array(t * t * 4), _ = CC(a);
+	}, p = new In(t, t, f), h = new In(t, t, f), g = new Float32Array(t * t * 4), _ = EC(a);
 	for (let e = 0; e < t * t; e++) g[e * 4] = 1, g[e * 4 + 3] = 1;
 	for (let e = 0; e < 26; e++) {
 		let e = Math.floor(_() * t), n = Math.floor(_() * t), r = 3 + Math.floor(_() * 5);
@@ -26170,13 +26275,13 @@ function wC(e, { simRes: t = 256, iters: n = 12, feed: r = .0545, kill: i = .062
 	v.needsUpdate = !0;
 	let y = new $c({
 		vertexShader: d_,
-		fragmentShader: pC,
+		fragmentShader: gC,
 		uniforms: { uTex: { value: v } }
 	});
 	d(y, p), y.dispose();
 	let b = new $c({
 		vertexShader: d_,
-		fragmentShader: vC,
+		fragmentShader: xC,
 		uniforms: {
 			uState: { value: p.texture },
 			uTexel: { value: new G(1 / t, 1 / t) },
@@ -26186,7 +26291,7 @@ function wC(e, { simRes: t = 256, iters: n = 12, feed: r = .0545, kill: i = .062
 		}
 	}), x = new wr(), S = new pu(-1, 1, 1, -1, 0, 1), C = new $c({
 		vertexShader: d_,
-		fragmentShader: yC,
+		fragmentShader: SC,
 		uniforms: {
 			uState: { value: p.texture },
 			uTexel: { value: new G(1 / t, 1 / t) },
@@ -26221,11 +26326,11 @@ function wC(e, { simRes: t = 256, iters: n = 12, feed: r = .0545, kill: i = .062
 }
 //#endregion
 //#region src/shaders/caustics.frag
-var TC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uRes;\nuniform vec3  uDeep;    \nuniform vec3  uShallow; \nuniform vec3  uCaustic; \nuniform float uSharp;   \n\n/* Hash a cell to a jittered feature point. */\nvec2 hash2(vec2 p) {\n  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));\n  return fract(sin(p) * 43758.5453);\n}\n\n/* Worley / cellular — returning the TWO nearest distances (F1, F2), not just the nearest.\n   The points DRIFT with time (that's the water moving), so the whole web is alive. */\nvec2 worley2(vec2 p, float t) {\n  vec2 cell = floor(p);\n  vec2 f    = fract(p);\n  float f1 = 1e9, f2 = 1e9;\n  for (int y = -1; y <= 1; y++) {\n    for (int x = -1; x <= 1; x++) {\n      vec2 g = vec2(float(x), float(y));\n      vec2 o = hash2(cell + g);\n      /* Each feature point orbits its own little circle — the surface never stops rippling. */\n      o = 0.5 + 0.5 * sin(t + 6.2831 * o);\n      float d = length(g + o - f);\n      if (d < f1) { f2 = f1; f1 = d; }        \n      else if (d < f2) { f2 = d; }\n    }\n  }\n  return vec2(f1, f2);\n}\n\n/* ONE OCTAVE OF THE WEB — and getting this right is the whole scene.\n   The first cut brightened 1 - F1, which peaks AT each feature point. That draws glowing DOTS, and\n   the scene came out looking like bokeh / plankton — pretty, and not remotely a caustic.\n   A caustic filament is not a point, it is a BORDER: the set of places equidistant from two feature\n   points, where light focused by neighbouring parts of the surface piles up. That set is exactly where\n   F2 - F1 → 0. So the web is the CELL EDGES, and the thin searing line comes from sharpening how fast\n   that gap opens up. Same noise function, opposite feature — dots become a net. */\nfloat web(vec2 p, float t, float sharp) {\n  vec2 f = worley2(p, t);\n  float gap = f.y - f.x;                       \n  float edge = 1.0 - clamp(gap * 2.6, 0.0, 1.0);\n  return pow(edge, sharp * 0.55);\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  uv.x *= uRes.x / max(uRes.y, 1.0);   \n\n  float t = uTime * 0.55;\n\n  /* DOMAIN WARP: push the lookup around with a slow wave before sampling. This is what turns a static\n     lattice of cells into something that flows and folds like a real surface. */\n  vec2 w = uv * 3.4;\n  w += 0.22 * vec2(sin(w.y * 2.1 + t * 0.9), cos(w.x * 1.9 - t * 0.7));\n\n  /* Two octaves drifting against each other — the interference is where the picture comes alive. */\n  float a = web(w,                t,        uSharp);\n  float b = web(w * 1.9 + 11.3,   t * 1.27, uSharp * 0.75);\n  float c = a * 0.65 + b * 0.45 + a * b * 0.8;   \n\n  /* CHROMATIC FRINGE — sample the web at three slightly different scales for R/G/B. */\n  float cr = c;\n  float cg = web(w * 1.012, t, uSharp) * 0.65 + b * 0.45;\n  float cb = web(w * 1.026, t, uSharp) * 0.65 + b * 0.45;\n\n  /* The floor: lit in the middle, falling to deep water at the edges (a cheap pool vignette). */\n  float floorLit = 1.0 - smoothstep(0.25, 0.95, length(vUv - 0.5) * 1.35);\n  vec3 base = mix(uDeep, uShallow, floorLit);\n\n  vec3 col = base + uCaustic * vec3(cr, cg, cb) * (0.55 + 0.75 * floorLit);\n\n  /* A slow bright swell so the whole pool breathes, not just the filaments. */\n  col += uCaustic * 0.06 * (0.5 + 0.5 * sin(t * 0.6 + vUv.y * 3.0));\n\n  gl_FragColor = vec4(col, 1.0);\n}", EC = new J(.01, .05, .09), DC = new J(.04, .18, .23), OC = new J(.55, .95, 1);
-function kC(e, { sharp: t = 14, deep: n = EC, shallow: r = DC, caustic: i = OC } = {}) {
+var OC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uRes;\nuniform vec3  uDeep;    \nuniform vec3  uShallow; \nuniform vec3  uCaustic; \nuniform float uSharp;   \n\n/* Hash a cell to a jittered feature point. */\nvec2 hash2(vec2 p) {\n  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));\n  return fract(sin(p) * 43758.5453);\n}\n\n/* Worley / cellular — returning the TWO nearest distances (F1, F2), not just the nearest.\n   The points DRIFT with time (that's the water moving), so the whole web is alive. */\nvec2 worley2(vec2 p, float t) {\n  vec2 cell = floor(p);\n  vec2 f    = fract(p);\n  float f1 = 1e9, f2 = 1e9;\n  for (int y = -1; y <= 1; y++) {\n    for (int x = -1; x <= 1; x++) {\n      vec2 g = vec2(float(x), float(y));\n      vec2 o = hash2(cell + g);\n      /* Each feature point orbits its own little circle — the surface never stops rippling. */\n      o = 0.5 + 0.5 * sin(t + 6.2831 * o);\n      float d = length(g + o - f);\n      if (d < f1) { f2 = f1; f1 = d; }        \n      else if (d < f2) { f2 = d; }\n    }\n  }\n  return vec2(f1, f2);\n}\n\n/* ONE OCTAVE OF THE WEB — and getting this right is the whole scene.\n   The first cut brightened 1 - F1, which peaks AT each feature point. That draws glowing DOTS, and\n   the scene came out looking like bokeh / plankton — pretty, and not remotely a caustic.\n   A caustic filament is not a point, it is a BORDER: the set of places equidistant from two feature\n   points, where light focused by neighbouring parts of the surface piles up. That set is exactly where\n   F2 - F1 → 0. So the web is the CELL EDGES, and the thin searing line comes from sharpening how fast\n   that gap opens up. Same noise function, opposite feature — dots become a net. */\nfloat web(vec2 p, float t, float sharp) {\n  vec2 f = worley2(p, t);\n  float gap = f.y - f.x;                       \n  float edge = 1.0 - clamp(gap * 2.6, 0.0, 1.0);\n  return pow(edge, sharp * 0.55);\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  uv.x *= uRes.x / max(uRes.y, 1.0);   \n\n  float t = uTime * 0.55;\n\n  /* DOMAIN WARP: push the lookup around with a slow wave before sampling. This is what turns a static\n     lattice of cells into something that flows and folds like a real surface. */\n  vec2 w = uv * 3.4;\n  w += 0.22 * vec2(sin(w.y * 2.1 + t * 0.9), cos(w.x * 1.9 - t * 0.7));\n\n  /* Two octaves drifting against each other — the interference is where the picture comes alive. */\n  float a = web(w,                t,        uSharp);\n  float b = web(w * 1.9 + 11.3,   t * 1.27, uSharp * 0.75);\n  float c = a * 0.65 + b * 0.45 + a * b * 0.8;   \n\n  /* CHROMATIC FRINGE — sample the web at three slightly different scales for R/G/B. */\n  float cr = c;\n  float cg = web(w * 1.012, t, uSharp) * 0.65 + b * 0.45;\n  float cb = web(w * 1.026, t, uSharp) * 0.65 + b * 0.45;\n\n  /* The floor: lit in the middle, falling to deep water at the edges (a cheap pool vignette). */\n  float floorLit = 1.0 - smoothstep(0.25, 0.95, length(vUv - 0.5) * 1.35);\n  vec3 base = mix(uDeep, uShallow, floorLit);\n\n  vec3 col = base + uCaustic * vec3(cr, cg, cb) * (0.55 + 0.75 * floorLit);\n\n  /* A slow bright swell so the whole pool breathes, not just the filaments. */\n  col += uCaustic * 0.06 * (0.5 + 0.5 * sin(t * 0.6 + vUv.y * 3.0));\n\n  gl_FragColor = vec4(col, 1.0);\n}", kC = new J(.01, .05, .09), AC = new J(.04, .18, .23), jC = new J(.55, .95, 1);
+function MC(e, { sharp: t = 14, deep: n = kC, shallow: r = AC, caustic: i = jC } = {}) {
 	let { drawBuffer: a } = e, o = new wr(), s = new pu(-1, 1, 1, -1, 0, 1), c = new $c({
 		vertexShader: d_,
-		fragmentShader: TC,
+		fragmentShader: OC,
 		uniforms: {
 			uTime: { value: 0 },
 			uRes: { value: new G(a.x, a.y) },
@@ -26255,13 +26360,13 @@ function kC(e, { sharp: t = 14, deep: n = EC, shallow: r = DC, caustic: i = OC }
 }
 //#endregion
 //#region src/shaders/letterpress.frag
-var AC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float     uTime;         \nuniform vec2      uResolution;   \nuniform sampler2D uText;         \nuniform vec2      uTextAspect;   \nuniform float     uTextScale;    \nuniform float     uMaxWidth;     \nuniform vec3      uPaper;        \nuniform vec3      uInk;          \nuniform float     uGrain;        \nuniform float     uInkFill;      \nuniform float     uInkEdge;      \nuniform float     uRelief;       \nuniform float     uSweepAmp;     \nuniform float     uSweepSpeed;   \nuniform float     uBuild;        \n\n/* Value noise — the same cheap hash+vnoise the other engine shaders inline (image-transition.frag). A\n   full fbm would be wasted on paper tooth; one octave of value noise is the grain. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* Map a fullscreen uv into the letterform's own texture space, preserving its aspect and centring it.\n   Returns the text-space uv; the caller tests whether it landed inside [0,1] (outside = open sheet). */\nvec2 toTextUv(vec2 uv) {\n  float screenA = uResolution.x / max(uResolution.y, 1.0);\n  float textA   = uTextAspect.x / max(uTextAspect.y, 1.0);\n  /* Height-driven scale, but CONTAINED: at uTextScale of the height the glyph is uTextScale*textA wide in\n     screen-HEIGHT units, i.e. uTextScale*textA/screenA of the WIDTH — which blows past 1.0 on a portrait\n     phone (a huge cropped '&'). Cap the scale so that width stays ≤ uMaxWidth; min() picks the axis that\n     fits. On a wide desktop the cap is slack, so s == uTextScale and the settled desktop frame is unchanged. */\n  float s = min(uTextScale, uMaxWidth * screenA / textA);\n  vec2 c = uv - 0.5;\n  c.x *= screenA;                                   \n  vec2 t;\n  t.y = c.y / s + 0.5;                              \n  t.x = c.x / (s * textA) + 0.5;                    \n  return t;\n}\n\n/* Coverage of the letterform at a text-space uv: 0 on the open sheet (outside the tile), the mask's red\n   channel inside. Sampled several times to build the relief gradient, so it is its own function. */\nfloat cov(vec2 t) {\n  if (t.x < 0.0 || t.x > 1.0 || t.y < 0.0 || t.y > 1.0) return 0.0;\n  return texture2D(uText, t).r;\n}\n\nvoid main() {\n  vec2 t = toTextUv(vUv);\n\n  /* Sample the coverage and its gradient. The step is a small fraction of the tile — big enough to span a\n     couple of baked texels (a soft wall the light can rake), small enough to stay crisp. */\n  float e = 0.0035;\n  float m  = cov(t);\n  float gx = cov(t + vec2(e, 0.0)) - cov(t - vec2(e, 0.0));\n  float gy = cov(t + vec2(0.0, e)) - cov(t - vec2(0.0, e));\n  float edge = clamp(length(vec2(gx, gy)) * 6.0, 0.0, 1.0);   \n\n  /* BUILD-IN PRESS. uBuild 0->1 stamps the impression IN: the deboss tilt, ink and lips all scale up from a\n     flat sheet, with an impact BITE near landing (a brief over-press that settles). At uBuild=1 the bite is\n     0 and press == 1.0 EXACTLY, so the built sheet is byte-identical to the un-built shader (present-parity\n     contract — the pack defaults uBuild to 1). The mark thus appears to be punched into the paper. */\n  float b     = clamp(uBuild, 0.0, 1.0);\n  /* bite is gated to the OPEN interval (0.62, 1.0): at b==1 it is exactly 0, so press is exactly 1.0 and\n     every \"* press\" below becomes \"* 1.0\" (an identity) — the built sheet is bit-for-bit the original\n     shader (sin PI is NOT exactly 0 in float, which would otherwise flip an LSB and break present-parity). */\n  float bite  = (b > 0.62 && b < 1.0) ? sin(((b - 0.62) / 0.38) * 3.14159265) : 0.0;   \n  float press = clamp(b + bite * 0.16, 0.0, 1.15);                        \n\n  /* THE DEBOSS NORMAL. The glyph is pressed IN, so the surface tilts down into it: the gradient (paper→ink)\n     is the outward slope. Flatter uRelief → steeper walls → a deeper-looking press. Scaled by press so the\n     sheet is FLAT (no tilt) until the stamp bites. */\n  vec3 N = normalize(vec3(-gx * press, -gy * press, uRelief));\n\n  /* THE RAKING LIGHT. Low azimuth, grazing elevation, azimuth breathing on uTime — the whole point. */\n  float a = uTime * uSweepSpeed;\n  float az = 0.9 + sin(a) * uSweepAmp;              \n  vec3 L = normalize(vec3(cos(az), sin(az), 0.55)); \n  float lit = dot(N, L);                            \n\n  /* THE SHEET. Kraft cream + a whisper of tooth, plus a broad soft gradient that reads as one low lamp\n     washing across the paper from the light's direction (makes the flat areas feel lit, not printed-flat). */\n  float grain = (vnoise(vUv * vec2(220.0, 220.0)) - 0.5) * uGrain;\n  vec3 col = uPaper * (1.0 + grain);\n  float lamp = 0.5 + 0.5 * dot(normalize(vec2(cos(az), sin(az))), (vUv - 0.5));\n  col *= mix(0.94, 1.05, lamp);\n\n  /* INK. A little in the body of the impression (kept low so copy stays legible on top), more concentrated\n     at the bitten edges where real ink pools. */\n  col = mix(col, uInk, clamp((m * uInkFill + edge * uInkEdge) * press, 0.0, 1.0));\n\n  /* THE DEBOSS LIPS. The wall facing the light catches a warm highlight; the far wall drops into shadow.\n     Both live on the edge term (the walls), and both track the sweeping azimuth — this is the breathing.\n     Scaled by press so they only appear as the impression bites. */\n  col += edge * press * max(lit, 0.0)  * 0.42 * vec3(1.0, 0.985, 0.95);   \n  col -= edge * press * max(-lit, 0.0) * 0.34 * vec3(1.0, 1.0, 1.0);      \n  col  = max(col, vec3(0.0));\n\n  /* LINEAR out — the post-filmic pass tonemaps (ACES), grades, dithers and sRGB-encodes downstream. */\n  gl_FragColor = vec4(col, 1.0);\n}", jC = new J(.91, .84, .71), MC = new J(.045, .038, .03), NC = {
+var NC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float     uTime;         \nuniform vec2      uResolution;   \nuniform sampler2D uText;         \nuniform vec2      uTextAspect;   \nuniform float     uTextScale;    \nuniform float     uMaxWidth;     \nuniform vec3      uPaper;        \nuniform vec3      uInk;          \nuniform float     uGrain;        \nuniform float     uInkFill;      \nuniform float     uInkEdge;      \nuniform float     uRelief;       \nuniform float     uSweepAmp;     \nuniform float     uSweepSpeed;   \nuniform float     uBuild;        \n\n/* Value noise — the same cheap hash+vnoise the other engine shaders inline (image-transition.frag). A\n   full fbm would be wasted on paper tooth; one octave of value noise is the grain. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* Map a fullscreen uv into the letterform's own texture space, preserving its aspect and centring it.\n   Returns the text-space uv; the caller tests whether it landed inside [0,1] (outside = open sheet). */\nvec2 toTextUv(vec2 uv) {\n  float screenA = uResolution.x / max(uResolution.y, 1.0);\n  float textA   = uTextAspect.x / max(uTextAspect.y, 1.0);\n  /* Height-driven scale, but CONTAINED: at uTextScale of the height the glyph is uTextScale*textA wide in\n     screen-HEIGHT units, i.e. uTextScale*textA/screenA of the WIDTH — which blows past 1.0 on a portrait\n     phone (a huge cropped '&'). Cap the scale so that width stays ≤ uMaxWidth; min() picks the axis that\n     fits. On a wide desktop the cap is slack, so s == uTextScale and the settled desktop frame is unchanged. */\n  float s = min(uTextScale, uMaxWidth * screenA / textA);\n  vec2 c = uv - 0.5;\n  c.x *= screenA;                                   \n  vec2 t;\n  t.y = c.y / s + 0.5;                              \n  t.x = c.x / (s * textA) + 0.5;                    \n  return t;\n}\n\n/* Coverage of the letterform at a text-space uv: 0 on the open sheet (outside the tile), the mask's red\n   channel inside. Sampled several times to build the relief gradient, so it is its own function. */\nfloat cov(vec2 t) {\n  if (t.x < 0.0 || t.x > 1.0 || t.y < 0.0 || t.y > 1.0) return 0.0;\n  return texture2D(uText, t).r;\n}\n\nvoid main() {\n  vec2 t = toTextUv(vUv);\n\n  /* Sample the coverage and its gradient. The step is a small fraction of the tile — big enough to span a\n     couple of baked texels (a soft wall the light can rake), small enough to stay crisp. */\n  float e = 0.0035;\n  float m  = cov(t);\n  float gx = cov(t + vec2(e, 0.0)) - cov(t - vec2(e, 0.0));\n  float gy = cov(t + vec2(0.0, e)) - cov(t - vec2(0.0, e));\n  float edge = clamp(length(vec2(gx, gy)) * 6.0, 0.0, 1.0);   \n\n  /* BUILD-IN PRESS. uBuild 0->1 stamps the impression IN: the deboss tilt, ink and lips all scale up from a\n     flat sheet, with an impact BITE near landing (a brief over-press that settles). At uBuild=1 the bite is\n     0 and press == 1.0 EXACTLY, so the built sheet is byte-identical to the un-built shader (present-parity\n     contract — the pack defaults uBuild to 1). The mark thus appears to be punched into the paper. */\n  float b     = clamp(uBuild, 0.0, 1.0);\n  /* bite is gated to the OPEN interval (0.62, 1.0): at b==1 it is exactly 0, so press is exactly 1.0 and\n     every \"* press\" below becomes \"* 1.0\" (an identity) — the built sheet is bit-for-bit the original\n     shader (sin PI is NOT exactly 0 in float, which would otherwise flip an LSB and break present-parity). */\n  float bite  = (b > 0.62 && b < 1.0) ? sin(((b - 0.62) / 0.38) * 3.14159265) : 0.0;   \n  float press = clamp(b + bite * 0.16, 0.0, 1.15);                        \n\n  /* THE DEBOSS NORMAL. The glyph is pressed IN, so the surface tilts down into it: the gradient (paper→ink)\n     is the outward slope. Flatter uRelief → steeper walls → a deeper-looking press. Scaled by press so the\n     sheet is FLAT (no tilt) until the stamp bites. */\n  vec3 N = normalize(vec3(-gx * press, -gy * press, uRelief));\n\n  /* THE RAKING LIGHT. Low azimuth, grazing elevation, azimuth breathing on uTime — the whole point. */\n  float a = uTime * uSweepSpeed;\n  float az = 0.9 + sin(a) * uSweepAmp;              \n  vec3 L = normalize(vec3(cos(az), sin(az), 0.55)); \n  float lit = dot(N, L);                            \n\n  /* THE SHEET. Kraft cream + a whisper of tooth, plus a broad soft gradient that reads as one low lamp\n     washing across the paper from the light's direction (makes the flat areas feel lit, not printed-flat). */\n  float grain = (vnoise(vUv * vec2(220.0, 220.0)) - 0.5) * uGrain;\n  vec3 col = uPaper * (1.0 + grain);\n  float lamp = 0.5 + 0.5 * dot(normalize(vec2(cos(az), sin(az))), (vUv - 0.5));\n  col *= mix(0.94, 1.05, lamp);\n\n  /* INK. A little in the body of the impression (kept low so copy stays legible on top), more concentrated\n     at the bitten edges where real ink pools. */\n  col = mix(col, uInk, clamp((m * uInkFill + edge * uInkEdge) * press, 0.0, 1.0));\n\n  /* THE DEBOSS LIPS. The wall facing the light catches a warm highlight; the far wall drops into shadow.\n     Both live on the edge term (the walls), and both track the sweeping azimuth — this is the breathing.\n     Scaled by press so they only appear as the impression bites. */\n  col += edge * press * max(lit, 0.0)  * 0.42 * vec3(1.0, 0.985, 0.95);   \n  col -= edge * press * max(-lit, 0.0) * 0.34 * vec3(1.0, 1.0, 1.0);      \n  col  = max(col, vec3(0.0));\n\n  /* LINEAR out — the post-filmic pass tonemaps (ACES), grades, dithers and sRGB-encodes downstream. */\n  gl_FragColor = vec4(col, 1.0);\n}", PC = new J(.91, .84, .71), FC = new J(.045, .038, .03), IC = {
 	tint: new J(.98, .95, .92),
 	lift: new J(0, 0, 0),
 	sat: 1,
 	contrast: 1.12
 };
-function PC(e, t, n) {
+function LC(e, t, n) {
 	let r = document.createElement("canvas").getContext("2d");
 	r.font = `${n} 820px ${t}`;
 	let i = r.measureText(e), a = i.actualBoundingBoxAscent || 820 * .72, o = i.actualBoundingBoxDescent || 820 * .24, c = (i.actualBoundingBoxLeft || 0) + (i.actualBoundingBoxRight || i.width), l = 820 * .16, u = Math.max(2, Math.ceil(c + l * 2)), d = Math.max(2, Math.ceil(a + o + l * 2)), f = document.createElement("canvas");
@@ -26275,8 +26380,8 @@ function PC(e, t, n) {
 		h: d
 	};
 }
-function FC(e, { text: t = "&", fontStack: n = "Georgia, \"Times New Roman\", \"Times\", serif", weight: r = 700, textScale: i = .62, maxWidth: a = .82, paper: o = jC, ink: s = MC, grain: c = .05, inkFill: l = .3, inkEdge: u = .55, relief: d = .32, sweepAmp: f = .55, sweepSpeed: p = .16, filmic: m = NC } = {}) {
-	let h = new wr(), g = new pu(-1, 1, 1, -1, 0, 1), _ = PC(t, n, r), v = {
+function RC(e, { text: t = "&", fontStack: n = "Georgia, \"Times New Roman\", \"Times\", serif", weight: r = 700, textScale: i = .62, maxWidth: a = .82, paper: o = PC, ink: s = FC, grain: c = .05, inkFill: l = .3, inkEdge: u = .55, relief: d = .32, sweepAmp: f = .55, sweepSpeed: p = .16, filmic: m = IC } = {}) {
+	let h = new wr(), g = new pu(-1, 1, 1, -1, 0, 1), _ = LC(t, n, r), v = {
 		uTime: { value: 0 },
 		uResolution: { value: new G(e.drawBuffer.x, e.drawBuffer.y) },
 		uText: { value: _.tex },
@@ -26294,7 +26399,7 @@ function FC(e, { text: t = "&", fontStack: n = "Georgia, \"Times New Roman\", \"
 		uBuild: { value: 1 }
 	}, y = new $c({
 		vertexShader: d_,
-		fragmentShader: AC,
+		fragmentShader: NC,
 		uniforms: v,
 		depthTest: !1,
 		depthWrite: !1
@@ -26322,13 +26427,13 @@ function FC(e, { text: t = "&", fontStack: n = "Georgia, \"Times New Roman\", \"
 }
 //#endregion
 //#region src/shaders/cathedral-light.frag
-var IC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uResolution;   \nuniform vec2  uSource;       \nuniform vec2  uWindow;       \nuniform vec3  uShadow;       \nuniform vec3  uLight;        \nuniform float uRayFreq;      \nuniform float uDensity;      \nuniform float uFalloff;      \nuniform float uDust;         \n\n/* hash + value noise + a little fbm — the inline pattern the other engine shaders use (no shared lib). */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\nfloat fbm(vec2 p) {\n  float v = 0.0, a = 0.5;\n  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.02; a *= 0.5; }\n  return v;\n}\n\nvoid main() {\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n  vec2 auv = vec2(vUv.x * aspect, vUv.y);          \n  vec2 asrc = vec2(uSource.x * aspect, uSource.y);\n  vec2 awin = vec2(uWindow.x * aspect, uWindow.y);\n\n  /* THE RAY BACK TO THE SOURCE. Its angle indexes the shaft noise; its length drives the falloff. */\n  vec2 back = auv - asrc;\n  float dist = length(back);\n  float ang  = atan(back.y, back.x);\n\n  /* SHAFTS — noise on the angle = streaks fanning from the source; the second axis drifts slowly along the\n     beam so the shafts breathe rather than sit frozen. Two octaves at different angular scales = fine rays\n     inside broad ones. */\n  float s1 = fbm(vec2(ang * uRayFreq,        dist * 1.5 - uTime * 0.04));\n  float s2 = fbm(vec2(ang * uRayFreq * 2.7,  dist * 2.5 + uTime * 0.02));\n  float shaftNoise = s1 * 0.7 + s2 * 0.3;\n  float shaft = smoothstep(0.35, 0.95, shaftNoise);\n\n  /* FALLOFF — bright at the window, scattering away into the dark. */\n  float fall = exp(-dist * uFalloff);\n  float beams = shaft * fall * uDensity;\n\n  /* DIRECTIONAL BIAS — this is what makes it CATHEDRAL light and not a sunburst. Favour rays that pour\n     DOWN into the nave; dim the ones firing sideways/up. The back vector points from source to pixel, so a\n     downward shaft has a negative y; -normalize(back).y is 1 straight down, 0 sideways. */\n  float down = clamp(-normalize(back).y, 0.0, 1.0);\n  beams *= mix(0.12, 1.0, smoothstep(0.15, 0.9, down));\n\n  /* THE WINDOW — a warm glow where the light enters. Kept tight + mostly at the frame's top edge (the\n     source sits just above the frame) so it reads as light ENTERING from a high opening, not a sun. */\n  float wd = length(auv - awin);\n  float glow = exp(-wd * wd * 44.0) * 1.7 + exp(-wd * 9.0) * 0.28;\n\n  /* DUST — a few drifting motes, only visible where a shaft lights them. Cheap: hashed cells scrolled down\n     slowly, a soft dot per cell, gated by the local beam intensity so they twinkle inside the light only. */\n  vec2 dcell = auv * 26.0 + vec2(0.0, uTime * 0.5);\n  vec2 gi = floor(dcell), gf = fract(dcell);\n  float h = hash(gi);\n  vec2 motePos = vec2(h, fract(h * 41.7));\n  float mote = smoothstep(0.16, 0.0, length(gf - motePos)) * step(0.82, h);\n  float dust = mote * (beams + glow * 0.2) * uDust;\n\n  /* AMBIENT BOUNCE — a faint warm wash spilling from the opening into the nave. It reads as a lit interior\n     rather than a black void, and (measured) it lifts the frame's MEAN warm enough to keep the scene mean-RGB\n     DISTINCT from the ring's other near-black scenes (Aurora/Observatory) — a downscaled mean is blind to the\n     bright-but-small shafts, so the dark scenes collapse together without this. It stays a WASH, not a fill:\n     strongest near the opening, gone by the lower nave, so the drama (dark below, light above) survives. */\n  float amb = exp(-dist * 0.8) * 0.16 + (1.0 - vUv.y) * 0.02;\n\n  /* COMPOSE (LINEAR). Warm light scaled past 1 in the core so the director's bloom blooms it. */\n  vec3 col = uShadow;\n  col += uLight * (beams * 1.6 + glow + amb);\n  col += uLight * dust * 3.0;\n\n  gl_FragColor = vec4(max(col, 0.0), 1.0);\n}", LC = new J(.006, .008, .013), RC = new J(1, .66, .34), zC = {
+var zC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uResolution;   \nuniform vec2  uSource;       \nuniform vec2  uWindow;       \nuniform vec3  uShadow;       \nuniform vec3  uLight;        \nuniform float uRayFreq;      \nuniform float uDensity;      \nuniform float uFalloff;      \nuniform float uDust;         \n\n/* hash + value noise + a little fbm — the inline pattern the other engine shaders use (no shared lib). */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\nfloat fbm(vec2 p) {\n  float v = 0.0, a = 0.5;\n  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.02; a *= 0.5; }\n  return v;\n}\n\nvoid main() {\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n  vec2 auv = vec2(vUv.x * aspect, vUv.y);          \n  vec2 asrc = vec2(uSource.x * aspect, uSource.y);\n  vec2 awin = vec2(uWindow.x * aspect, uWindow.y);\n\n  /* THE RAY BACK TO THE SOURCE. Its angle indexes the shaft noise; its length drives the falloff. */\n  vec2 back = auv - asrc;\n  float dist = length(back);\n  float ang  = atan(back.y, back.x);\n\n  /* SHAFTS — noise on the angle = streaks fanning from the source; the second axis drifts slowly along the\n     beam so the shafts breathe rather than sit frozen. Two octaves at different angular scales = fine rays\n     inside broad ones. */\n  float s1 = fbm(vec2(ang * uRayFreq,        dist * 1.5 - uTime * 0.04));\n  float s2 = fbm(vec2(ang * uRayFreq * 2.7,  dist * 2.5 + uTime * 0.02));\n  float shaftNoise = s1 * 0.7 + s2 * 0.3;\n  float shaft = smoothstep(0.35, 0.95, shaftNoise);\n\n  /* FALLOFF — bright at the window, scattering away into the dark. */\n  float fall = exp(-dist * uFalloff);\n  float beams = shaft * fall * uDensity;\n\n  /* DIRECTIONAL BIAS — this is what makes it CATHEDRAL light and not a sunburst. Favour rays that pour\n     DOWN into the nave; dim the ones firing sideways/up. The back vector points from source to pixel, so a\n     downward shaft has a negative y; -normalize(back).y is 1 straight down, 0 sideways. */\n  float down = clamp(-normalize(back).y, 0.0, 1.0);\n  beams *= mix(0.12, 1.0, smoothstep(0.15, 0.9, down));\n\n  /* THE WINDOW — a warm glow where the light enters. Kept tight + mostly at the frame's top edge (the\n     source sits just above the frame) so it reads as light ENTERING from a high opening, not a sun. */\n  float wd = length(auv - awin);\n  float glow = exp(-wd * wd * 44.0) * 1.7 + exp(-wd * 9.0) * 0.28;\n\n  /* DUST — a few drifting motes, only visible where a shaft lights them. Cheap: hashed cells scrolled down\n     slowly, a soft dot per cell, gated by the local beam intensity so they twinkle inside the light only. */\n  vec2 dcell = auv * 26.0 + vec2(0.0, uTime * 0.5);\n  vec2 gi = floor(dcell), gf = fract(dcell);\n  float h = hash(gi);\n  vec2 motePos = vec2(h, fract(h * 41.7));\n  float mote = smoothstep(0.16, 0.0, length(gf - motePos)) * step(0.82, h);\n  float dust = mote * (beams + glow * 0.2) * uDust;\n\n  /* AMBIENT BOUNCE — a faint warm wash spilling from the opening into the nave. It reads as a lit interior\n     rather than a black void, and (measured) it lifts the frame's MEAN warm enough to keep the scene mean-RGB\n     DISTINCT from the ring's other near-black scenes (Aurora/Observatory) — a downscaled mean is blind to the\n     bright-but-small shafts, so the dark scenes collapse together without this. It stays a WASH, not a fill:\n     strongest near the opening, gone by the lower nave, so the drama (dark below, light above) survives. */\n  float amb = exp(-dist * 0.8) * 0.16 + (1.0 - vUv.y) * 0.02;\n\n  /* COMPOSE (LINEAR). Warm light scaled past 1 in the core so the director's bloom blooms it. */\n  vec3 col = uShadow;\n  col += uLight * (beams * 1.6 + glow + amb);\n  col += uLight * dust * 3.0;\n\n  gl_FragColor = vec4(max(col, 0.0), 1.0);\n}", BC = new J(.006, .008, .013), VC = new J(1, .66, .34), HC = {
 	tint: new J(1, .9, .74),
 	lift: new J(0, 0, 0),
 	sat: 1.08,
 	contrast: 1.15
 };
-function BC(e, { shadow: t = LC, light: n = RC, source: r = new G(.42, 1.34), windowPos: i = new G(.44, 1.02), rayFreq: a = 7, density: o = 1, falloff: s = 1.2, dust: c = 1, filmic: l = zC } = {}) {
+function UC(e, { shadow: t = BC, light: n = VC, source: r = new G(.42, 1.34), windowPos: i = new G(.44, 1.02), rayFreq: a = 7, density: o = 1, falloff: s = 1.2, dust: c = 1, filmic: l = HC } = {}) {
 	let u = new wr(), d = new pu(-1, 1, 1, -1, 0, 1), f = {
 		uTime: { value: 0 },
 		uResolution: { value: new G(e.drawBuffer.x, e.drawBuffer.y) },
@@ -26342,7 +26447,7 @@ function BC(e, { shadow: t = LC, light: n = RC, source: r = new G(.42, 1.34), wi
 		uDust: { value: c }
 	}, p = new $c({
 		vertexShader: d_,
-		fragmentShader: IC,
+		fragmentShader: zC,
 		uniforms: f,
 		depthTest: !1,
 		depthWrite: !1
@@ -26366,13 +26471,13 @@ function BC(e, { shadow: t = LC, light: n = RC, source: r = new G(.42, 1.34), wi
 }
 //#endregion
 //#region src/shaders/first-light.frag
-var VC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uResolution;   \nuniform float uSpeed;        \nuniform float uHorizon;      \nuniform vec3  uNightZenith;  \nuniform vec3  uNightHorizon; \nuniform vec3  uRose;         \nuniform vec3  uGold;         \nuniform vec3  uDayZenith;    \nuniform vec3  uLand;         \nuniform float uStarBright;   \n\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\nfloat fbm(vec2 p) {\n  float v = 0.0, a = 0.5;\n  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; }\n  return v;\n}\n\nconst float PI = 3.14159265;\n\nvoid main() {\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n\n  /* THE SCALAR. sin(phase*PI) is 0 at phase 0 and 1 (seamless loop) and 1 at the middle. A gentle power\n     shape holds the blue hour a touch longer and makes the gold peak brief — restraint. */\n  float phase = fract(uTime * uSpeed);\n  float sunH  = pow(sin(phase * PI), 2.2);           \n                                                     \n                                                     \n\n  /* Mood terms derived from the one scalar. Warmth kicks in LATE (only as the limb nears breaking). */\n  float warm  = smoothstep(0.34, 0.95, sunH);        \n  float rise  = smoothstep(0.16, 0.62, sunH);        \n  float sunY  = uHorizon - 0.06 + sunH * 0.20;       \n\n  /* ── SKY ── a vertical gradient, zenith→horizon, warming + lifting with sunH. */\n  float sky = smoothstep(uHorizon, 1.0, vUv.y);       \n  vec3 zenith  = mix(uNightZenith, uDayZenith, sunH * 0.6);\n  vec3 horizonC = mix(uNightHorizon, uRose, rise);\n  horizonC = mix(horizonC, uGold, smoothstep(0.55, 1.0, sunH));\n  vec3 col = mix(horizonC, zenith, pow(sky, 0.8));\n\n  /* A soft warm glow pooled at the horizon where the light comes from — widens + warms as dawn breaks. */\n  float glowBand = exp(-max(vUv.y - uHorizon, 0.0) * mix(9.0, 3.5, warm));\n  col += uGold * glowBand * (0.10 + 0.9 * warm) * (0.4 + 0.6 * rise);\n\n  /* ── STARS ── faint points high in the sky, fading as it brightens. Cheap hashed cells. */\n  float starFade = (1.0 - smoothstep(0.12, 0.5, sunH)) * smoothstep(uHorizon + 0.1, 0.6, vUv.y);\n  vec2 sc = vec2(vUv.x * aspect, vUv.y) * 90.0;\n  vec2 si = floor(sc);\n  float sh = hash(si);\n  float star = step(0.985, sh) * smoothstep(0.09, 0.0, length(fract(sc) - 0.5));\n  float twinkle = 0.6 + 0.4 * sin(uTime * 2.0 + sh * 40.0);\n  col += vec3(0.7, 0.8, 1.0) * star * starFade * twinkle * uStarBright;   \n                                                     \n\n  /* ── SUN ── a warm disc rising through the horizon; one soft HDR core for the bloom. Aspect-corrected\n     so it stays round. Only contributes near/after the limb break. */\n  vec2 sunP = vec2((vUv.x - 0.5) * aspect, vUv.y - sunY);\n  float sd = length(sunP);\n  float disc = smoothstep(0.045, 0.030, sd);          \n  float halo = exp(-sd * 7.0);                        \n  float reveal = smoothstep(0.18, 0.5, sunH);         \n  col += uGold * halo * 0.7 * reveal;\n  col += vec3(1.5, 1.05, 0.6) * disc * reveal;        \n\n  /* ── HILLS ── a low, minimal rolling silhouette (a couple of smooth undulations + a little noise). NOT\n     dunes: gentle sine swells, not sharp crests. Everything below the profile is the dark land. */\n  float hills = uHorizon\n              + sin(vUv.x * 3.1 + 1.3) * 0.018\n              + sin(vUv.x * 6.7 + 4.0) * 0.010\n              + (fbm(vec2(vUv.x * 4.0, 0.0)) - 0.5) * 0.030;\n  float land = smoothstep(hills + 0.004, hills - 0.004, vUv.y);   \n  vec3 landC = mix(uLand, uLand + uGold * 0.06, warm);            \n  col = mix(col, landC, land);\n\n  /* ── MIST ── a low soft band drifting just above the land; thick + cool in the blue hour, thinning and\n     glowing gold as the light floods. Sits over the ridge line so the land reads as behind it. */\n  float mband = exp(-abs(vUv.y - (uHorizon + 0.03)) * 16.0);\n  float drift = fbm(vec2(vUv.x * 2.2 - uTime * 0.03, uTime * 0.02 + 3.0));\n  float mist  = mband * (0.35 + 0.4 * drift) * mix(0.9, 0.5, warm);\n  vec3 mistC  = mix(mix(uNightHorizon, uRose, rise), uGold, warm * 0.7) + vec3(0.02);\n  col = mix(col, mistC, clamp(mist, 0.0, 0.85));\n\n  gl_FragColor = vec4(max(col, 0.0), 1.0);\n}", HC = new J(.025, .045, .12), UC = new J(.09, .15, .3), WC = new J(.32, .14, .15), GC = new J(.9, .52, .21), KC = new J(.14, .22, .36), qC = new J(.008, .012, .022), JC = {
+var WC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform float uTime;\nuniform vec2  uResolution;   \nuniform float uSpeed;        \nuniform float uHorizon;      \nuniform vec3  uNightZenith;  \nuniform vec3  uNightHorizon; \nuniform vec3  uRose;         \nuniform vec3  uGold;         \nuniform vec3  uDayZenith;    \nuniform vec3  uLand;         \nuniform float uStarBright;   \n\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\nfloat fbm(vec2 p) {\n  float v = 0.0, a = 0.5;\n  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; }\n  return v;\n}\n\nconst float PI = 3.14159265;\n\nvoid main() {\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n\n  /* THE SCALAR. sin(phase*PI) is 0 at phase 0 and 1 (seamless loop) and 1 at the middle. A gentle power\n     shape holds the blue hour a touch longer and makes the gold peak brief — restraint. */\n  float phase = fract(uTime * uSpeed);\n  float sunH  = pow(sin(phase * PI), 2.2);           \n                                                     \n                                                     \n\n  /* Mood terms derived from the one scalar. Warmth kicks in LATE (only as the limb nears breaking). */\n  float warm  = smoothstep(0.34, 0.95, sunH);        \n  float rise  = smoothstep(0.16, 0.62, sunH);        \n  float sunY  = uHorizon - 0.06 + sunH * 0.20;       \n\n  /* ── SKY ── a vertical gradient, zenith→horizon, warming + lifting with sunH. */\n  float sky = smoothstep(uHorizon, 1.0, vUv.y);       \n  vec3 zenith  = mix(uNightZenith, uDayZenith, sunH * 0.6);\n  vec3 horizonC = mix(uNightHorizon, uRose, rise);\n  horizonC = mix(horizonC, uGold, smoothstep(0.55, 1.0, sunH));\n  vec3 col = mix(horizonC, zenith, pow(sky, 0.8));\n\n  /* A soft warm glow pooled at the horizon where the light comes from — widens + warms as dawn breaks. */\n  float glowBand = exp(-max(vUv.y - uHorizon, 0.0) * mix(9.0, 3.5, warm));\n  col += uGold * glowBand * (0.10 + 0.9 * warm) * (0.4 + 0.6 * rise);\n\n  /* ── STARS ── faint points high in the sky, fading as it brightens. Cheap hashed cells. */\n  float starFade = (1.0 - smoothstep(0.12, 0.5, sunH)) * smoothstep(uHorizon + 0.1, 0.6, vUv.y);\n  vec2 sc = vec2(vUv.x * aspect, vUv.y) * 90.0;\n  vec2 si = floor(sc);\n  float sh = hash(si);\n  float star = step(0.985, sh) * smoothstep(0.09, 0.0, length(fract(sc) - 0.5));\n  float twinkle = 0.6 + 0.4 * sin(uTime * 2.0 + sh * 40.0);\n  col += vec3(0.7, 0.8, 1.0) * star * starFade * twinkle * uStarBright;   \n                                                     \n\n  /* ── SUN ── a warm disc rising through the horizon; one soft HDR core for the bloom. Aspect-corrected\n     so it stays round. Only contributes near/after the limb break. */\n  vec2 sunP = vec2((vUv.x - 0.5) * aspect, vUv.y - sunY);\n  float sd = length(sunP);\n  float disc = smoothstep(0.045, 0.030, sd);          \n  float halo = exp(-sd * 7.0);                        \n  float reveal = smoothstep(0.18, 0.5, sunH);         \n  col += uGold * halo * 0.7 * reveal;\n  col += vec3(1.5, 1.05, 0.6) * disc * reveal;        \n\n  /* ── HILLS ── a low, minimal rolling silhouette (a couple of smooth undulations + a little noise). NOT\n     dunes: gentle sine swells, not sharp crests. Everything below the profile is the dark land. */\n  float hills = uHorizon\n              + sin(vUv.x * 3.1 + 1.3) * 0.018\n              + sin(vUv.x * 6.7 + 4.0) * 0.010\n              + (fbm(vec2(vUv.x * 4.0, 0.0)) - 0.5) * 0.030;\n  float land = smoothstep(hills + 0.004, hills - 0.004, vUv.y);   \n  vec3 landC = mix(uLand, uLand + uGold * 0.06, warm);            \n  col = mix(col, landC, land);\n\n  /* ── MIST ── a low soft band drifting just above the land; thick + cool in the blue hour, thinning and\n     glowing gold as the light floods. Sits over the ridge line so the land reads as behind it. */\n  float mband = exp(-abs(vUv.y - (uHorizon + 0.03)) * 16.0);\n  float drift = fbm(vec2(vUv.x * 2.2 - uTime * 0.03, uTime * 0.02 + 3.0));\n  float mist  = mband * (0.35 + 0.4 * drift) * mix(0.9, 0.5, warm);\n  vec3 mistC  = mix(mix(uNightHorizon, uRose, rise), uGold, warm * 0.7) + vec3(0.02);\n  col = mix(col, mistC, clamp(mist, 0.0, 0.85));\n\n  gl_FragColor = vec4(max(col, 0.0), 1.0);\n}", GC = new J(.025, .045, .12), KC = new J(.09, .15, .3), qC = new J(.32, .14, .15), JC = new J(.9, .52, .21), YC = new J(.14, .22, .36), XC = new J(.008, .012, .022), ZC = {
 	tint: new J(1, .98, .95),
 	lift: new J(0, 0, 0),
 	sat: 1,
 	contrast: 1.06
 };
-function YC(e, { speed: t = .02, horizon: n = .3, starBrightness: r = .85, nightZenith: i = HC, nightHorizon: a = UC, rose: o = WC, gold: s = GC, dayZenith: c = KC, land: l = qC, filmic: u = JC } = {}) {
+function QC(e, { speed: t = .02, horizon: n = .3, starBrightness: r = .85, nightZenith: i = GC, nightHorizon: a = KC, rose: o = qC, gold: s = JC, dayZenith: c = YC, land: l = XC, filmic: u = ZC } = {}) {
 	let d = new wr(), f = new pu(-1, 1, 1, -1, 0, 1), p = {
 		uTime: { value: 0 },
 		uResolution: { value: new G(e.drawBuffer.x, e.drawBuffer.y) },
@@ -26387,7 +26492,7 @@ function YC(e, { speed: t = .02, horizon: n = .3, starBrightness: r = .85, night
 		uStarBright: { value: r }
 	}, m = new $c({
 		vertexShader: d_,
-		fragmentShader: VC,
+		fragmentShader: WC,
 		uniforms: p,
 		depthTest: !1,
 		depthWrite: !1
@@ -26411,10 +26516,10 @@ function YC(e, { speed: t = .02, horizon: n = .3, starBrightness: r = .85, night
 }
 //#endregion
 //#region src/shaders/image-transition.frag
-var XC = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uBefore;\nuniform sampler2D uAfter;\nuniform float uProgress;    \nuniform float uTime;        \nuniform vec2  uQuadRes;     \nuniform vec2  uBeforeRes;   \nuniform vec2  uAfterRes;    \nuniform float uMelt;        \nuniform float uWidth;       \n\n/* uMeltAmp — the MASTER \"how liquid is this transition at all\" scalar (Lesson Z).\n   ------------------------------------------------------------\n   Why this exists, and why it is a SEPARATE dial from uMelt: a real client finding. The liquid melt is\n   gorgeous on dark, moody sets — but on LIGHT, high-contrast photographs (an elegant salon reel) the\n   sideways UV displacement smears bright/dark edges into harsh HORIZONTAL STREAKING, and the photos never\n   settle enough to read. The melt is not vibe-agnostic; elegant brands need a calm alternative.\n\n   So uMeltAmp collapses the whole liquid apparatus toward a plain opacity crossfade:\n     • 1.0 = the melt EXACTLY as before — every term below is multiplied by 1.0, a true no-op, so the\n       default is byte-identical and no baseline is disturbed.\n     • 0.0 = a pure cross-DISSOLVE: the blend becomes spatially UNIFORM (every pixel at the same opacity,\n       = uProgress) instead of a wobbling wipe front, the drag displacement is scaled to nothing (no\n       streak), and the wet-edge glow is switched off. Two stills fading through each other, nothing more.\n   uMelt still exists and still tunes the drag WITHIN a melt; uMeltAmp decides whether there is a melt at\n   all. When uMeltAmp is 0 the value of uMelt no longer matters — the crossfade overrides it, by design\n   (we layer a master switch on top; we do not average the two into a muddy third thing). */\nuniform float uMeltAmp;\n\n/* Cheap value noise — enough to make the front organic; a full fbm would be wasted here. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* object-fit: cover, in UV space. Scale the axis with slack, then recentre.\n   The max(.,1.0) on BOTH numerators is the last line of defense (Lesson Z2b): if a degenerate box\n   dimension (a 0-width container caught mid-layout) ever reaches boxRes.x, an unclamped 0 makes\n   boxA = 0 → s.x = boxA/imgA = 0 → the whole x axis collapses to a horizontal-streak smear. Clamping\n   to ≥1 turns that into a merely-wrong crop for the one bad frame instead of a full collapse, and is a\n   true no-op for every real photo/box (all ≥1), so no rendered baseline shifts. */\nvec2 coverUv(vec2 uv, vec2 imgRes, vec2 boxRes) {\n  float imgA = max(imgRes.x, 1.0) / max(imgRes.y, 1.0);\n  float boxA = max(boxRes.x, 1.0) / max(boxRes.y, 1.0);\n  vec2 s = vec2(1.0);\n  if (imgA > boxA) s.x = boxA / imgA;   \n  else             s.y = imgA / boxA;   \n  return (uv - 0.5) * s + 0.5;\n}\n\nvoid main() {\n  /* THE FRONT — a wobbling boundary, not a line. */\n  float n = vnoise(vec2(vUv.y * 3.2, uTime * 0.10)) * 0.5\n          + vnoise(vec2(vUv.y * 8.0 + 4.0, uTime * 0.16)) * 0.25;\n\n  /* Bias the front so progress 0 and 1 are FULLY clean: at the ends the noise must not leave a stray\n     sliver of the other image on screen. Remapping into a slightly over-scanned range does that. */\n  float p = uProgress * (1.0 + uWidth * 2.0) - uWidth;\n  float front = vUv.x + (n - 0.375) * 0.13 - p;\n\n  /* THE BAND — how much of the picture is currently mid-melt (the wobbly wipe mask). */\n  float m = 1.0 - smoothstep(-uWidth, uWidth, front);   \n\n  /* THE MASTER LERP. Blend between a UNIFORM opacity (uProgress everywhere — a crossfade) and the wipe\n     mask m, by uMeltAmp. At uMeltAmp = 1.0 this returns m exactly (mix(a,b,1.0) == b, bit-for-bit), so\n     the melt is untouched; at 0.0 it returns uProgress, a flat cross-dissolve with no spatial front. */\n  float mask = mix(uProgress, m, uMeltAmp);\n\n  /* THE DRAG — strongest inside the band, zero at either end. This is the liquid part: we pull the\n     sampled coordinates sideways (and a little vertically) so the front looks like it is physically\n     pushing the old image out of the way. */\n  float band = 1.0 - abs(front) / max(uWidth, 1e-4);\n  band = clamp(band, 0.0, 1.0);\n  /* uMeltAmp gates the drag too: at 1.0 this is band*band*uMelt unchanged; at 0.0 the drag is zero, so\n     push is zero, so both images are sampled at the same cover-fit UV — a crossfade, no sideways smear. */\n  float drag = band * band * uMelt * uMeltAmp;\n\n  vec2 push = vec2(drag * 0.16, (n - 0.5) * drag * 0.10);\n\n  vec2 uvB = coverUv(vUv + push,        uBeforeRes, uQuadRes);   \n  vec2 uvA = coverUv(vUv - push * 0.45, uAfterRes,  uQuadRes);   \n\n  vec3 before = texture2D(uBefore, clamp(uvB, 0.0, 1.0)).rgb;\n  vec3 after  = texture2D(uAfter,  clamp(uvA, 0.0, 1.0)).rgb;\n\n  vec3 col = mix(before, after, mask);\n\n  /* A whisper of brightness right at the melting front — the wet edge where the two liquids meet.\n     Kept subtle: this is a photo, and a glowing seam would look like a filter. (Added in LINEAR, before\n     the encode below, so it behaves like light and not like a paint overlay.) uMeltAmp switches it off in\n     crossfade mode — there is no front for it to trace, so at 1.0 it is times 1.0 (unchanged), at 0.0 gone. */\n  col += vec3(1.0, 0.98, 0.96) * band * band * 0.10 * uMelt * uMeltAmp;\n\n  /* ENCODE — see the header. Everything above is LINEAR light; the screen wants sRGB. This is the exact\n     IEC 61966-2-1 transfer curve (not a lazy pow(1/2.2), which is visibly wrong in the deep shadows). */\n  col = mix(col * 12.92,\n            1.055 * pow(max(col, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,\n            step(vec3(0.0031308), col));\n\n  gl_FragColor = vec4(col, 1.0);\n}";
+var $C = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uBefore;\nuniform sampler2D uAfter;\nuniform float uProgress;    \nuniform float uTime;        \nuniform vec2  uQuadRes;     \nuniform vec2  uBeforeRes;   \nuniform vec2  uAfterRes;    \nuniform float uMelt;        \nuniform float uWidth;       \n\n/* uMeltAmp — the MASTER \"how liquid is this transition at all\" scalar (Lesson Z).\n   ------------------------------------------------------------\n   Why this exists, and why it is a SEPARATE dial from uMelt: a real client finding. The liquid melt is\n   gorgeous on dark, moody sets — but on LIGHT, high-contrast photographs (an elegant salon reel) the\n   sideways UV displacement smears bright/dark edges into harsh HORIZONTAL STREAKING, and the photos never\n   settle enough to read. The melt is not vibe-agnostic; elegant brands need a calm alternative.\n\n   So uMeltAmp collapses the whole liquid apparatus toward a plain opacity crossfade:\n     • 1.0 = the melt EXACTLY as before — every term below is multiplied by 1.0, a true no-op, so the\n       default is byte-identical and no baseline is disturbed.\n     • 0.0 = a pure cross-DISSOLVE: the blend becomes spatially UNIFORM (every pixel at the same opacity,\n       = uProgress) instead of a wobbling wipe front, the drag displacement is scaled to nothing (no\n       streak), and the wet-edge glow is switched off. Two stills fading through each other, nothing more.\n   uMelt still exists and still tunes the drag WITHIN a melt; uMeltAmp decides whether there is a melt at\n   all. When uMeltAmp is 0 the value of uMelt no longer matters — the crossfade overrides it, by design\n   (we layer a master switch on top; we do not average the two into a muddy third thing). */\nuniform float uMeltAmp;\n\n/* Cheap value noise — enough to make the front organic; a full fbm would be wasted here. */\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vnoise(vec2 p) {\n  vec2 i = floor(p), f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),\n             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);\n}\n\n/* object-fit: cover, in UV space. Scale the axis with slack, then recentre.\n   The max(.,1.0) on BOTH numerators is the last line of defense (Lesson Z2b): if a degenerate box\n   dimension (a 0-width container caught mid-layout) ever reaches boxRes.x, an unclamped 0 makes\n   boxA = 0 → s.x = boxA/imgA = 0 → the whole x axis collapses to a horizontal-streak smear. Clamping\n   to ≥1 turns that into a merely-wrong crop for the one bad frame instead of a full collapse, and is a\n   true no-op for every real photo/box (all ≥1), so no rendered baseline shifts. */\nvec2 coverUv(vec2 uv, vec2 imgRes, vec2 boxRes) {\n  float imgA = max(imgRes.x, 1.0) / max(imgRes.y, 1.0);\n  float boxA = max(boxRes.x, 1.0) / max(boxRes.y, 1.0);\n  vec2 s = vec2(1.0);\n  if (imgA > boxA) s.x = boxA / imgA;   \n  else             s.y = imgA / boxA;   \n  return (uv - 0.5) * s + 0.5;\n}\n\nvoid main() {\n  /* THE FRONT — a wobbling boundary, not a line. */\n  float n = vnoise(vec2(vUv.y * 3.2, uTime * 0.10)) * 0.5\n          + vnoise(vec2(vUv.y * 8.0 + 4.0, uTime * 0.16)) * 0.25;\n\n  /* Bias the front so progress 0 and 1 are FULLY clean: at the ends the noise must not leave a stray\n     sliver of the other image on screen. Remapping into a slightly over-scanned range does that. */\n  float p = uProgress * (1.0 + uWidth * 2.0) - uWidth;\n  float front = vUv.x + (n - 0.375) * 0.13 - p;\n\n  /* THE BAND — how much of the picture is currently mid-melt (the wobbly wipe mask). */\n  float m = 1.0 - smoothstep(-uWidth, uWidth, front);   \n\n  /* THE MASTER LERP. Blend between a UNIFORM opacity (uProgress everywhere — a crossfade) and the wipe\n     mask m, by uMeltAmp. At uMeltAmp = 1.0 this returns m exactly (mix(a,b,1.0) == b, bit-for-bit), so\n     the melt is untouched; at 0.0 it returns uProgress, a flat cross-dissolve with no spatial front. */\n  float mask = mix(uProgress, m, uMeltAmp);\n\n  /* THE DRAG — strongest inside the band, zero at either end. This is the liquid part: we pull the\n     sampled coordinates sideways (and a little vertically) so the front looks like it is physically\n     pushing the old image out of the way. */\n  float band = 1.0 - abs(front) / max(uWidth, 1e-4);\n  band = clamp(band, 0.0, 1.0);\n  /* uMeltAmp gates the drag too: at 1.0 this is band*band*uMelt unchanged; at 0.0 the drag is zero, so\n     push is zero, so both images are sampled at the same cover-fit UV — a crossfade, no sideways smear. */\n  float drag = band * band * uMelt * uMeltAmp;\n\n  vec2 push = vec2(drag * 0.16, (n - 0.5) * drag * 0.10);\n\n  vec2 uvB = coverUv(vUv + push,        uBeforeRes, uQuadRes);   \n  vec2 uvA = coverUv(vUv - push * 0.45, uAfterRes,  uQuadRes);   \n\n  vec3 before = texture2D(uBefore, clamp(uvB, 0.0, 1.0)).rgb;\n  vec3 after  = texture2D(uAfter,  clamp(uvA, 0.0, 1.0)).rgb;\n\n  vec3 col = mix(before, after, mask);\n\n  /* A whisper of brightness right at the melting front — the wet edge where the two liquids meet.\n     Kept subtle: this is a photo, and a glowing seam would look like a filter. (Added in LINEAR, before\n     the encode below, so it behaves like light and not like a paint overlay.) uMeltAmp switches it off in\n     crossfade mode — there is no front for it to trace, so at 1.0 it is times 1.0 (unchanged), at 0.0 gone. */\n  col += vec3(1.0, 0.98, 0.96) * band * band * 0.10 * uMelt * uMeltAmp;\n\n  /* ENCODE — see the header. Everything above is LINEAR light; the screen wants sRGB. This is the exact\n     IEC 61966-2-1 transfer curve (not a lazy pow(1/2.2), which is visibly wrong in the deep shadows). */\n  col = mix(col * 12.92,\n            1.055 * pow(max(col, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,\n            step(vec3(0.0031308), col));\n\n  gl_FragColor = vec4(col, 1.0);\n}";
 //#endregion
 //#region src/photo-path.js
-function ZC() {
+function ew() {
 	try {
 		let e = document.createElement("canvas");
 		return !!(e.getContext("webgl2") || e.getContext("webgl"));
@@ -26422,14 +26527,14 @@ function ZC() {
 		return !1;
 	}
 }
-function QC() {
+function tw() {
 	return typeof window < "u" && window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : !1;
 }
-function $C(e, t, n) {
+function nw(e, t, n) {
 	let r = document.createElement("img");
 	return r.src = t, r.alt = n || "", r.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;", e.appendChild(r), e.setAttribute("data-photo-path", "fallback-image"), r;
 }
-function ew(e, t) {
+function rw(e, t) {
 	let n = t || new Jl();
 	return n.setCrossOrigin("anonymous"), new Promise((t, r) => {
 		n.load(e, (e) => {
@@ -26437,7 +26542,7 @@ function ew(e, t) {
 		}, void 0, r);
 	});
 }
-function tw(e) {
+function iw(e) {
 	let t = !0, n = typeof IntersectionObserver < "u" ? new IntersectionObserver((e) => {
 		t = e.some((e) => e.isIntersecting);
 	}) : null;
@@ -26452,8 +26557,8 @@ function tw(e) {
 }
 //#endregion
 //#region src/createBeforeAfter.js
-function nw(e, t, n) {
-	let r = $C(e, t, n);
+function aw(e, t, n) {
+	let r = nw(e, t, n);
 	return e.setAttribute("data-before-after", "fallback-image"), {
 		setProgress() {},
 		getProgress() {
@@ -26467,22 +26572,22 @@ function nw(e, t, n) {
 		fallback: !0
 	};
 }
-async function rw(e, { before: t, after: n, melt: r = 1, width: i = .18, progress: a = 0, mode: o = "pointer", autoMs: s = 4200, holdMs: c = 1400, label: l = "Before and after", alt: u = "", step: d = .05 } = {}) {
+async function ow(e, { before: t, after: n, melt: r = 1, width: i = .18, progress: a = 0, mode: o = "pointer", autoMs: s = 4200, holdMs: c = 1400, label: l = "Before and after", alt: u = "", step: d = .05 } = {}) {
 	if (!e) throw Error("createBeforeAfter: container is required");
 	if (!t || !n) throw Error("createBeforeAfter: before and after image URLs are required");
 	let f;
 	try {
-		if (!ZC()) return nw(e, n, u);
+		if (!ew()) return aw(e, n, u);
 		f = await T_({
 			container: e,
 			lean: !0
 		});
 	} catch (t) {
-		return console.warn("[createBeforeAfter] WebGL unavailable — showing the after image.", t), nw(e, n, u);
+		return console.warn("[createBeforeAfter] WebGL unavailable — showing the after image.", t), aw(e, n, u);
 	}
 	let { renderer: p, drawBuffer: m } = f, h = new wr(), g = new pu(-1, 1, 1, -1, 0, 1), _ = new $c({
 		vertexShader: d_,
-		fragmentShader: XC,
+		fragmentShader: $C,
 		uniforms: {
 			uBefore: { value: null },
 			uAfter: { value: null },
@@ -26501,9 +26606,9 @@ async function rw(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 	y.frustumCulled = !1, h.add(y);
 	let b = new Jl(), x, S;
 	try {
-		[x, S] = await Promise.all([ew(t, b), ew(n, b)]);
+		[x, S] = await Promise.all([rw(t, b), rw(n, b)]);
 	} catch (t) {
-		return console.warn("[createBeforeAfter] an image failed to load — showing the after image.", t), f.dispose?.(), e.innerHTML = "", nw(e, n, u);
+		return console.warn("[createBeforeAfter] an image failed to load — showing the after image.", t), f.dispose?.(), e.innerHTML = "", aw(e, n, u);
 	}
 	_.uniforms.uBefore.value = x, _.uniforms.uAfter.value = S, _.uniforms.uBeforeRes.value.set(x.image.width, x.image.height), _.uniforms.uAfterRes.value.set(S.image.width, S.image.height), e.setAttribute("role", "slider"), e.setAttribute("tabindex", "0"), e.setAttribute("aria-label", l), e.setAttribute("aria-valuemin", "0"), e.setAttribute("aria-valuemax", "100"), e.setAttribute("data-before-after", "webgl"), e.style.touchAction = "pan-y";
 	let C = Math.min(1, Math.max(0, a));
@@ -26527,12 +26632,12 @@ async function rw(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 		(e.key === "ArrowRight" || e.key === "ArrowUp") && (t = C + d), (e.key === "ArrowLeft" || e.key === "ArrowDown") && (t = C - d), e.key === "Home" && (t = 0), e.key === "End" && (t = 1), t !== null && (e.preventDefault(), w(t, !0));
 	};
 	e.addEventListener("keydown", A);
-	let j = QC(), M = o === "auto" && !j, N = (s + c) * 2;
+	let j = tw(), M = o === "auto" && !j, N = (s + c) * 2;
 	function P(e) {
 		let t = e % N;
 		return t < c ? 0 : t < c + s ? (t - c) / s : t < c * 2 + s ? 1 : 1 - (t - c * 2 - s) / s;
 	}
-	let F = null, I = !1, L = null, R = tw(e);
+	let F = null, I = !1, L = null, R = iw(e);
 	function z(t) {
 		L === null && (L = t);
 		let n = t - L;
@@ -26563,13 +26668,13 @@ async function rw(e, { before: t, after: n, melt: r = 1, width: i = .18, progres
 }
 //#endregion
 //#region src/createLookReel.js
-var iw = (e) => e * e * (3 - 2 * e);
-async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt: i = 1, width: a = .18, transition: o = "melt", maxResident: s = 6, alt: c = "", ariaHidden: l = !0 } = {}) {
+var sw = (e) => e * e * (3 - 2 * e);
+async function cw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt: i = 1, width: a = .18, transition: o = "melt", maxResident: s = 6, alt: c = "", ariaHidden: l = !0 } = {}) {
 	if (!e) throw Error("createLookReel: container is required");
 	if (!Array.isArray(t) || t.length === 0) throw Error("createLookReel: images must be a non-empty array of URLs");
 	let u = o === "crossfade" ? 0 : 1;
-	if (!ZC()) {
-		let n = $C(e, t[0], c);
+	if (!ew()) {
+		let n = nw(e, t[0], c);
 		return e.setAttribute("data-look-reel", "fallback-image"), {
 			update() {},
 			pause() {},
@@ -26595,7 +26700,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		});
 	} catch (n) {
 		console.warn("[createLookReel] WebGL unavailable — showing the first image.", n);
-		let r = $C(e, t[0], c);
+		let r = nw(e, t[0], c);
 		return e.setAttribute("data-look-reel", "fallback-image"), {
 			update() {},
 			pause() {},
@@ -26618,7 +26723,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		if (_.has(e)) return null;
 		if (g.has(e)) return g.get(e);
 		try {
-			let t = await ew(e, m);
+			let t = await rw(e, m);
 			return g.set(e, t), b(), t;
 		} catch {
 			console.warn("[createLookReel] image failed to load; skipping it:", e), _.add(e);
@@ -26637,7 +26742,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 	for (; S === null && h.length;) S = await v(h[0]);
 	if (!S) {
 		console.warn("[createLookReel] no image could be loaded — falling back."), d.dispose?.(), e.innerHTML = "";
-		let n = $C(e, t[0], c);
+		let n = nw(e, t[0], c);
 		return {
 			update() {},
 			pause() {},
@@ -26657,7 +26762,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 	}
 	let C = new wr(), w = new pu(-1, 1, 1, -1, 0, 1), T = new $c({
 		vertexShader: d_,
-		fragmentShader: XC,
+		fragmentShader: $C,
 		uniforms: {
 			uBefore: { value: S },
 			uAfter: { value: S },
@@ -26674,7 +26779,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		depthWrite: !1
 	}), E = new Mc(2, 2), D = new Z(E, T);
 	D.frustumCulled = !1, C.add(D), l && e.setAttribute("aria-hidden", "true"), e.setAttribute("data-look-reel", "webgl");
-	let O = QC(), k = "hold", A = 0, j = -1, M = null, N = !1;
+	let O = tw(), k = "hold", A = 0, j = -1, M = null, N = !1;
 	function P() {
 		if (N || O || h.length < 2) return;
 		let e = h[(x + 1) % h.length];
@@ -26685,7 +26790,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 		});
 	}
 	P();
-	let F = tw(e), I = null, L = !1, R = !1, z = null;
+	let F = iw(e), I = null, L = !1, R = !1, z = null;
 	function ee(e) {
 		if (A += e, k === "hold") {
 			if (O || h.length < 2 || A < n) return;
@@ -26697,7 +26802,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 			return;
 		}
 		let t = Math.min(1, A / r);
-		T.uniforms.uProgress.value = iw(t), !(t < 1) && (x = j, S = M, M = null, j = -1, T.uniforms.uBefore.value = S, T.uniforms.uBeforeRes.value.set(S.image.width, S.image.height), T.uniforms.uProgress.value = 0, y = new Set([h[x]]), b(), k = "hold", A = 0, P());
+		T.uniforms.uProgress.value = sw(t), !(t < 1) && (x = j, S = M, M = null, j = -1, T.uniforms.uBefore.value = S, T.uniforms.uBeforeRes.value.set(S.image.width, S.image.height), T.uniforms.uProgress.value = 0, y = new Set([h[x]]), b(), k = "hold", A = 0, P());
 	}
 	function te(t) {
 		let n = z === null ? 0 : t - z;
@@ -26758,7 +26863,7 @@ async function aw(e, { images: t = [], holdMs: n = 2600, meltMs: r = 1600, melt:
 }
 //#endregion
 //#region src/scatter.js
-var ow = {
+var lw = {
 	beach: [{
 		type: "rock",
 		density: .05,
@@ -26797,7 +26902,7 @@ var ow = {
 		maxSlope: 2
 	}]
 };
-function sw({ terrain: e, seed: t = 1, worldSize: n = 26, baseY: r = 0, biomeKeys: i, density: a = 1, max: o = 9e3 } = {}) {
+function uw({ terrain: e, seed: t = 1, worldSize: n = 26, baseY: r = 0, biomeKeys: i, density: a = 1, max: o = 9e3 } = {}) {
 	let { size: s, height: c, biome: l, sea: u, relief: d } = e, f = yv((t ^ 97155048) >>> 0), p = n / (s - 1), m = n / 2, h = (e) => r + (e - u) * d, g = (e, t) => {
 		let n = Math.max(1, Math.min(s - 2, e)), r = Math.max(1, Math.min(s - 2, t)), i = (c[r * s + n + 1] - c[r * s + n - 1]) * d / (2 * p), a = (c[(r + 1) * s + n] - c[(r - 1) * s + n]) * d / (2 * p);
 		return Math.hypot(i, a);
@@ -26809,7 +26914,7 @@ function sw({ terrain: e, seed: t = 1, worldSize: n = 26, baseY: r = 0, biomeKey
 	for (let e = 1; e < s - 1; e += 2) for (let t = 1; t < s - 1; t += 2) {
 		let n = e * s + t, r = c[n];
 		if (r < u + .005) continue;
-		let d = ow[i[l[n]]];
+		let d = lw[i[l[n]]];
 		if (!d) continue;
 		let v = g(t, e);
 		for (let n of d) {
@@ -26837,12 +26942,12 @@ function sw({ terrain: e, seed: t = 1, worldSize: n = 26, baseY: r = 0, biomeKey
 		}
 	};
 }
-function cw(e, t) {
+function dw(e, t) {
 	let n = new J(t), r = e.attributes.position.count, i = new Float32Array(r * 3), a = new Float32Array(r), o = e.attributes.position.array;
 	for (let e = 0; e < r; e++) i[e * 3] = n.r, i[e * 3 + 1] = n.g, i[e * 3 + 2] = n.b, a[e] = Math.min(.45, Math.max(0, .42 * (1 - o[e * 3 + 1] / .55)));
 	return e.setAttribute("color", new Y(i, 3)), e.setAttribute("aAo", new Y(a, 1)), e;
 }
-function lw(e) {
+function fw(e) {
 	let t = 0;
 	for (let n of e) t += n.attributes.position.count;
 	let n = new Float32Array(t * 3), r = new Float32Array(t * 3), i = new Float32Array(t * 3), a = new Float32Array(t), o = 0;
@@ -26850,42 +26955,42 @@ function lw(e) {
 	let s = new Di();
 	return s.setAttribute("position", new Y(n, 3)), s.setAttribute("normal", new Y(r, 3)), s.setAttribute("color", new Y(i, 3)), s.setAttribute("aAo", new Y(a, 1)), s;
 }
-function uw() {
-	return lw([
-		cw(new rs(.045, .06, .34, 6).translate(0, .17, 0).toNonIndexed(), "#5b3f28"),
-		cw(new is(.3, .55, 7).translate(0, .55, 0).toNonIndexed(), "#3f7d3a"),
-		cw(new is(.22, .42, 7).translate(0, .85, 0).toNonIndexed(), "#4f9046")
+function pw() {
+	return fw([
+		dw(new rs(.045, .06, .34, 6).translate(0, .17, 0).toNonIndexed(), "#5b3f28"),
+		dw(new is(.3, .55, 7).translate(0, .55, 0).toNonIndexed(), "#3f7d3a"),
+		dw(new is(.22, .42, 7).translate(0, .85, 0).toNonIndexed(), "#4f9046")
 	]);
 }
-function dw() {
+function mw() {
 	let e = new kc(.18, 0).toNonIndexed(), t = e.attributes.position, n = yv(3098);
 	for (let e = 0; e < t.count; e++) {
 		let r = .78 + n() * .5;
 		t.setXYZ(e, t.getX(e) * r, t.getY(e) * r * .8, t.getZ(e) * r);
 	}
-	return e.computeVertexNormals(), cw(e, "#7d7468");
+	return e.computeVertexNormals(), dw(e, "#7d7468");
 }
-function fw() {
-	return cw(new is(.06, .16, 4).translate(0, .08, 0).toNonIndexed(), "#6f9a4e");
+function hw() {
+	return dw(new is(.06, .16, 4).translate(0, .08, 0).toNonIndexed(), "#6f9a4e");
 }
-var pw = [
+var gw = [
 	"tree",
 	"rock",
 	"tuft"
-], mw = {
+], _w = {
 	tree: 0,
 	rock: -.05,
 	tuft: 0
-}, hw = new q(), gw = new hn(), _w = new K(), vw = new K(), yw = new K(0, 1, 0), bw = new J();
-function xw(e) {
+}, vw = new q(), yw = new hn(), bw = new K(), xw = new K(), Sw = new K(0, 1, 0), Cw = new J();
+function ww(e) {
 	let t = new mr();
 	t.raycast = () => {};
 	let n = {
-		tree: uw(),
-		rock: dw(),
-		tuft: fw()
+		tree: pw(),
+		rock: mw(),
+		tuft: hw()
 	};
-	for (let r of pw) {
+	for (let r of gw) {
 		let i = e[r] || (e[r] = []), a = Math.max(i.length * 2, 512), o = u_(new tl({
 			vertexColors: !0,
 			roughness: .9,
@@ -26893,26 +26998,26 @@ function xw(e) {
 			flatShading: !0
 		}), { sway: !0 }), s = new Ua(n[r], o, a);
 		s.count = i.length, s.castShadow = !0, s.receiveShadow = !1, s.frustumCulled = !0, s.raycast = () => {}, s.userData.type = r, s.instanceColor = new Fa(new Float32Array(a * 3), 3);
-		for (let e = 0; e < i.length; e++) Sw(s, e, i[e], mw[r]);
+		for (let e = 0; e < i.length; e++) Tw(s, e, i[e], _w[r]);
 		s.instanceMatrix.needsUpdate = !0, s.instanceColor.needsUpdate = !0, t.add(s);
 	}
-	return t.userData.placements = e, t.userData.yoff = mw, t.userData.dispose = () => t.traverse((e) => {
+	return t.userData.placements = e, t.userData.yoff = _w, t.userData.dispose = () => t.traverse((e) => {
 		e.isInstancedMesh && (e.geometry.dispose(), e.material.dispose());
 	}), t;
 }
-function Sw(e, t, n, r) {
-	_w.set(n.x, n.y + (r || 0), n.z), gw.setFromAxisAngle(yw, n.r), vw.setScalar(n.s), e.setMatrixAt(t, hw.compose(_w, gw, vw)), e.setColorAt(t, bw.setScalar(n.t));
+function Tw(e, t, n, r) {
+	bw.set(n.x, n.y + (r || 0), n.z), yw.setFromAxisAngle(Sw, n.r), xw.setScalar(n.s), e.setMatrixAt(t, vw.compose(bw, yw, xw)), e.setColorAt(t, Cw.setScalar(n.t));
 }
-var Cw = (e, t) => e.children.find((e) => e.isInstancedMesh && e.userData.type === t);
-function ww(e, t) {
+var Ew = (e, t) => e.children.find((e) => e.isInstancedMesh && e.userData.type === t);
+function Dw(e, t) {
 	let n = t.instanceMatrix.count * 2, r = new Ua(t.geometry, t.material, n);
 	return r.count = t.count, r.castShadow = !0, r.receiveShadow = !1, r.frustumCulled = !0, r.raycast = () => {}, r.userData.type = t.userData.type, r.instanceColor = new Fa(new Float32Array(n * 3), 3), r.instanceMatrix.array.set(t.instanceMatrix.array.subarray(0, t.count * 16)), r.instanceColor.array.set(t.instanceColor.array.subarray(0, t.count * 3)), r.instanceMatrix.needsUpdate = !0, r.instanceColor.needsUpdate = !0, e.remove(t), t.dispose(), e.add(r), r;
 }
-function Tw(e, t, n, r, i, a, o, s) {
-	let c = Cw(e, t);
+function Ow(e, t, n, r, i, a, o, s) {
+	let c = Ew(e, t);
 	if (!c) return !1;
 	let l = e.userData.placements[t];
-	l.length >= c.instanceMatrix.count && (c = ww(e, c));
+	l.length >= c.instanceMatrix.count && (c = Dw(e, c));
 	let u = l.length;
 	return l.push({
 		x: n,
@@ -26921,12 +27026,12 @@ function Tw(e, t, n, r, i, a, o, s) {
 		s: a,
 		r: o,
 		t: s
-	}), Sw(c, u, l[u], (e.userData.yoff || {})[t] || 0), c.count = l.length, c.instanceMatrix.needsUpdate = !0, c.instanceColor.needsUpdate = !0, !0;
+	}), Tw(c, u, l[u], (e.userData.yoff || {})[t] || 0), c.count = l.length, c.instanceMatrix.needsUpdate = !0, c.instanceColor.needsUpdate = !0, !0;
 }
-function Ew(e, t, n, r, i) {
-	let a = t === "all" ? pw : [t], o = i * i, s = 0;
+function kw(e, t, n, r, i) {
+	let a = t === "all" ? gw : [t], o = i * i, s = 0;
 	for (let t of a) {
-		let i = Cw(e, t);
+		let i = Ew(e, t);
 		if (!i) continue;
 		let a = e.userData.placements[t], c = i.instanceMatrix.array, l = i.instanceColor && i.instanceColor.array;
 		for (let e = a.length - 1; e >= 0; e--) {
@@ -26944,12 +27049,12 @@ function Ew(e, t, n, r, i) {
 	}
 	return s;
 }
-var Dw = {
+var Aw = {
 	tree: .85,
 	rock: 2,
 	tuft: .95
 };
-function Ow(e, t, { worldSize: n = 26, baseY: r = 0 } = {}) {
+function jw(e, t, { worldSize: n = 26, baseY: r = 0 } = {}) {
 	let i = e.userData.placements, a = e.userData.yoff || {};
 	if (!i) return;
 	let { size: o, height: s, sea: c, relief: l } = t, u = n / (o - 1), d = n / 2, f = (e) => e < 0 ? 0 : e >= o ? o - 1 : e, p = (e, t) => s[f(Math.round((t + d) / u)) * o + f(Math.round((e + d) / u))], m = (e, t) => {
@@ -26959,7 +27064,7 @@ function Ow(e, t, { worldSize: n = 26, baseY: r = 0 } = {}) {
 	for (let t of e.children) {
 		let e = t.userData.type, n = i[e];
 		if (!n || !t.isInstancedMesh) continue;
-		let o = Dw[e] ?? 1.5, s = t.instanceMatrix.count, u = Math.min(n.length, s);
+		let o = Aw[e] ?? 1.5, s = t.instanceMatrix.count, u = Math.min(n.length, s);
 		t.count = u;
 		for (let i = 0; i < u; i++) {
 			let s = n[i], u = p(s.x, s.z), d = u < c + .005 || m(s.x, s.z) > o;
@@ -26968,8 +27073,8 @@ function Ow(e, t, { worldSize: n = 26, baseY: r = 0 } = {}) {
 		t.instanceMatrix.needsUpdate = !0, t.instanceColor && (t.instanceColor.needsUpdate = !0);
 	}
 }
-function kw({ terrain: e, seed: t, worldSize: n, baseY: r, biomeKeys: i, density: a, max: o }) {
-	let { placements: s, counts: c } = sw({
+function Mw({ terrain: e, seed: t, worldSize: n, baseY: r, biomeKeys: i, density: a, max: o }) {
+	let { placements: s, counts: c } = uw({
 		terrain: e,
 		seed: t,
 		worldSize: n,
@@ -26977,12 +27082,12 @@ function kw({ terrain: e, seed: t, worldSize: n, baseY: r, biomeKeys: i, density
 		biomeKeys: i,
 		density: a,
 		max: o
-	}), l = xw(s);
+	}), l = ww(s);
 	return l.userData.counts = c, l;
 }
 //#endregion
 //#region src/world-water.js
-function Aw(e, { worldSize: t = 26, baseY: n = 0, maxLakes: r = 3 } = {}) {
+function Nw(e, { worldSize: t = 26, baseY: n = 0, maxLakes: r = 3 } = {}) {
 	let { size: i, height: a, sea: o, relief: s, maxH: c } = e, l = Math.floor((i - 1) / 3), u = t / (i - 1), d = t / 2, f = (e, t) => a[t * 3 * i + e * 3], p = (e) => e * 3 * u - d, m = (e) => e * 3 * u - d, h = (e) => e > o + .02, g = o + .55 * Math.max(.001, c - o), _ = [];
 	for (let e = 2; e < l - 2; e++) for (let t = 2; t < l - 2; t++) {
 		let n = f(t, e);
@@ -27037,7 +27142,7 @@ function Aw(e, { worldSize: t = 26, baseY: n = 0, maxLakes: r = 3 } = {}) {
 	}
 	return y;
 }
-function jw(e, { material: t } = {}) {
+function Pw(e, { material: t } = {}) {
 	let n = new mr();
 	n.raycast = () => {};
 	let r = t || new tl({
@@ -27055,16 +27160,16 @@ function jw(e, { material: t } = {}) {
 		e.isMesh && e.geometry.dispose();
 	}), n.userData.count = e.length, n;
 }
-function Mw(e, t = {}) {
-	let n = Aw(e, t), r = jw(n, t);
+function Fw(e, t = {}) {
+	let n = Nw(e, t), r = Pw(n, t);
 	return r.userData.lakes = n, r;
 }
 //#endregion
 //#region src/shaders/flow-flux.frag
-var Nw = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;       \nuniform float uN;           \nuniform float uDt;          \nuniform float uFlow;        \nuniform float uDamp;        \n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN);          \n  float j = floor(uv.y * uN);          \n\n  float Wc = texture2D(uState, uv).r;\n  float Tc = texture2D(uTerr,  uv).r;\n  float hc = Tc + Wc;                   \n  vec4  fp = texture2D(uFlux,  uv);     \n\n  float l = 0.0, r = 0.0, b = 0.0, t = 0.0;\n  if (i > 0.5) {                                          \n    vec2 n = uv + vec2(-uTexel.x, 0.0);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    l = max(0.0, fp.r * uDamp + uDt * uFlow * (hc - hn));\n  }\n  if (i < uN - 1.5) {                                     \n    vec2 n = uv + vec2(uTexel.x, 0.0);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    r = max(0.0, fp.g * uDamp + uDt * uFlow * (hc - hn));\n  }\n  if (j > 0.5) {                                          \n    vec2 n = uv + vec2(0.0, -uTexel.y);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    b = max(0.0, fp.b * uDamp + uDt * uFlow * (hc - hn));\n  }\n  if (j < uN - 1.5) {                                     \n    vec2 n = uv + vec2(0.0, uTexel.y);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    t = max(0.0, fp.a * uDamp + uDt * uFlow * (hc - hn));\n  }\n\n  \n  float outv = (l + r + b + t) * uDt;\n  float k = outv > 1e-9 ? min(1.0, Wc / outv) : 1.0;\n  gl_FragColor = vec4(l * k, r * k, b * k, t * k);        \n}", Pw = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN;\nuniform float uDt;\nuniform float uSeaY;        \n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN);\n  float j = floor(uv.y * uN);\n\n  vec4 fc = texture2D(uFlux, uv);                 \n  float inflow = 0.0;\n  if (i > 0.5)      inflow += texture2D(uFlux, uv + vec2(-uTexel.x, 0.0)).g;  \n  if (i < uN - 1.5) inflow += texture2D(uFlux, uv + vec2( uTexel.x, 0.0)).r;  \n  if (j > 0.5)      inflow += texture2D(uFlux, uv + vec2(0.0, -uTexel.y)).a;  \n  if (j < uN - 1.5) inflow += texture2D(uFlux, uv + vec2(0.0,  uTexel.y)).b;  \n  float outflow = fc.r + fc.g + fc.b + fc.a;\n\n  vec4 st = texture2D(uState, uv);                \n  float Wn = st.r + uDt * (inflow - outflow);\n  if (Wn < 0.0) Wn = 0.0;\n  float Tc = texture2D(uTerr, uv).r;\n  if (Tc < uSeaY - 0.02) Wn = 0.0;               \n  gl_FragColor = vec4(Wn, st.g, 0.0, 0.0);        \n}", Fw = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform float uN;\nuniform float uSeaY;\nuniform float uRain;        \nuniform int   uPourCount;   \nuniform vec3  uPours[8];    \nuniform float uPourR[8];    \n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN);\n  float j = floor(uv.y * uN);\n  vec4 st = texture2D(uState, uv);\n  float Tc = texture2D(uTerr, uv).r;\n\n  float add = 0.0;\n  if (uRain > 0.0 && Tc > uSeaY) add += uRain;        \n  for (int p = 0; p < 8; p++) {\n    if (p >= uPourCount) break;\n    vec3 po = uPours[p];                              \n    float R = uPourR[p];\n    float d = length(vec2(i - po.x, j - po.y));\n    if (d <= R) add += po.z * (1.0 - d / R);          \n  }\n  gl_FragColor = vec4(st.r + add, st.g, 0.0, 0.0);\n}", Iw = "precision highp float;\nvarying vec2 vUv;\nuniform sampler2D uSrc;\nvoid main() { gl_FragColor = vec4(texture2D(uSrc, vUv).r, 0.0, 0.0, 0.0); }", Lw = "precision highp float;\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN, uDt, uCell, uSeaY;\nuniform float uKC, uKE, uKD, uMaxD, uMinDepth, uErosK;\n\nfloat erodeDelta(vec2 uv, float i, float j, float W, float S, float T) {\n  if (W <= uMinDepth) {                                   \n    return S > 0.0 ? min(uMaxD, uKD * S * uDt) : 0.0;\n  }\n  vec4 f = texture2D(uFlux, uv);\n  float tf = f.r + f.g + f.b + f.a;                       \n  float v = tf / (W + 0.02);\n  float hl = i > 0.5      ? texture2D(uTerr, uv + vec2(-uTexel.x, 0.0)).r : T;\n  float hr = i < uN - 1.5 ? texture2D(uTerr, uv + vec2( uTexel.x, 0.0)).r : T;\n  float hd = j > 0.5      ? texture2D(uTerr, uv + vec2(0.0, -uTexel.y)).r : T;\n  float hu = j < uN - 1.5 ? texture2D(uTerr, uv + vec2(0.0,  uTexel.y)).r : T;\n  float slope = min(2.0, length(vec2(hr - hl, hu - hd)) / (2.0 * uCell));\n  float cap = uKC * v * max(0.05, slope) * uErosK;        \n  if (cap > S) return -min(uMaxD, uKE * (cap - S) * uDt); \n  return            min(uMaxD, uKD * (S - cap) * uDt);    \n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN), j = floor(uv.y * uN);\n  vec2 st = texture2D(uState, uv).rg;                     \n  float T = texture2D(uTerr, uv).r;\n  float d = erodeDelta(uv, i, j, st.x, st.y, T);\n  gl_FragColor = vec4(T + d, 0.0, 0.0, 0.0);\n}", Rw = "precision highp float;\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN, uDt, uCell, uSeaY;\nuniform float uKC, uKE, uKD, uMaxD, uMinDepth, uErosK;\n\nfloat erodeDelta(vec2 uv, float i, float j, float W, float S, float T) {\n  if (W <= uMinDepth) {\n    return S > 0.0 ? min(uMaxD, uKD * S * uDt) : 0.0;\n  }\n  vec4 f = texture2D(uFlux, uv);\n  float tf = f.r + f.g + f.b + f.a;\n  float v = tf / (W + 0.02);\n  float hl = i > 0.5      ? texture2D(uTerr, uv + vec2(-uTexel.x, 0.0)).r : T;\n  float hr = i < uN - 1.5 ? texture2D(uTerr, uv + vec2( uTexel.x, 0.0)).r : T;\n  float hd = j > 0.5      ? texture2D(uTerr, uv + vec2(0.0, -uTexel.y)).r : T;\n  float hu = j < uN - 1.5 ? texture2D(uTerr, uv + vec2(0.0,  uTexel.y)).r : T;\n  float slope = min(2.0, length(vec2(hr - hl, hu - hd)) / (2.0 * uCell));\n  float cap = uKC * v * max(0.05, slope) * uErosK;\n  if (cap > S) return -min(uMaxD, uKE * (cap - S) * uDt);\n  return            min(uMaxD, uKD * (S - cap) * uDt);\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN), j = floor(uv.y * uN);\n  vec2 st = texture2D(uState, uv).rg;                     \n  float T = texture2D(uTerr, uv).r;\n  float d = erodeDelta(uv, i, j, st.x, st.y, T);\n  float Snew = st.y - d;                                  \n  if (Snew < 0.0) Snew = 0.0;\n  gl_FragColor = vec4(st.x, Snew, 0.0, 0.0);              \n}", zw = "precision highp float;\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN, uDt, uSeaY, uKADV;\n\nfloat moveOut(float S, vec4 f) {                          \n  float tot = f.r + f.g + f.b + f.a;\n  return (tot > 1e-9 && S > 1e-9) ? min(S, S * uKADV * uDt) : 0.0;\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN), j = floor(uv.y * uN);\n  vec2 st = texture2D(uState, uv).rg;                     \n  vec4 fc = texture2D(uFlux, uv);\n  float out_ = moveOut(st.y, fc);\n\n  float inflow = 0.0;\n  if (i < uN - 1.5) {                                     \n    vec2 n = uv + vec2(uTexel.x, 0.0); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.r / tn;\n  }\n  if (i > 0.5) {                                          \n    vec2 n = uv + vec2(-uTexel.x, 0.0); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.g / tn;\n  }\n  if (j < uN - 1.5) {                                     \n    vec2 n = uv + vec2(0.0, uTexel.y); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.b / tn;\n  }\n  if (j > 0.5) {                                          \n    vec2 n = uv + vec2(0.0, -uTexel.y); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.a / tn;\n  }\n\n  float Snew = st.y - out_ + inflow;\n  if (Snew < 0.0) Snew = 0.0;\n  if (texture2D(uTerr, uv).r < uSeaY - 0.02) Snew = 0.0;  \n  gl_FragColor = vec4(st.x, Snew, 0.0, 0.0);\n}";
+var Iw = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;       \nuniform float uN;           \nuniform float uDt;          \nuniform float uFlow;        \nuniform float uDamp;        \n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN);          \n  float j = floor(uv.y * uN);          \n\n  float Wc = texture2D(uState, uv).r;\n  float Tc = texture2D(uTerr,  uv).r;\n  float hc = Tc + Wc;                   \n  vec4  fp = texture2D(uFlux,  uv);     \n\n  float l = 0.0, r = 0.0, b = 0.0, t = 0.0;\n  if (i > 0.5) {                                          \n    vec2 n = uv + vec2(-uTexel.x, 0.0);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    l = max(0.0, fp.r * uDamp + uDt * uFlow * (hc - hn));\n  }\n  if (i < uN - 1.5) {                                     \n    vec2 n = uv + vec2(uTexel.x, 0.0);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    r = max(0.0, fp.g * uDamp + uDt * uFlow * (hc - hn));\n  }\n  if (j > 0.5) {                                          \n    vec2 n = uv + vec2(0.0, -uTexel.y);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    b = max(0.0, fp.b * uDamp + uDt * uFlow * (hc - hn));\n  }\n  if (j < uN - 1.5) {                                     \n    vec2 n = uv + vec2(0.0, uTexel.y);\n    float hn = texture2D(uTerr, n).r + texture2D(uState, n).r;\n    t = max(0.0, fp.a * uDamp + uDt * uFlow * (hc - hn));\n  }\n\n  \n  float outv = (l + r + b + t) * uDt;\n  float k = outv > 1e-9 ? min(1.0, Wc / outv) : 1.0;\n  gl_FragColor = vec4(l * k, r * k, b * k, t * k);        \n}", Lw = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN;\nuniform float uDt;\nuniform float uSeaY;        \n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN);\n  float j = floor(uv.y * uN);\n\n  vec4 fc = texture2D(uFlux, uv);                 \n  float inflow = 0.0;\n  if (i > 0.5)      inflow += texture2D(uFlux, uv + vec2(-uTexel.x, 0.0)).g;  \n  if (i < uN - 1.5) inflow += texture2D(uFlux, uv + vec2( uTexel.x, 0.0)).r;  \n  if (j > 0.5)      inflow += texture2D(uFlux, uv + vec2(0.0, -uTexel.y)).a;  \n  if (j < uN - 1.5) inflow += texture2D(uFlux, uv + vec2(0.0,  uTexel.y)).b;  \n  float outflow = fc.r + fc.g + fc.b + fc.a;\n\n  vec4 st = texture2D(uState, uv);                \n  float Wn = st.r + uDt * (inflow - outflow);\n  if (Wn < 0.0) Wn = 0.0;\n  float Tc = texture2D(uTerr, uv).r;\n  if (Tc < uSeaY - 0.02) Wn = 0.0;               \n  gl_FragColor = vec4(Wn, st.g, 0.0, 0.0);        \n}", Rw = "precision highp float;\n\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform float uN;\nuniform float uSeaY;\nuniform float uRain;        \nuniform int   uPourCount;   \nuniform vec3  uPours[8];    \nuniform float uPourR[8];    \n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN);\n  float j = floor(uv.y * uN);\n  vec4 st = texture2D(uState, uv);\n  float Tc = texture2D(uTerr, uv).r;\n\n  float add = 0.0;\n  if (uRain > 0.0 && Tc > uSeaY) add += uRain;        \n  for (int p = 0; p < 8; p++) {\n    if (p >= uPourCount) break;\n    vec3 po = uPours[p];                              \n    float R = uPourR[p];\n    float d = length(vec2(i - po.x, j - po.y));\n    if (d <= R) add += po.z * (1.0 - d / R);          \n  }\n  gl_FragColor = vec4(st.r + add, st.g, 0.0, 0.0);\n}", zw = "precision highp float;\nvarying vec2 vUv;\nuniform sampler2D uSrc;\nvoid main() { gl_FragColor = vec4(texture2D(uSrc, vUv).r, 0.0, 0.0, 0.0); }", Bw = "precision highp float;\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN, uDt, uCell, uSeaY;\nuniform float uKC, uKE, uKD, uMaxD, uMinDepth, uErosK;\n\nfloat erodeDelta(vec2 uv, float i, float j, float W, float S, float T) {\n  if (W <= uMinDepth) {                                   \n    return S > 0.0 ? min(uMaxD, uKD * S * uDt) : 0.0;\n  }\n  vec4 f = texture2D(uFlux, uv);\n  float tf = f.r + f.g + f.b + f.a;                       \n  float v = tf / (W + 0.02);\n  float hl = i > 0.5      ? texture2D(uTerr, uv + vec2(-uTexel.x, 0.0)).r : T;\n  float hr = i < uN - 1.5 ? texture2D(uTerr, uv + vec2( uTexel.x, 0.0)).r : T;\n  float hd = j > 0.5      ? texture2D(uTerr, uv + vec2(0.0, -uTexel.y)).r : T;\n  float hu = j < uN - 1.5 ? texture2D(uTerr, uv + vec2(0.0,  uTexel.y)).r : T;\n  float slope = min(2.0, length(vec2(hr - hl, hu - hd)) / (2.0 * uCell));\n  float cap = uKC * v * max(0.05, slope) * uErosK;        \n  if (cap > S) return -min(uMaxD, uKE * (cap - S) * uDt); \n  return            min(uMaxD, uKD * (S - cap) * uDt);    \n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN), j = floor(uv.y * uN);\n  vec2 st = texture2D(uState, uv).rg;                     \n  float T = texture2D(uTerr, uv).r;\n  float d = erodeDelta(uv, i, j, st.x, st.y, T);\n  gl_FragColor = vec4(T + d, 0.0, 0.0, 0.0);\n}", Vw = "precision highp float;\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN, uDt, uCell, uSeaY;\nuniform float uKC, uKE, uKD, uMaxD, uMinDepth, uErosK;\n\nfloat erodeDelta(vec2 uv, float i, float j, float W, float S, float T) {\n  if (W <= uMinDepth) {\n    return S > 0.0 ? min(uMaxD, uKD * S * uDt) : 0.0;\n  }\n  vec4 f = texture2D(uFlux, uv);\n  float tf = f.r + f.g + f.b + f.a;\n  float v = tf / (W + 0.02);\n  float hl = i > 0.5      ? texture2D(uTerr, uv + vec2(-uTexel.x, 0.0)).r : T;\n  float hr = i < uN - 1.5 ? texture2D(uTerr, uv + vec2( uTexel.x, 0.0)).r : T;\n  float hd = j > 0.5      ? texture2D(uTerr, uv + vec2(0.0, -uTexel.y)).r : T;\n  float hu = j < uN - 1.5 ? texture2D(uTerr, uv + vec2(0.0,  uTexel.y)).r : T;\n  float slope = min(2.0, length(vec2(hr - hl, hu - hd)) / (2.0 * uCell));\n  float cap = uKC * v * max(0.05, slope) * uErosK;\n  if (cap > S) return -min(uMaxD, uKE * (cap - S) * uDt);\n  return            min(uMaxD, uKD * (S - cap) * uDt);\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN), j = floor(uv.y * uN);\n  vec2 st = texture2D(uState, uv).rg;                     \n  float T = texture2D(uTerr, uv).r;\n  float d = erodeDelta(uv, i, j, st.x, st.y, T);\n  float Snew = st.y - d;                                  \n  if (Snew < 0.0) Snew = 0.0;\n  gl_FragColor = vec4(st.x, Snew, 0.0, 0.0);              \n}", Hw = "precision highp float;\nvarying vec2 vUv;\n\nuniform sampler2D uState;   \nuniform sampler2D uTerr;    \nuniform sampler2D uFlux;    \nuniform vec2  uTexel;\nuniform float uN, uDt, uSeaY, uKADV;\n\nfloat moveOut(float S, vec4 f) {                          \n  float tot = f.r + f.g + f.b + f.a;\n  return (tot > 1e-9 && S > 1e-9) ? min(S, S * uKADV * uDt) : 0.0;\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float i = floor(uv.x * uN), j = floor(uv.y * uN);\n  vec2 st = texture2D(uState, uv).rg;                     \n  vec4 fc = texture2D(uFlux, uv);\n  float out_ = moveOut(st.y, fc);\n\n  float inflow = 0.0;\n  if (i < uN - 1.5) {                                     \n    vec2 n = uv + vec2(uTexel.x, 0.0); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.r / tn;\n  }\n  if (i > 0.5) {                                          \n    vec2 n = uv + vec2(-uTexel.x, 0.0); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.g / tn;\n  }\n  if (j < uN - 1.5) {                                     \n    vec2 n = uv + vec2(0.0, uTexel.y); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.b / tn;\n  }\n  if (j > 0.5) {                                          \n    vec2 n = uv + vec2(0.0, -uTexel.y); vec4 fn = texture2D(uFlux, n); float Sn = texture2D(uState, n).g;\n    float tn = fn.r + fn.g + fn.b + fn.a; if (tn > 1e-9) inflow += moveOut(Sn, fn) * fn.a / tn;\n  }\n\n  float Snew = st.y - out_ + inflow;\n  if (Snew < 0.0) Snew = 0.0;\n  if (texture2D(uTerr, uv).r < uSeaY - 0.02) Snew = 0.0;  \n  gl_FragColor = vec4(st.x, Snew, 0.0, 0.0);\n}";
 //#endregion
 //#region src/water-flow-gpu.js
-function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FLOW: o, DAMP: c, MIN_DEPTH: u, KC: d, KE: f, KD: p, KADV: m, MAXD: h, readTerrain: g }) {
+function Uw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FLOW: o, DAMP: c, MIN_DEPTH: u, KC: d, KE: f, KD: p, KADV: m, MAXD: h, readTerrain: g }) {
 	let _ = e.getContext();
 	if (!(_ && _.getExtension && _.getExtension("EXT_color_buffer_float"))) return typeof console < "u" && console.warn("[L87] EXT_color_buffer_float unavailable — GPU flow backend cannot run; staying on CPU."), null;
 	let v = {
@@ -27084,7 +27189,7 @@ function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FL
 		vertexShader: d_,
 		fragmentShader: e,
 		uniforms: t
-	}), F = N(Nw, {
+	}), F = N(Iw, {
 		uState: { value: null },
 		uTerr: { value: null },
 		uFlux: { value: null },
@@ -27093,7 +27198,7 @@ function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FL
 		uDt: { value: 0 },
 		uFlow: { value: o },
 		uDamp: { value: c }
-	}), I = N(Pw, {
+	}), I = N(Lw, {
 		uState: { value: null },
 		uTerr: { value: null },
 		uFlux: { value: null },
@@ -27101,7 +27206,7 @@ function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FL
 		uN: { value: t },
 		uDt: { value: 0 },
 		uSeaY: { value: a }
-	}), L = N(Fw, {
+	}), L = N(Rw, {
 		uState: { value: null },
 		uTerr: { value: null },
 		uN: { value: t },
@@ -27110,7 +27215,7 @@ function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FL
 		uPourCount: { value: 0 },
 		uPours: { value: Array.from({ length: 8 }, () => new K()) },
 		uPourR: { value: new Float32Array(8) }
-	}), R = N(Iw, { uSrc: { value: C } }), z = () => ({
+	}), R = N(zw, { uSrc: { value: C } }), z = () => ({
 		uState: { value: null },
 		uTerr: { value: null },
 		uFlux: { value: null },
@@ -27125,7 +27230,7 @@ function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FL
 		uMaxD: { value: h },
 		uMinDepth: { value: u },
 		uErosK: { value: D }
-	}), ee = N(Lw, z()), te = N(Rw, z()), ne = N(zw, {
+	}), ee = N(Bw, z()), te = N(Vw, z()), ne = N(Hw, {
 		uState: { value: null },
 		uTerr: { value: null },
 		uFlux: { value: null },
@@ -27269,7 +27374,7 @@ function Bw({ renderer: e, N: t, cell: n, half: r, worldSize: i, seaY: a = 0, FL
 }
 //#endregion
 //#region src/water-flow.js
-function Vw({ worldHeightAt: e, applyErosion: t = null, syncErodedTerrain: n = null, worldSize: r = 26, grid: i = 96, seaY: a = 0, renderer: o = null } = {}) {
+function Ww({ worldHeightAt: e, applyErosion: t = null, syncErodedTerrain: n = null, worldSize: r = 26, grid: i = 96, seaY: a = 0, renderer: o = null } = {}) {
 	let s = i, c = new Float32Array(s * s), l = new Float32Array(s * s), u = new Float32Array(s * s), d = new Float32Array(s * s), f = new Float32Array(s * s), p = new Float32Array(s * s), m = new Float32Array(s * s), h = new Float32Array(s * s), g = new Float32Array(s * s), _ = !1, v = 1, y = r / (s - 1), b = r / 2, x = e || (() => 0), S = (e) => e * y - b, C = (e) => e * y - b, w = (e, t) => t * s + e, T = 26 * y, E = .9, D = .006, O = .5, k = .25, A = .3, j = .006;
 	function M() {
 		for (let e = 0; e < s; e++) for (let t = 0; t < s; t++) p[w(t, e)] = x(S(t), C(e));
@@ -27280,7 +27385,7 @@ function Vw({ worldHeightAt: e, applyErosion: t = null, syncErodedTerrain: n = n
 		for (let t = 0; t < s * s; t++) e[t] = p[t];
 	}
 	function R() {
-		return P || !o ? P : (P = Bw({
+		return P || !o ? P : (P = Uw({
 			renderer: o,
 			N: s,
 			cell: y,
@@ -27475,7 +27580,7 @@ function Vw({ worldHeightAt: e, applyErosion: t = null, syncErodedTerrain: n = n
 }
 //#endregion
 //#region src/catalog.js
-function Hw() {
+function Gw() {
 	let e = /* @__PURE__ */ new Map(), t = {
 		register(n) {
 			return !n || !n.id ? t : (n.art = n.art || {}, n.defaults = n.defaults || {}, e.set(n.id, n), t);
@@ -27509,10 +27614,10 @@ function Hw() {
 	};
 	return t;
 }
-function Uw(e = Hw()) {
+function Kw(e = Gw()) {
 	return Tv.forEach((t, n) => e.register({
 		id: `mat-${t.key}`,
-		label: Ww(t.key),
+		label: qw(t.key),
 		kind: "material",
 		group: "Terrain",
 		defaults: { colorIndex: n },
@@ -27670,7 +27775,7 @@ function Uw(e = Hw()) {
 		}
 	]), e;
 }
-var Ww = (e) => e.charAt(0).toUpperCase() + e.slice(1), Gw = class e extends Z {
+var qw = (e) => e.charAt(0).toUpperCase() + e.slice(1), Jw = class e extends Z {
 	constructor() {
 		let t = e.SkyShader, n = new $c({
 			name: t.name,
@@ -27683,7 +27788,7 @@ var Ww = (e) => e.charAt(0).toUpperCase() + e.slice(1), Gw = class e extends Z {
 		super(new es(1, 1, 1), n), this.isSky = !0;
 	}
 };
-Gw.SkyShader = {
+Jw.SkyShader = {
 	name: "SkyShader",
 	uniforms: {
 		turbidity: { value: 2 },
@@ -27705,8 +27810,8 @@ Gw.SkyShader = {
 };
 //#endregion
 //#region src/sky-atmosphere.js
-function Kw({ scale: e = 90 } = {}) {
-	let t = new Gw();
+function Yw({ scale: e = 90 } = {}) {
+	let t = new Jw();
 	t.scale.setScalar(e), t.frustumCulled = !1, t.raycast = () => {}, t.visible = !1;
 	let n = t.material.uniforms;
 	n.turbidity.value = 2.2, n.rayleigh.value = 1.3, n.mieCoefficient.value = .005, n.mieDirectionalG.value = .78, n.showSunDisc.value = 0;
@@ -27719,7 +27824,7 @@ function Kw({ scale: e = 90 } = {}) {
 	let a = null, o = null, s = null, c = null;
 	function l(t) {
 		if (typeof document > "u" || !t) return null;
-		a || (a = new ep(t), o = new wr(), s = new Gw(), s.scale.setScalar(e), o.add(s));
+		a || (a = new ep(t), o = new wr(), s = new Jw(), s.scale.setScalar(e), o.add(s));
 		let r = s.material.uniforms;
 		return r.turbidity.value = n.turbidity.value, r.rayleigh.value = n.rayleigh.value, r.mieCoefficient.value = n.mieCoefficient.value, r.mieDirectionalG.value = n.mieDirectionalG.value, r.sunPosition.value.copy(n.sunPosition.value), c && c.dispose(), c = a.fromScene(o), c.texture;
 	}
@@ -27735,7 +27840,7 @@ function Kw({ scale: e = 90 } = {}) {
 }
 //#endregion
 //#region src/audio-bus.js
-function qw() {
+function Xw() {
 	let e = typeof window < "u" && (window.AudioContext || window.webkitAudioContext);
 	if (!e) return null;
 	let t = null, n = null, r = !1, i = !1, a = /* @__PURE__ */ new Map();
@@ -27783,7 +27888,7 @@ function qw() {
 }
 //#endregion
 //#region src/ambient-bed.js
-function Jw(e, { preset: t = 1 } = {}) {
+function Zw(e, { preset: t = 1 } = {}) {
 	let n = null;
 	function r(e, t) {
 		let n = e.createGain();
@@ -27910,12 +28015,12 @@ function Jw(e, { preset: t = 1 } = {}) {
 }
 //#endregion
 //#region src/positional-field.js
-var Yw = 3;
-function Xw(e, t) {
+var Qw = 3;
+function $w(e, t) {
 	let n = null, r = !1, i = [], a = [], o = [], s = new K();
 	function c() {
 		Mu.setContext(e.context), n = new Yu(), t.add(n);
-		for (let e = 0; e < Yw; e++) {
+		for (let e = 0; e < Qw; e++) {
 			let e = new pr(), t = new td(n);
 			t.panner.panningModel = "equalpower", e.add(t), a.push({
 				dummy: e,
@@ -27978,7 +28083,7 @@ function Xw(e, t) {
 		o.sort((e, t) => e._dist2 - t._dist2);
 		let e = (e) => e.maxDistance * e.maxDistance;
 		for (let t = 0; t < o.length; t++) {
-			let n = o[t], r = n._active && t < Yw && n._dist2 < e(n);
+			let n = o[t], r = n._active && t < Qw && n._dist2 < e(n);
 			r && n._slot === null && l(n), !r && n._slot !== null && u(n), n._slot !== null && (a[n._slot].dummy.position.copy(n._posVec), a[n._slot].dummy.updateMatrixWorld());
 		}
 	}
@@ -27991,8 +28096,8 @@ function Xw(e, t) {
 }
 //#endregion
 //#region src/rotor.js
-var Zw = new K();
-function Qw(e, t, { getThrottle: n, getAltitude: r, getWorldPos: i }) {
+var eT = new K();
+function tT(e, t, { getThrottle: n, getAltitude: r, getWorldPos: i }) {
 	let a = null, o = null, s = null, c = null, l = null;
 	function u() {
 		let n = e.context, r = t.getListener();
@@ -28011,7 +28116,7 @@ function Qw(e, t, { getThrottle: n, getAltitude: r, getWorldPos: i }) {
 	}
 	function d(t) {
 		if (!a) return;
-		i(Zw), o.position.copy(Zw), o.updateMatrixWorld();
+		i(eT), o.position.copy(eT), o.updateMatrixWorld();
 		let r = Math.max(0, Math.min(1, n())), l = r > .005 ? .18 + r * .28 : 0, u = 14 + r * 8, d = e.context;
 		if (!d) return;
 		let f = d.currentTime;
@@ -28034,7 +28139,7 @@ function Qw(e, t, { getThrottle: n, getAltitude: r, getWorldPos: i }) {
 }
 //#endregion
 //#region src/graph-spec.js
-var $w = 1, eT = [
+var nT = 1, rT = [
 	"hub",
 	"live-ops",
 	"doctrine",
@@ -28042,14 +28147,14 @@ var $w = 1, eT = [
 	"learning",
 	"ops",
 	"site"
-], tT = [
+], iT = [
 	"links-to",
 	"depends-on",
 	"explains",
 	"built-by",
 	"derived-from"
-], nT = 1500;
-function rT(e, { slowMs: t = nT } = {}) {
+], aT = 1500;
+function oT(e, { slowMs: t = aT } = {}) {
 	if (!e || e.checked === !1 || e.httpCode == null && !e.timedOut && !e.error) return "unknown";
 	if (e.timedOut || e.error) return "red";
 	let n = Number(e.httpCode);
@@ -28061,41 +28166,41 @@ function rT(e, { slowMs: t = nT } = {}) {
 	}
 	return "unknown";
 }
-var iT = {
+var sT = {
 	red: 4,
 	working: 3,
 	unknown: 2,
 	green: 1,
 	stale: 3
 };
-function aT(e = []) {
+function cT(e = []) {
 	let t = null, n = 0;
 	for (let r of e) {
-		let e = iT[r] || 0;
+		let e = sT[r] || 0;
 		e > n && (n = e, t = r);
 	}
 	return t || "unknown";
 }
-var oT = [
+var lT = [
 	"bubble-sort",
 	"binary-search",
 	"merge-sort",
 	"quick-sort",
 	"heap-sort"
-], sT = ["binary-search-tree", "binary-heap"], cT = [
+], uT = ["binary-search-tree", "binary-heap"], dT = [
 	"green",
 	"working",
 	"stale",
 	"red",
 	"unknown"
-], lT = new Set([
+], fT = new Set([
 	"v",
 	"nodes",
 	"edges"
-]), uT = (e) => typeof e == "object" && !!e && !Array.isArray(e), dT = (e) => typeof e == "string" && e.length > 0;
-function fT(e) {
+]), pT = (e) => typeof e == "object" && !!e && !Array.isArray(e), mT = (e) => typeof e == "string" && e.length > 0;
+function hT(e) {
 	let t = [];
-	if (!uT(e)) return {
+	if (!pT(e)) return {
 		ok: !1,
 		errors: ["spec must be a plain object"],
 		unknownSections: []
@@ -28103,15 +28208,15 @@ function fT(e) {
 	e.v !== 1 && t.push(`v must be 1 (got ${JSON.stringify(e.v)}) — a different version needs its own loader`);
 	let n = /* @__PURE__ */ new Set();
 	Array.isArray(e.nodes) ? e.nodes.forEach((e, r) => {
-		if (!uT(e)) {
+		if (!pT(e)) {
 			t.push(`nodes[${r}] must be an object`);
 			return;
 		}
-		if (!dT(e.id)) {
+		if (!mT(e.id)) {
 			t.push(`nodes[${r}].id must be a non-empty string`);
 			return;
 		}
-		if (n.has(e.id) && t.push(`nodes[${r}].id "${e.id}" is a duplicate (ids must be unique)`), n.add(e.id), "label" in e && typeof e.label != "string" && t.push(`nodes[${r}] (${e.id}).label must be a string`), "kind" in e && !eT.includes(e.kind) && t.push(`nodes[${r}] (${e.id}).kind must be one of ${eT.join("|")}`), "type" in e && typeof e.type != "string" && t.push(`nodes[${r}] (${e.id}).type must be a string`), "group" in e && typeof e.group != "string" && t.push(`nodes[${r}] (${e.id}).group must be a string`), "href" in e && typeof e.href != "string" && t.push(`nodes[${r}] (${e.id}).href must be a string`), "weight" in e && !Number.isFinite(e.weight) && t.push(`nodes[${r}] (${e.id}).weight must be a finite number`), "batch" in e && typeof e.batch != "boolean" && t.push(`nodes[${r}] (${e.id}).batch must be a boolean`), "state" in e && !cT.includes(e.state) && t.push(`nodes[${r}] (${e.id}).state must be one of ${cT.join("|")}`), "algorithm" in e && (!uT(e.algorithm) || !dT(e.algorithm.kind) ? t.push(`nodes[${r}] (${e.id}).algorithm must be an object with a non-empty kind`) : oT.includes(e.algorithm.kind) || t.push(`nodes[${r}] (${e.id}).algorithm.kind "${e.algorithm.kind}" is not runnable (have: ${oT.join("|")})`), "input" in e.algorithm && !Array.isArray(e.algorithm.input) && t.push(`nodes[${r}] (${e.id}).algorithm.input must be an array`)), "structure" in e && (!uT(e.structure) || !dT(e.structure.kind) ? t.push(`nodes[${r}] (${e.id}).structure must be an object with a non-empty kind`) : sT.includes(e.structure.kind) || t.push(`nodes[${r}] (${e.id}).structure.kind "${e.structure.kind}" is not runnable (have: ${sT.join("|")})`), "inserts" in e.structure && !Array.isArray(e.structure.inserts) && t.push(`nodes[${r}] (${e.id}).structure.inserts must be an array`)), "launch" in e && (!uT(e.launch) || !dT(e.launch.url) || !dT(e.launch.label)) && t.push(`nodes[${r}] (${e.id}).launch must be an object with a non-empty url and label`), "media" in e) if (!uT(e.media)) t.push(`nodes[${r}] (${e.id}).media must be an object`);
+		if (n.has(e.id) && t.push(`nodes[${r}].id "${e.id}" is a duplicate (ids must be unique)`), n.add(e.id), "label" in e && typeof e.label != "string" && t.push(`nodes[${r}] (${e.id}).label must be a string`), "kind" in e && !rT.includes(e.kind) && t.push(`nodes[${r}] (${e.id}).kind must be one of ${rT.join("|")}`), "type" in e && typeof e.type != "string" && t.push(`nodes[${r}] (${e.id}).type must be a string`), "group" in e && typeof e.group != "string" && t.push(`nodes[${r}] (${e.id}).group must be a string`), "href" in e && typeof e.href != "string" && t.push(`nodes[${r}] (${e.id}).href must be a string`), "weight" in e && !Number.isFinite(e.weight) && t.push(`nodes[${r}] (${e.id}).weight must be a finite number`), "batch" in e && typeof e.batch != "boolean" && t.push(`nodes[${r}] (${e.id}).batch must be a boolean`), "state" in e && !dT.includes(e.state) && t.push(`nodes[${r}] (${e.id}).state must be one of ${dT.join("|")}`), "algorithm" in e && (!pT(e.algorithm) || !mT(e.algorithm.kind) ? t.push(`nodes[${r}] (${e.id}).algorithm must be an object with a non-empty kind`) : lT.includes(e.algorithm.kind) || t.push(`nodes[${r}] (${e.id}).algorithm.kind "${e.algorithm.kind}" is not runnable (have: ${lT.join("|")})`), "input" in e.algorithm && !Array.isArray(e.algorithm.input) && t.push(`nodes[${r}] (${e.id}).algorithm.input must be an array`)), "structure" in e && (!pT(e.structure) || !mT(e.structure.kind) ? t.push(`nodes[${r}] (${e.id}).structure must be an object with a non-empty kind`) : uT.includes(e.structure.kind) || t.push(`nodes[${r}] (${e.id}).structure.kind "${e.structure.kind}" is not runnable (have: ${uT.join("|")})`), "inserts" in e.structure && !Array.isArray(e.structure.inserts) && t.push(`nodes[${r}] (${e.id}).structure.inserts must be an array`)), "launch" in e && (!pT(e.launch) || !mT(e.launch.url) || !mT(e.launch.label)) && t.push(`nodes[${r}] (${e.id}).launch must be an object with a non-empty url and label`), "media" in e) if (!pT(e.media)) t.push(`nodes[${r}] (${e.id}).media must be an object`);
 		else for (let n of [
 			"figma",
 			"pdf",
@@ -28122,34 +28227,34 @@ function fT(e) {
 		]) n in e.media && typeof e.media[n] != "boolean" && t.push(`nodes[${r}] (${e.id}).media.${n} must be a boolean`);
 		"ageDays" in e && (!Number.isFinite(e.ageDays) || e.ageDays < 0) && t.push(`nodes[${r}] (${e.id}).ageDays must be a finite number >= 0`);
 	}) : t.push("nodes must be an array"), Array.isArray(e.edges) ? e.edges.forEach((r, i) => {
-		if (!uT(r)) {
+		if (!pT(r)) {
 			t.push(`edges[${i}] must be an object`);
 			return;
 		}
 		for (let a of ["from", "to"]) {
-			if (!dT(r[a])) {
+			if (!mT(r[a])) {
 				t.push(`edges[${i}].${a} must be a non-empty string`);
 				continue;
 			}
 			Array.isArray(e.nodes) && !n.has(r[a]) && t.push(`edges[${i}].${a} "${r[a]}" references no node (dangling edge)`);
 		}
-		"rel" in r && !tT.includes(r.rel) && t.push(`edges[${i}].rel must be one of ${tT.join("|")}`), "weight" in r && !Number.isFinite(r.weight) && t.push(`edges[${i}].weight must be a finite number`);
+		"rel" in r && !iT.includes(r.rel) && t.push(`edges[${i}].rel must be one of ${iT.join("|")}`), "weight" in r && !Number.isFinite(r.weight) && t.push(`edges[${i}].weight must be a finite number`);
 	}) : t.push("edges must be an array");
-	let r = Object.keys(e).filter((e) => !lT.has(e));
+	let r = Object.keys(e).filter((e) => !fT.has(e));
 	return {
 		ok: t.length === 0,
 		errors: t,
 		unknownSections: r
 	};
 }
-var pT = 7;
-function mT(e, t = 7) {
+var gT = 7;
+function _T(e, t = 7) {
 	if (!Number.isFinite(e) || e < 0 || !Number.isFinite(t) || t <= 0) return 0;
 	let n = Math.exp(-e / t);
 	return n < .02 ? 0 : n;
 }
-var hT = 5e3;
-function gT(e, { deepChars: t = hT } = {}) {
+var vT = 5e3;
+function yT(e, { deepChars: t = vT } = {}) {
 	let n = Array.isArray(e && e.assets) ? e.assets : [];
 	return {
 		figma: !!(e && Array.isArray(e.figmaAssets) && e.figmaAssets.length),
@@ -28160,38 +28265,38 @@ function gT(e, { deepChars: t = hT } = {}) {
 		launch: !!(e && e.launch && typeof e.launch.url == "string")
 	};
 }
-var _T = [
+var bT = [
 	"rocket",
 	"play",
 	"frame",
 	"page",
 	"book"
 ];
-function vT(e) {
+function xT(e) {
 	return e ? e.launch ? "rocket" : e.interactive ? "play" : e.figma || e.img ? "frame" : e.pdf ? "page" : e.deep ? "book" : null : null;
 }
-function yT(e) {
-	let t = vT(e);
-	return t ? _T.indexOf(t) + 1 : 0;
+function ST(e) {
+	let t = xT(e);
+	return t ? bT.indexOf(t) + 1 : 0;
 }
-function bT(e) {
+function CT(e) {
 	return !!(e && (e.figma || e.pdf || e.img || e.deep || e.interactive || e.launch));
 }
-function xT(e) {
+function wT(e) {
 	let t = /* @__PURE__ */ new Map();
 	if (e && Array.isArray(e.nodes)) for (let n of e.nodes) n && n.id && t.set(n.id, n);
 	return t;
 }
 //#endregion
 //#region src/graph-layout.js
-var ST = {
+var TT = {
 	ops: 2,
 	"live-ops": 4,
 	doctrine: 8,
 	initiative: 12,
 	learning: 14
-}, CT = 16;
-function wT(e, { kind: t = "radial", rings: n = ST, fallbackRadius: r = CT } = {}) {
+}, ET = 16;
+function DT(e, { kind: t = "radial", rings: n = TT, fallbackRadius: r = ET } = {}) {
 	if (t !== "radial") throw Error(`createGraphLayout: unknown layout kind "${t}" (v1 supports 'radial')`);
 	let i = /* @__PURE__ */ new Map(), a = e && Array.isArray(e.nodes) ? e.nodes : [], o = /* @__PURE__ */ new Map();
 	for (let e of a) {
@@ -28223,7 +28328,7 @@ function wT(e, { kind: t = "radial", rings: n = ST, fallbackRadius: r = CT } = {
 }
 //#endregion
 //#region src/ingest-vault.js
-function TT(e) {
+function OT(e) {
 	let t = {}, n = /^---\n([\s\S]*?)\n---/.exec(e);
 	if (!n) return t;
 	let r = n[1], i = /^name:\s*(.+)$/m.exec(r);
@@ -28233,7 +28338,7 @@ function TT(e) {
 	let o = /kind\/([a-z0-9-]+)/i.exec(r);
 	return o && (t.kind = o[1]), t;
 }
-function ET(e) {
+function kT(e) {
 	let t = e.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, ""), n = [], r = /* @__PURE__ */ new Set(), i = /\[\[([^\]]+)\]\]/g, a;
 	for (; (a = i.exec(t)) !== null;) {
 		let e = a[1].split("|")[0].trim();
@@ -28241,7 +28346,7 @@ function ET(e) {
 	}
 	return n;
 }
-function DT(e) {
+function AT(e) {
 	let t = e.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, ""), n = [], r = /* @__PURE__ */ new Set(), i = /\[[^\]]*\]\(([^)\s]+)\)/g, a;
 	for (; (a = i.exec(t)) !== null;) {
 		let e = a[1].split("#")[0].trim();
@@ -28251,8 +28356,8 @@ function DT(e) {
 	}
 	return n;
 }
-function OT(e, t, { href: n } = {}) {
-	let r = TT(t), i = e === "MEMORY", a = {
+function jT(e, t, { href: n } = {}) {
+	let r = OT(t), i = e === "MEMORY", a = {
 		id: e,
 		label: i ? "MEMORY" : r.name || e,
 		kind: i ? "hub" : r.kind,
@@ -28260,14 +28365,14 @@ function OT(e, t, { href: n } = {}) {
 		href: n || `${e}.md`
 	};
 	a.kind ?? delete a.kind, a.type ?? delete a.type;
-	let o = ET(t);
-	if (i) for (let e of DT(t)) o.includes(e) || o.push(e);
+	let o = kT(t);
+	if (i) for (let e of AT(t)) o.includes(e) || o.push(e);
 	return {
 		node: a,
 		links: o
 	};
 }
-function kT(e, t = 220) {
+function MT(e, t = 220) {
 	let n = e.replace(/^---\n[\s\S]*?\n---/, "").split(/\n\s*\n/).map((e) => e.trim()).find((e) => e && !e.startsWith("#"));
 	if (!n) return "";
 	let r = n.replace(/\[\[([^\]|]+)(\|([^\]]+))?\]\]/g, (e, t, n, r) => r || t).replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();
@@ -28275,10 +28380,10 @@ function kT(e, t = 220) {
 	let i = r.slice(0, t);
 	return i.slice(0, i.lastIndexOf(" ")) + "…";
 }
-function AT(e) {
+function NT(e) {
 	let t = [], n = [];
 	for (let { slug: r, content: i, href: a } of e) {
-		let { node: e, links: o } = OT(r, i, { href: a });
+		let { node: e, links: o } = jT(r, i, { href: a });
 		t.push(e);
 		for (let e of o) n.push({
 			from: r,
@@ -28294,7 +28399,7 @@ function AT(e) {
 }
 //#endregion
 //#region src/shaders/graph-edge.vert
-var jT = "attribute float aAlong;   \nattribute float aSide;    \nattribute vec3  aEndA;\nattribute vec3  aEndB;\nattribute vec3  aColorA;\nattribute vec3  aColorB;\nattribute float aWidth;\n\nattribute float aDim;\n\nuniform float uLift;        \nuniform float uWidthScale;  \nuniform float uMinWidth;    \nuniform float uTaper;       \n\nvarying float vT;\nvarying float vCross;\nvarying vec3  vColor;\nvarying float vDim;\n\nconst float PI = 3.14159265;\n\nvec3 curvePoint(float t, float lift) {\n  vec3 p = mix(aEndA, aEndB, t);\n  p.y += sin(t * PI) * lift;\n  return p;\n}\n\nvoid main() {\n  float t     = aAlong;\n  float cross = aSide;              \n\n  vT     = t;\n  vCross = cross;\n  vDim   = aDim;\n  vColor = mix(aColorA, aColorB, t);   \n\n  float lift = uLift * distance(aEndA, aEndB);   \n\n  \n  \n  \n  const float E = 0.01;\n  float ta = max(t - E, 0.0);\n  float tb = min(t + E, 1.0);\n\n  vec4 mv  = modelViewMatrix * vec4(curvePoint(t,  lift), 1.0);\n  vec4 mva = modelViewMatrix * vec4(curvePoint(ta, lift), 1.0);\n  vec4 mvb = modelViewMatrix * vec4(curvePoint(tb, lift), 1.0);\n\n  vec2 dir  = mvb.xy - mva.xy;\n  vec2 side = length(dir) > 1e-6 ? normalize(vec2(-dir.y, dir.x)) : vec2(0.0, 1.0);\n\n  \n  \n  float w = aWidth * uWidthScale * (1.0 - uTaper * sin(t * PI));\n  \n  \n  \n  w *= 1.0 + max(aDim - 1.0, 0.0) * 0.75;\n  \n  w *= mix(0.55, 1.0, clamp(aDim, 0.0, 1.0));\n  w = max(w, uMinWidth);\n\n  mv.xy += side * cross * w * 0.5;\n  gl_Position = projectionMatrix * mv;\n}", MT = "uniform float uTime;\nuniform float uSpeed;\nuniform float uDashRatio;   \nuniform float uFlow;        \nuniform float uOpacity;\nuniform float uRest;        \nuniform vec3  uColor;       \n\nvarying float vT;\nvarying float vCross;\nvarying vec3  vColor;\nvarying float vDim;   \n\nvoid main() {\n  \n  float aa   = fwidth(vCross);\n  float edge = 1.0 - smoothstep(1.0 - aa * 1.5, 1.0, abs(vCross));\n  if (edge <= 0.0) discard;\n\n  \n  \n  float head = fract(uTime * uSpeed * uFlow);\n  float d    = vT - head;\n  d = d - floor(d + 0.5);\n\n  float sigma = max(uDashRatio * 0.35, 1e-4);\n  float band  = exp(-(d * d) / (sigma * sigma));\n\n  \n  \n  vec3  col = vColor * uRest + (vColor * 0.6 + uColor * 0.5) * band;\n  float a   = uOpacity * edge * (uRest + 0.85 * band);\n\n  \n  \n  \n  float calm = min(vDim, 1.0);\n  float floorKeep = mix(1.0, calm, 0.35);              \n  float bandKeep  = calm;                              \n  vec3  colC = vColor * uRest * floorKeep + (vColor * 0.6 + uColor * 0.5) * band * bandKeep;\n  float aC   = uOpacity * edge * (uRest * floorKeep + 0.85 * band * bandKeep);\n  \n  vec3  colF = mix(colC, col * vDim, step(1.0001, vDim));\n  float aF   = mix(aC, a * min(vDim, 1.25), step(1.0001, vDim));\n  gl_FragColor = vec4(colF, aF);\n}", NT = "uniform float uSizeMul;   \nuniform float uScale;     \nuniform float uHaloCap;   \n\nattribute float aHaloCap; \n                          \n                          \nattribute vec3  aOutline; \n                          \nattribute float aBadge;   \n                          \n\nvarying vec2 vP;\nvarying vec3 vColor;\nvarying vec3 vOutline;\nvarying float vBadge;\n\nvoid main() {\n  vP     = uv * 2.0 - 1.0;   \n  vColor = instanceColor;    \n\n  vOutline = aOutline;\n  vBadge = aBadge;\n  float radius = length(instanceMatrix[0].xyz) * uScale * uSizeMul * mix(1.0, aHaloCap, uHaloCap);\n\n  vec4 mv = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n  mv.xy += position.xy * 2.0 * radius;   \n\n  gl_Position = projectionMatrix * mv;\n}", PT = "uniform float uRimPower;\nuniform float uRimGain;\nuniform float uPrint;   \n                        \n                        \nuniform float uOutlinePx;  \n                           \n                           \n                           \n\nuniform float uBadgePx;    \n                           \nuniform vec3  uBadgeColor; \n                           \n\nvarying vec2 vP;\nvarying vec3 vColor;\nvarying vec3 vOutline;\nvarying float vBadge;\n\nvoid main() {\n  float d = length(vP);\n\n  float aa    = fwidth(d);\n  float alpha = 1.0 - smoothstep(1.0 - aa * 1.5, 1.0, d);\n  if (alpha <= 0.0) discard;\n\n  float nz    = sqrt(max(0.0, 1.0 - d * d));   \n  float inner = 0.55 + 0.45 * nz;              \n  float rim   = pow(1.0 - nz, uRimPower) * uRimGain;\n\n  \n  vec3 glow = vColor * inner + vColor * rim + vec3(rim * 0.12);\n\n  \n  \n  \n  if (uOutlinePx > 0.0) {\n    float ring = smoothstep(1.0 - aa * (uOutlinePx + 1.0), 1.0 - aa * uOutlinePx + aa, d);\n    glow = mix(glow, vOutline, ring);\n  }\n\n  \n  if (uBadgePx > 0.0 && vBadge > 0.5) {\n    vec2 bc = (vP - vec2(0.40, -0.40)) / (aa * uBadgePx);   \n    float pad = 1.0 - step(1.35, max(abs(bc.x), abs(bc.y)));\n    glow = mix(glow, vOutline, pad);                        \n\n    float g = 0.0;\n    float kind = vBadge;\n    /* SLICE 27: the codes shifted when ROCKET took the top priority slot (1 rocket · 2 play · 3 frame ·\n       4 page · 5 book). The branch order follows mediaGlyphCode's list — if that list changes, this\n       ladder changes with it, which is why the priority lives in ONE place (graph-spec) and not here. */\n    if (kind < 1.5) {\n      \n      \n      float nose = step(abs(bc.x), 0.30) * step(0.30, bc.y) * step(bc.y, 0.95)\n                 * step(abs(bc.x), 0.30 * (0.95 - bc.y) / 0.65 + 0.08);\n      float body = step(abs(bc.x), 0.30) * step(-0.45, bc.y) * step(bc.y, 0.35);\n      float fins = step(0.28, abs(bc.x)) * step(abs(bc.x), 0.72) * step(-0.45, bc.y) * step(bc.y, -0.05);\n      float flame = step(abs(bc.x), 0.17) * step(-0.85, bc.y) * step(bc.y, -0.45);\n      g = max(max(nose, body), max(fins, flame));\n    } else if (kind < 2.5) {\n      \n      float h = 0.75 * (1.0 - (bc.x + 0.7) / 1.4);\n      g = step(-0.7, bc.x) * step(bc.x, 0.7) * step(abs(bc.y), max(h, 0.0));\n    } else if (kind < 3.5) {\n      \n      float outer = 1.0 - step(0.8, max(abs(bc.x), abs(bc.y)));\n      float inner = 1.0 - step(0.48, max(abs(bc.x), abs(bc.y)));\n      float bar   = (1.0 - step(0.8, abs(bc.x))) * step(0.15, bc.y) * (1.0 - step(0.55, bc.y));\n      g = max(outer - inner, bar);\n    } else if (kind < 4.5) {\n      \n      float body = (1.0 - step(0.55, abs(bc.x))) * (1.0 - step(0.85, abs(bc.y)));\n      float l1 = (1.0 - step(0.3, abs(bc.x))) * (1.0 - step(0.12, abs(bc.y - 0.3)));\n      float l2 = (1.0 - step(0.3, abs(bc.x))) * (1.0 - step(0.12, abs(bc.y + 0.15)));\n      g = body - max(l1, l2);\n    } else {\n      \n      float top = (1.0 - step(0.8, abs(bc.x))) * (1.0 - step(0.28, abs(bc.y - 0.42)));\n      float bot = (1.0 - step(0.8, abs(bc.x))) * (1.0 - step(0.28, abs(bc.y + 0.42)));\n      g = max(top, bot);\n    }\n    glow = mix(glow, uBadgeColor, clamp(g, 0.0, 1.0) * pad);\n  }\n\n  \n  float outline = smoothstep(0.94 - aa, 0.94 + aa, d);\n  vec3 print = mix(vColor, vColor * 0.55, outline);\n  \n  \n  if (uBadgePx > 0.0 && vBadge > 0.5) {\n    vec2 bc = (vP - vec2(0.40, -0.40)) / (aa * uBadgePx);\n    float box = 1.0 - step(0.9, max(abs(bc.x), abs(bc.y)));\n    print = mix(print, uBadgeColor, box);\n  }\n\n  gl_FragColor = vec4(mix(glow, print, uPrint), alpha);\n}", FT = "uniform float uFalloff;\nuniform float uRings;   \n                        \n                        \n\nvarying vec2 vP;\nvarying vec3 vColor;\n\nvoid main() {\n  float d2 = dot(vP, vP);\n  if (d2 > 1.0) discard;   \n\n  float i = exp(-d2 * uFalloff) - exp(-uFalloff);   \n  i = max(i, 0.0);\n  if (uRings > 0.5) i = ceil(i * uRings) / uRings * step(0.015, i) * 0.9;   \n\n  gl_FragColor = vec4(vColor * i, i);   \n}", IT = {
+var PT = "attribute float aAlong;   \nattribute float aSide;    \nattribute vec3  aEndA;\nattribute vec3  aEndB;\nattribute vec3  aColorA;\nattribute vec3  aColorB;\nattribute float aWidth;\n\nattribute float aDim;\n\nuniform float uLift;        \nuniform float uWidthScale;  \nuniform float uMinWidth;    \nuniform float uTaper;       \n\nvarying float vT;\nvarying float vCross;\nvarying vec3  vColor;\nvarying float vDim;\n\nconst float PI = 3.14159265;\n\nvec3 curvePoint(float t, float lift) {\n  vec3 p = mix(aEndA, aEndB, t);\n  p.y += sin(t * PI) * lift;\n  return p;\n}\n\nvoid main() {\n  float t     = aAlong;\n  float cross = aSide;              \n\n  vT     = t;\n  vCross = cross;\n  vDim   = aDim;\n  vColor = mix(aColorA, aColorB, t);   \n\n  float lift = uLift * distance(aEndA, aEndB);   \n\n  \n  \n  \n  const float E = 0.01;\n  float ta = max(t - E, 0.0);\n  float tb = min(t + E, 1.0);\n\n  vec4 mv  = modelViewMatrix * vec4(curvePoint(t,  lift), 1.0);\n  vec4 mva = modelViewMatrix * vec4(curvePoint(ta, lift), 1.0);\n  vec4 mvb = modelViewMatrix * vec4(curvePoint(tb, lift), 1.0);\n\n  vec2 dir  = mvb.xy - mva.xy;\n  vec2 side = length(dir) > 1e-6 ? normalize(vec2(-dir.y, dir.x)) : vec2(0.0, 1.0);\n\n  \n  \n  float w = aWidth * uWidthScale * (1.0 - uTaper * sin(t * PI));\n  \n  \n  \n  w *= 1.0 + max(aDim - 1.0, 0.0) * 0.75;\n  \n  w *= mix(0.55, 1.0, clamp(aDim, 0.0, 1.0));\n  w = max(w, uMinWidth);\n\n  mv.xy += side * cross * w * 0.5;\n  gl_Position = projectionMatrix * mv;\n}", FT = "uniform float uTime;\nuniform float uSpeed;\nuniform float uDashRatio;   \nuniform float uFlow;        \nuniform float uOpacity;\nuniform float uRest;        \nuniform vec3  uColor;       \n\nvarying float vT;\nvarying float vCross;\nvarying vec3  vColor;\nvarying float vDim;   \n\nvoid main() {\n  \n  float aa   = fwidth(vCross);\n  float edge = 1.0 - smoothstep(1.0 - aa * 1.5, 1.0, abs(vCross));\n  if (edge <= 0.0) discard;\n\n  \n  \n  float head = fract(uTime * uSpeed * uFlow);\n  float d    = vT - head;\n  d = d - floor(d + 0.5);\n\n  float sigma = max(uDashRatio * 0.35, 1e-4);\n  float band  = exp(-(d * d) / (sigma * sigma));\n\n  \n  \n  vec3  col = vColor * uRest + (vColor * 0.6 + uColor * 0.5) * band;\n  float a   = uOpacity * edge * (uRest + 0.85 * band);\n\n  \n  \n  \n  float calm = min(vDim, 1.0);\n  float floorKeep = mix(1.0, calm, 0.35);              \n  float bandKeep  = calm;                              \n  vec3  colC = vColor * uRest * floorKeep + (vColor * 0.6 + uColor * 0.5) * band * bandKeep;\n  float aC   = uOpacity * edge * (uRest * floorKeep + 0.85 * band * bandKeep);\n  \n  vec3  colF = mix(colC, col * vDim, step(1.0001, vDim));\n  float aF   = mix(aC, a * min(vDim, 1.25), step(1.0001, vDim));\n  gl_FragColor = vec4(colF, aF);\n}", IT = "uniform float uSizeMul;   \nuniform float uScale;     \nuniform float uHaloCap;   \n\nattribute float aHaloCap; \n                          \n                          \nattribute vec3  aOutline; \n                          \nattribute float aBadge;   \n                          \n\nvarying vec2 vP;\nvarying vec3 vColor;\nvarying vec3 vOutline;\nvarying float vBadge;\n\nvoid main() {\n  vP     = uv * 2.0 - 1.0;   \n  vColor = instanceColor;    \n\n  vOutline = aOutline;\n  vBadge = aBadge;\n  float radius = length(instanceMatrix[0].xyz) * uScale * uSizeMul * mix(1.0, aHaloCap, uHaloCap);\n\n  vec4 mv = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n  mv.xy += position.xy * 2.0 * radius;   \n\n  gl_Position = projectionMatrix * mv;\n}", LT = "uniform float uRimPower;\nuniform float uRimGain;\nuniform float uPrint;   \n                        \n                        \nuniform float uOutlinePx;  \n                           \n                           \n                           \n\nuniform float uBadgePx;    \n                           \nuniform vec3  uBadgeColor; \n                           \n\nvarying vec2 vP;\nvarying vec3 vColor;\nvarying vec3 vOutline;\nvarying float vBadge;\n\nvoid main() {\n  float d = length(vP);\n\n  float aa    = fwidth(d);\n  float alpha = 1.0 - smoothstep(1.0 - aa * 1.5, 1.0, d);\n  if (alpha <= 0.0) discard;\n\n  float nz    = sqrt(max(0.0, 1.0 - d * d));   \n  float inner = 0.55 + 0.45 * nz;              \n  float rim   = pow(1.0 - nz, uRimPower) * uRimGain;\n\n  \n  vec3 glow = vColor * inner + vColor * rim + vec3(rim * 0.12);\n\n  \n  \n  \n  if (uOutlinePx > 0.0) {\n    float ring = smoothstep(1.0 - aa * (uOutlinePx + 1.0), 1.0 - aa * uOutlinePx + aa, d);\n    glow = mix(glow, vOutline, ring);\n  }\n\n  \n  if (uBadgePx > 0.0 && vBadge > 0.5) {\n    vec2 bc = (vP - vec2(0.40, -0.40)) / (aa * uBadgePx);   \n    float pad = 1.0 - step(1.35, max(abs(bc.x), abs(bc.y)));\n    glow = mix(glow, vOutline, pad);                        \n\n    float g = 0.0;\n    float kind = vBadge;\n    /* SLICE 27: the codes shifted when ROCKET took the top priority slot (1 rocket · 2 play · 3 frame ·\n       4 page · 5 book). The branch order follows mediaGlyphCode's list — if that list changes, this\n       ladder changes with it, which is why the priority lives in ONE place (graph-spec) and not here. */\n    if (kind < 1.5) {\n      \n      \n      float nose = step(abs(bc.x), 0.30) * step(0.30, bc.y) * step(bc.y, 0.95)\n                 * step(abs(bc.x), 0.30 * (0.95 - bc.y) / 0.65 + 0.08);\n      float body = step(abs(bc.x), 0.30) * step(-0.45, bc.y) * step(bc.y, 0.35);\n      float fins = step(0.28, abs(bc.x)) * step(abs(bc.x), 0.72) * step(-0.45, bc.y) * step(bc.y, -0.05);\n      float flame = step(abs(bc.x), 0.17) * step(-0.85, bc.y) * step(bc.y, -0.45);\n      g = max(max(nose, body), max(fins, flame));\n    } else if (kind < 2.5) {\n      \n      float h = 0.75 * (1.0 - (bc.x + 0.7) / 1.4);\n      g = step(-0.7, bc.x) * step(bc.x, 0.7) * step(abs(bc.y), max(h, 0.0));\n    } else if (kind < 3.5) {\n      \n      float outer = 1.0 - step(0.8, max(abs(bc.x), abs(bc.y)));\n      float inner = 1.0 - step(0.48, max(abs(bc.x), abs(bc.y)));\n      float bar   = (1.0 - step(0.8, abs(bc.x))) * step(0.15, bc.y) * (1.0 - step(0.55, bc.y));\n      g = max(outer - inner, bar);\n    } else if (kind < 4.5) {\n      \n      float body = (1.0 - step(0.55, abs(bc.x))) * (1.0 - step(0.85, abs(bc.y)));\n      float l1 = (1.0 - step(0.3, abs(bc.x))) * (1.0 - step(0.12, abs(bc.y - 0.3)));\n      float l2 = (1.0 - step(0.3, abs(bc.x))) * (1.0 - step(0.12, abs(bc.y + 0.15)));\n      g = body - max(l1, l2);\n    } else {\n      \n      float top = (1.0 - step(0.8, abs(bc.x))) * (1.0 - step(0.28, abs(bc.y - 0.42)));\n      float bot = (1.0 - step(0.8, abs(bc.x))) * (1.0 - step(0.28, abs(bc.y + 0.42)));\n      g = max(top, bot);\n    }\n    glow = mix(glow, uBadgeColor, clamp(g, 0.0, 1.0) * pad);\n  }\n\n  \n  float outline = smoothstep(0.94 - aa, 0.94 + aa, d);\n  vec3 print = mix(vColor, vColor * 0.55, outline);\n  \n  \n  if (uBadgePx > 0.0 && vBadge > 0.5) {\n    vec2 bc = (vP - vec2(0.40, -0.40)) / (aa * uBadgePx);\n    float box = 1.0 - step(0.9, max(abs(bc.x), abs(bc.y)));\n    print = mix(print, uBadgeColor, box);\n  }\n\n  gl_FragColor = vec4(mix(glow, print, uPrint), alpha);\n}", RT = "uniform float uFalloff;\nuniform float uRings;   \n                        \n                        \n\nvarying vec2 vP;\nvarying vec3 vColor;\n\nvoid main() {\n  float d2 = dot(vP, vP);\n  if (d2 > 1.0) discard;   \n\n  float i = exp(-d2 * uFalloff) - exp(-uFalloff);   \n  i = max(i, 0.0);\n  if (uRings > 0.5) i = ceil(i * uRings) / uRings * step(0.015, i) * 0.9;   \n\n  gl_FragColor = vec4(vColor * i, i);   \n}", zT = {
 	hub: $.NEUTRAL.text,
 	"live-ops": $.ACCENT.ihat,
 	doctrine: $.ACCENT.jhat,
@@ -28302,30 +28407,30 @@ var jT = "attribute float aAlong;   \nattribute float aSide;    \nattribute vec3
 	learning: $.ACCENT.guide,
 	ops: $.ACCENT.gold,
 	site: $.ACCENT.jhat
-}, LT = (e, t = 1.9) => {
+}, BT = (e, t = 1.9) => {
 	let n = new J(e).multiplyScalar(t);
 	return n.r = Math.min(n.r, 1), n.g = Math.min(n.g, 1), n.b = Math.min(n.b, 1), "#" + n.getHexString();
-}, RT = {
-	hub: LT(X_.paper.NEUTRAL.text, 1.6),
-	"live-ops": LT(X_.paper.ACCENT.ihat),
-	doctrine: LT(X_.paper.ACCENT.jhat),
-	initiative: LT(X_.paper.ACCENT.axis),
-	learning: LT(X_.paper.ACCENT.guide),
-	ops: LT(X_.paper.ACCENT.gold),
-	site: LT(X_.paper.ACCENT.jhat)
-}, zT = {
+}, VT = {
+	hub: BT(X_.paper.NEUTRAL.text, 1.6),
+	"live-ops": BT(X_.paper.ACCENT.ihat),
+	doctrine: BT(X_.paper.ACCENT.jhat),
+	initiative: BT(X_.paper.ACCENT.axis),
+	learning: BT(X_.paper.ACCENT.guide),
+	ops: BT(X_.paper.ACCENT.gold),
+	site: BT(X_.paper.ACCENT.jhat)
+}, HT = {
 	glow: $.NEUTRAL.dim,
-	print: LT(X_.paper.NEUTRAL.dim, 1.7)
+	print: BT(X_.paper.NEUTRAL.dim, 1.7)
 };
-function BT(e = "glow") {
+function UT(e = "glow") {
 	return Object.freeze({
-		...e === "print" ? RT : IT,
-		untagged: zT[e === "print" ? "print" : "glow"]
+		...e === "print" ? VT : zT,
+		untagged: HT[e === "print" ? "print" : "glow"]
 	});
 }
-var VT = .6, HT = .18, UT = .1, WT = .9, GT = .45, KT = .3, qT = 1.25, JT = 1.6, YT = .18, XT = .1, ZT = 1.6, QT = .5, $T = .06, eE = .45, tE = new J("#fff2dc"), nE = new J("#b45309"), rE = new J("#3a2e22"), iE = "#cbdbfc", aE = "#2f2a21", oE = .3, sE = "#d9a066", cE = .5, lE = new J(sE), uE = new J("#c9c2b4");
-function dE(e, t, n, r = {}) {
-	let i = Array.isArray(t.nodes) ? t.nodes : [], a = Array.isArray(t.edges) ? t.edges : [], o = i.length, s = "glow", c = 0, l = IT, u = tE, d = 0, f = 0, p = !1, m = QT, h = null, g = new Float32Array(o || 1).fill(1), _ = !1, v = new Map(i.map((e, t) => [e.id, t])), y = typeof window < "u" && window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null, b = () => !!(y && y.matches), x = /* @__PURE__ */ new Map();
+var WT = .6, GT = .18, KT = .1, qT = .9, JT = .45, YT = .3, XT = 1.25, ZT = 1.6, QT = .18, $T = .1, eE = 1.6, tE = .5, nE = .06, rE = .45, iE = new J("#fff2dc"), aE = new J("#b45309"), oE = new J("#3a2e22"), sE = "#cbdbfc", cE = "#2f2a21", lE = .3, uE = "#d9a066", dE = .5, fE = new J(uE), pE = new J("#c9c2b4");
+function mE(e, t, n, r = {}) {
+	let i = Array.isArray(t.nodes) ? t.nodes : [], a = Array.isArray(t.edges) ? t.edges : [], o = i.length, s = "glow", c = 0, l = zT, u = iE, d = 0, f = 0, p = !1, m = tE, h = null, g = new Float32Array(o || 1).fill(1), _ = !1, v = new Map(i.map((e, t) => [e.id, t])), y = typeof window < "u" && window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null, b = () => !!(y && y.matches), x = /* @__PURE__ */ new Map();
 	for (let e of i) x.set(e.id, /* @__PURE__ */ new Set());
 	for (let e of a) x.has(e.from) && x.has(e.to) && (x.get(e.from).add(e.to), x.get(e.to).add(e.from));
 	let S = /* @__PURE__ */ new Map();
@@ -28336,19 +28441,19 @@ function dE(e, t, n, r = {}) {
 			x: 0,
 			y: 0,
 			z: 0
-		}, E[t] = C(e), D[t] = new J(l[e.kind] || zT.glow);
+		}, E[t] = C(e), D[t] = new J(l[e.kind] || HT.glow);
 	});
 	let k = new Mc(1, 1), A = new Float32Array(o || 1).fill(1), j = new Float32Array((o || 1) * 3), M = new Fa(A, 1), N = new Fa(j, 3);
 	k.setAttribute("aHaloCap", M), k.setAttribute("aOutline", N);
 	let P = new Float32Array(o || 1);
 	i.forEach((e, t) => {
-		P[t] = yT(e.media);
+		P[t] = ST(e.media);
 	});
 	let F = new Fa(P, 1);
 	k.setAttribute("aBadge", F);
 	let I = P.reduce((e, t) => e + t, 0), L = new $c({
-		vertexShader: NT,
-		fragmentShader: PT,
+		vertexShader: IT,
+		fragmentShader: LT,
 		transparent: !0,
 		depthWrite: !1,
 		uniforms: {
@@ -28360,11 +28465,11 @@ function dE(e, t, n, r = {}) {
 			uOutlinePx: { value: 0 },
 			uHaloCap: { value: 0 },
 			uBadgePx: { value: 0 },
-			uBadgeColor: { value: new J(iE).multiplyScalar(2.4) }
+			uBadgeColor: { value: new J(sE).multiplyScalar(2.4) }
 		}
 	}), R = new $c({
-		vertexShader: NT,
-		fragmentShader: FT,
+		vertexShader: IT,
+		fragmentShader: RT,
 		transparent: !0,
 		depthWrite: !1,
 		depthTest: !1,
@@ -28377,7 +28482,7 @@ function dE(e, t, n, r = {}) {
 			uHaloCap: { value: 0 },
 			uOutlinePx: { value: 0 },
 			uBadgePx: { value: 0 },
-			uBadgeColor: { value: new J(iE) }
+			uBadgeColor: { value: new J(sE) }
 		}
 	}), z = new Ua(k, L, Math.max(o, 1)), ee = new Ua(k, R, Math.max(o, 1));
 	for (let e of [z, ee]) e.count = o, e.instanceMatrix.setUsage(ut), e.frustumCulled = !1;
@@ -28388,8 +28493,8 @@ function dE(e, t, n, r = {}) {
 		w.makeScale(n, n, n).setPosition(r.x, r.y, r.z), re.setMatrixAt(t, w), z.setMatrixAt(t, w), ee.setMatrixAt(t, w), z.setColorAt(t, D[t]), ee.setColorAt(t, D[t]);
 	}), re.instanceMatrix.needsUpdate = !0;
 	let B = new $c({
-		vertexShader: jT,
-		fragmentShader: MT,
+		vertexShader: PT,
+		fragmentShader: FT,
 		transparent: !0,
 		depthWrite: !1,
 		blending: 2,
@@ -28417,7 +28522,7 @@ function dE(e, t, n, r = {}) {
 		let i = D[v.get(e.from)], a = D[v.get(e.to)];
 		ue.push(i.r, i.g, i.b), de.push(a.r, a.g, a.b), fe.push(ce * (.7 + .3 * (Number.isFinite(e.weight) ? e.weight : 1)));
 	}
-	let pe = sS({
+	let pe = uS({
 		positions: O,
 		pairs: le,
 		segments: 24,
@@ -28431,7 +28536,7 @@ function dE(e, t, n, r = {}) {
 	_e.add(ge), _e.add(ee), _e.add(z), _e.add(re);
 	let ve = r.heatTauDays ?? 7, ye = r.batchDiscount ?? .15, be = new Float32Array(o), xe = new Float32Array(o);
 	i.forEach((e, t) => {
-		be[t] = mT(e.ageDays, ve) * (e.batch ? ye : 1), e.state === "red" && (be[t] = Math.max(be[t], .85)), xe[t] = be[t];
+		be[t] = _T(e.ageDays, ve) * (e.batch ? ye : 1), e.state === "red" && (be[t] = Math.max(be[t], .85)), xe[t] = be[t];
 	});
 	let Se = {
 		red: [new J("#ff3b30"), .55],
@@ -28444,7 +28549,7 @@ function dE(e, t, n, r = {}) {
 		let n = i.findIndex((t) => t.id === e);
 		if (n < 0) return;
 		i[n].state = t, Ce[n] = Se[t] || null;
-		let r = mT(i[n].ageDays, ve) * (i[n].batch ? ye : 1);
+		let r = _T(i[n].ageDays, ve) * (i[n].batch ? ye : 1);
 		be[n] = t === "red" ? Math.max(r, .85) : r, xe[n] = Math.max(xe[n], be[n]);
 	}
 	function V(e, t) {
@@ -28523,8 +28628,8 @@ function dE(e, t, n, r = {}) {
 			let r = ae[t * 2], i = ae[t * 2 + 1], a;
 			if (h != null) {
 				let e = h.has(r), t = h.has(i);
-				a = e && t ? ZT : e || t ? XT : $T;
-			} else a = e == null ? m : r === e || i === e ? ZT : XT;
+				a = e && t ? eE : e || t ? $T : nE;
+			} else a = e == null ? m : r === e || i === e ? eE : $T;
 			if (_) {
 				let e = v.get(r), t = v.get(i), n = e == null ? 1 : g[e], o = t == null ? 1 : g[t];
 				a *= Math.min(n, o);
@@ -28567,22 +28672,22 @@ function dE(e, t, n, r = {}) {
 	function lt(e, t) {
 		let n = !b(), r = Oe > 0 ? Math.floor(t * Oe) / Oe : t;
 		B.uniforms.uTime.value = r, B.uniforms.uFlow.value = +!!n, $e < Infinity && ($e += e);
-		let a = Math.min($e / eE, 1), c = et(), l = Ze == null ? void 0 : v.get(Ze), m = c == null ? void 0 : v.get(c), y = m != null, S = y ? x.get(c) : null;
+		let a = Math.min($e / rE, 1), c = et(), l = Ze == null ? void 0 : v.get(Ze), m = c == null ? void 0 : v.get(c), y = m != null, S = y ? x.get(c) : null;
 		for (let r = 0; r < o; r++) {
-			xe[r] > be[r] && (xe[r] = be[r] + (xe[r] - be[r]) * Math.exp(-e / VT), xe[r] - be[r] < .001 && (xe[r] = be[r]));
-			let o = r === l, c = r === m, v = o ? 1 - a : 0, b = n ? Math.sin(t * JT * Math.PI * 2 + r) : 0, x = E[r] * (1 + HT * xe[r] + UT * xe[r] * b + .6 * v) * (_ ? g[r] : 1), C = O[r];
+			xe[r] > be[r] && (xe[r] = be[r] + (xe[r] - be[r]) * Math.exp(-e / WT), xe[r] - be[r] < .001 && (xe[r] = be[r]));
+			let o = r === l, c = r === m, v = o ? 1 - a : 0, b = n ? Math.sin(t * ZT * Math.PI * 2 + r) : 0, x = E[r] * (1 + GT * xe[r] + KT * xe[r] * b + .6 * v) * (_ ? g[r] : 1), C = O[r];
 			w.makeScale(x, x, x).setPosition(C.x, C.y, C.z), z.setMatrixAt(r, w), s === "print" && w.setPosition(C.x + .05, C.y, C.z + .09), ee.setMatrixAt(r, w);
-			let k = h != null && !h.has(i[r].id) ? $T : y && !c && !S.has(i[r].id) && h == null ? YT : 1, A = Math.min(k * (1 + WT * xe[r] + .8 * v), 2);
-			if (s === "print" && k < 1 ? T.copy(D[r]).lerp(uE, .78) : (T.copy(D[r]).lerp(u, GT * xe[r]).multiplyScalar(s === "print" ? Math.min(A, 1.15) : A), Ce[r] && T.lerp(Ce[r][0], Ce[r][1])), d > 0) {
+			let k = h != null && !h.has(i[r].id) ? nE : y && !c && !S.has(i[r].id) && h == null ? QT : 1, A = Math.min(k * (1 + qT * xe[r] + .8 * v), 2);
+			if (s === "print" && k < 1 ? T.copy(D[r]).lerp(pE, .78) : (T.copy(D[r]).lerp(u, JT * xe[r]).multiplyScalar(s === "print" ? Math.min(A, 1.15) : A), Ce[r] && T.lerp(Ce[r][0], Ce[r][1])), d > 0) {
 				let e = .2126 * T.r + .7152 * T.g + .0722 * T.b;
 				e > 1e-5 && e < d && T.multiplyScalar(d / e);
 			}
 			if (z.setColorAt(r, T), p) {
-				T.copy(D[r]).multiplyScalar(oE * k);
-				let e = Math.max(0, Math.min((xe[r] - cE) / (1 - cE), 1));
-				e > 0 && T.lerp(lE, e), Ce[r] && T.lerp(Ce[r][0], Ce[r][1] * .85), j[r * 3] = T.r, j[r * 3 + 1] = T.g, j[r * 3 + 2] = T.b;
+				T.copy(D[r]).multiplyScalar(lE * k);
+				let e = Math.max(0, Math.min((xe[r] - dE) / (1 - dE), 1));
+				e > 0 && T.lerp(fE, e), Ce[r] && T.lerp(Ce[r][0], Ce[r][1] * .85), j[r * 3] = T.r, j[r * 3 + 1] = T.g, j[r * 3 + 2] = T.b;
 			}
-			s === "print" ? T.copy(rE) : T.copy(D[r]).lerp(u, GT * xe[r] * (1 - f)).multiplyScalar(k * (KT * (1 - f) + qT * xe[r] + .6 * v)), ee.setColorAt(r, T);
+			s === "print" ? T.copy(oE) : T.copy(D[r]).lerp(u, JT * xe[r] * (1 - f)).multiplyScalar(k * (YT * (1 - f) + XT * xe[r] + .6 * v)), ee.setColorAt(r, T);
 		}
 		z.instanceMatrix.needsUpdate = !0, ee.instanceMatrix.needsUpdate = !0, z.instanceColor && (z.instanceColor.needsUpdate = !0), ee.instanceColor && (ee.instanceColor.needsUpdate = !0), p && (N.needsUpdate = !0);
 	}
@@ -28647,7 +28752,7 @@ function dE(e, t, n, r = {}) {
 		},
 		setEdgeStyle: Ve,
 		getEdgeStyle: He,
-		kindColor: (e) => l[e] || zT[s === "print" ? "print" : "glow"],
+		kindColor: (e) => l[e] || HT[s === "print" ? "print" : "glow"],
 		setState: we,
 		setColorFloor: (e) => {
 			d = e;
@@ -28663,7 +28768,7 @@ function dE(e, t, n, r = {}) {
 		get badgeCount() {
 			return I;
 		},
-		badgedIds: () => i.filter((e) => bT(e.media)).map((e) => e.id),
+		badgedIds: () => i.filter((e) => CT(e.media)).map((e) => e.id),
 		stateColors: () => {
 			let e = {};
 			for (let [t, n] of Object.entries(Se)) e[t] = "#" + n[0].getHexString();
@@ -28671,20 +28776,20 @@ function dE(e, t, n, r = {}) {
 		},
 		glyphOf: (e) => {
 			let t = i.find((t) => t.id === e);
-			return t ? vT(t.media) : null;
+			return t ? xT(t.media) : null;
 		},
 		glyphCounts: () => {
 			let e = {};
-			for (let t of _T) e[t] = 0;
+			for (let t of bT) e[t] = 0;
 			for (let t of i) {
-				let n = vT(t.media);
+				let n = xT(t.media);
 				n && e[n]++;
 			}
 			return e;
 		},
-		BADGE_COLOR: iE,
-		activeBadgeColor: () => s === "print" ? aE : iE,
-		OUTLINE_HOT: sE,
+		BADGE_COLOR: sE,
+		activeBadgeColor: () => s === "print" ? cE : sE,
+		OUTLINE_HOT: uE,
 		debugHaloCap: (e) => {
 			let t = v.get(e);
 			return t == null ? null : A[t];
@@ -28700,7 +28805,7 @@ function dE(e, t, n, r = {}) {
 		setRenderMode(e) {
 			s = e === "print" ? "print" : "glow";
 			let t = s === "print";
-			l = t ? RT : IT, u = t ? nE : tE, R.blending = t ? 1 : 2, R.uniforms.uSizeMul.value = t ? 1.35 : r.haloScale ?? 3.2, R.uniforms.uFalloff.value = t ? 10 : 5.5, R.needsUpdate = !0, L.uniforms.uPrint.value = +!!t, L.uniforms.uBadgeColor.value.set(t ? aE : iE), t || L.uniforms.uBadgeColor.value.multiplyScalar(2.4), B.blending = t ? 1 : 2, B.needsUpdate = !0, i.forEach((e, t) => D[t].set(l[e.kind] || zT[s === "print" ? "print" : "glow"]));
+			l = t ? VT : zT, u = t ? aE : iE, R.blending = t ? 1 : 2, R.uniforms.uSizeMul.value = t ? 1.35 : r.haloScale ?? 3.2, R.uniforms.uFalloff.value = t ? 10 : 5.5, R.needsUpdate = !0, L.uniforms.uPrint.value = +!!t, L.uniforms.uBadgeColor.value.set(t ? cE : sE), t || L.uniforms.uBadgeColor.value.multiplyScalar(2.4), B.blending = t ? 1 : 2, B.needsUpdate = !0, i.forEach((e, t) => D[t].set(l[e.kind] || HT[s === "print" ? "print" : "glow"]));
 			let { colA0: n, colB0: a } = me.userData, o = 0;
 			for (let e = 0; e < ae.length / 2; e++) {
 				let t = D[oe[e]], r = D[se[e]];
@@ -28711,7 +28816,7 @@ function dE(e, t, n, r = {}) {
 		activeKindColors() {
 			return Object.freeze({
 				...l,
-				untagged: zT[s === "print" ? "print" : "glow"]
+				untagged: HT[s === "print" ? "print" : "glow"]
 			});
 		},
 		get renderMode() {
@@ -28746,8 +28851,8 @@ function dE(e, t, n, r = {}) {
 }
 //#endregion
 //#region src/graph-labels.js
-var fE = new K(), pE = .5, mE = 2;
-function hE({ container: e, nodes: t = [], edges: n = [], positions: r, camera: i, project: a = null, radiusOf: o = null, alwaysTop: s = 8, zoomThreshold: c = 5.5, gapPx: l = 5 } = {}) {
+var hE = new K(), gE = .5, _E = 2;
+function vE({ container: e, nodes: t = [], edges: n = [], positions: r, camera: i, project: a = null, radiusOf: o = null, alwaysTop: s = 8, zoomThreshold: c = 5.5, gapPx: l = 5 } = {}) {
 	if (!e) throw Error("createGraphLabels: container is required");
 	if (!r) throw Error("createGraphLabels: positions (Map<id,{x,y,z}>) is required");
 	if (!i && !a) throw Error("createGraphLabels: need a camera or a project(id) function");
@@ -28845,23 +28950,23 @@ function hE({ container: e, nodes: t = [], edges: n = [], positions: r, camera: 
 				}
 				d = e.x, h = e.y;
 			} else {
-				if (fE.set(r.p.x, r.p.y, r.p.z).project(i), fE.z > 1) {
+				if (hE.set(r.p.x, r.p.y, r.p.z).project(i), hE.z > 1) {
 					D(r, !1);
 					continue;
 				}
-				d = (fE.x + 1) * .5 * t, h = (1 - fE.y) * .5 * n;
+				d = (hE.x + 1) * .5 * t, h = (1 - hE.y) * .5 * n;
 			}
 			let S = o ? o(r.id) * u : 0, C = r.above ? h - S - l - r.hh : h + S + l, T = d - r.hw, E = d + r.hw, O = C, k = C + r.hh;
-			if (T < mE || E > t - mE || O < 0 || k > n - mE) {
+			if (T < _E || E > t - _E || O < 0 || k > n - _E) {
 				D(r, !1);
 				continue;
 			}
-			if (!w(T - mE, O - mE, E + mE, k + mE)) {
+			if (!w(T - _E, O - _E, E + _E, k + _E)) {
 				D(r, !1);
 				continue;
 			}
 			let A = y * 4;
-			v[A] = T, v[A + 1] = O, v[A + 2] = E, v[A + 3] = k, y++, Math.abs(d - r.x) < pE && Math.abs(C - r.y) < pE || (r.x = d, r.y = C, r.el.style.transform = `translate(-50%, 0) translate(${d.toFixed(1)}px, ${C.toFixed(1)}px)`), D(r, !0), x++;
+			v[A] = T, v[A + 1] = O, v[A + 2] = E, v[A + 3] = k, y++, Math.abs(d - r.x) < gE && Math.abs(C - r.y) < gE || (r.x = d, r.y = C, r.el.style.transform = `translate(-50%, 0) translate(${d.toFixed(1)}px, ${C.toFixed(1)}px)`), D(r, !0), x++;
 		}
 	}
 	function k(e) {
@@ -28889,17 +28994,17 @@ function hE({ container: e, nodes: t = [], edges: n = [], positions: r, camera: 
 }
 //#endregion
 //#region src/shaders/graph-star.vert
-var gE = "precision highp float;\n\nattribute float aPhase;    \nattribute float aSize;     \nattribute vec3  aColor;    \n\nuniform float uTime;\nuniform float uTwinkle;    \n\nvarying float vTw;\nvarying vec3  vColor;\n\nvoid main() {\n  float w = uTime * (0.9 + aPhase * 1.3) + aPhase * 6.28318;\n  \n  vTw = 1.0 + uTwinkle * 0.5 * (sin(w) + sin(w * 1.618 + aPhase * 4.0));\n  vColor = aColor;\n  gl_PointSize = aSize;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n}", _E = "precision highp float;\n\nuniform float uOpacity;\n\nvarying float vTw;\nvarying vec3  vColor;   \n\nvoid main() {\n  gl_FragColor = vec4(vColor, uOpacity * clamp(vTw, 0.0, 2.0));\n}", vE = "precision highp float;\n\nattribute vec2  aCorner;   \nattribute float aSize;     \nattribute float aKind;     \nattribute vec3  aTint;\nattribute float aPhase;    \n\nvarying vec2  vC;\nvarying float vKind;\nvarying vec3  vTint;\nvarying float vPhase;\n\nvoid main() {\n  vC = aCorner;\n  vKind = aKind;\n  vTint = aTint;\n  vPhase = aPhase;\n  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n  mv.xy += aCorner * aSize;\n  gl_Position = projectionMatrix * mv;\n}", yE = "precision highp float;\n\nuniform float uTime;\nuniform float uTwinkle;    \nuniform float uIntensity;\n\nvarying vec2  vC;\nvarying float vKind;\nvarying vec3  vTint;\nvarying float vPhase;\n\nvoid main() {\n  vec2 c = vC * 2.0;               \n  float r = length(c);\n  vec3 col = vec3(0.0);\n\n  if (vKind < 0.5) {\n    \n    float disc = 1.0 - smoothstep(0.50, 0.53, r);\n    float cr = exp(-dot(c - vec2(-0.13, 0.09), c - vec2(-0.13, 0.09)) * 55.0)\n             + exp(-dot(c - vec2(0.17, -0.04), c - vec2(0.17, -0.04)) * 85.0)\n             + exp(-dot(c - vec2(0.01, -0.24), c - vec2(0.01, -0.24)) * 110.0);\n    float shade = clamp(0.60 + 0.55 * dot(vec2(-0.55, 0.835), c) - cr * 0.45, 0.0, 1.0);\n    vec3 discCol = mix(vec3(0.188, 0.376, 0.510), vTint, shade);           \n    \n    vec2 q = vec2(c.x * 0.883 - c.y * 0.469, c.x * 0.469 + c.y * 0.883);\n    float er = length(vec2(q.x / 0.94, q.y / 0.28));\n    float ring = 1.0 - smoothstep(0.06, 0.13, abs(er - 1.0));\n    float ringVis = ring * (q.y > 0.0 ? 1.0 : step(0.53, r));              \n    \n    \n    float aura = exp(-max(r - 0.53, 0.0) * 22.0) * 0.14 * step(0.5, r) * (1.0 - smoothstep(0.72, 0.85, r));\n    col = discCol * disc + vec3(0.796, 0.859, 0.988) * ringVis * 0.8 + vTint * aura;\n  } else if (vKind < 1.5) {\n    \n    float disc = 1.0 - smoothstep(0.44, 0.50, r);\n    float shade = clamp(0.55 + 0.5 * dot(vec2(-0.55, 0.835), c), 0.0, 1.0);\n    col = mix(vec3(0.416, 0.416, 0.416), vTint, shade) * disc;             \n  } else if (vKind < 2.5) {\n    \n    vec2 a = abs(c);\n    float arm = max(step(a.x, 0.11) * (1.0 - smoothstep(0.45, 0.95, a.y)),\n                    step(a.y, 0.11) * (1.0 - smoothstep(0.45, 0.95, a.x)));\n    float core = 1.0 - smoothstep(0.10, 0.22, r);\n    float w = uTime * (1.4 + vPhase * 1.3) + vPhase * 6.28318;\n    float tw = 1.0 + uTwinkle * 0.5 * (sin(w) + sin(w * 1.618 + vPhase * 4.0));\n    col = vTint * (arm * 0.85 + core) * clamp(tw, 0.15, 2.0);\n  } else {\n    \n    float e = length(vec2(c.x, c.y * 2.6));                                 \n    float body = exp(-e * e * 2.4);\n    float theta = atan(c.y * 2.6, c.x);\n    float arms = 0.5 + 0.5 * cos(theta * 2.0 - log(max(e, 0.05)) * 3.5 + vPhase * 6.28318);\n    float core = exp(-e * e * 28.0);\n    col = vTint * body * (0.35 + 0.65 * arms * smoothstep(0.10, 0.45, e)) * 0.7\n        + mix(vTint, vec3(1.0), 0.55) * core;\n  }\n\n  gl_FragColor = vec4(col * uIntensity, 1.0);   \n}";
+var yE = "precision highp float;\n\nattribute float aPhase;    \nattribute float aSize;     \nattribute vec3  aColor;    \n\nuniform float uTime;\nuniform float uTwinkle;    \n\nvarying float vTw;\nvarying vec3  vColor;\n\nvoid main() {\n  float w = uTime * (0.9 + aPhase * 1.3) + aPhase * 6.28318;\n  \n  vTw = 1.0 + uTwinkle * 0.5 * (sin(w) + sin(w * 1.618 + aPhase * 4.0));\n  vColor = aColor;\n  gl_PointSize = aSize;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n}", bE = "precision highp float;\n\nuniform float uOpacity;\n\nvarying float vTw;\nvarying vec3  vColor;   \n\nvoid main() {\n  gl_FragColor = vec4(vColor, uOpacity * clamp(vTw, 0.0, 2.0));\n}", xE = "precision highp float;\n\nattribute vec2  aCorner;   \nattribute float aSize;     \nattribute float aKind;     \nattribute vec3  aTint;\nattribute float aPhase;    \n\nvarying vec2  vC;\nvarying float vKind;\nvarying vec3  vTint;\nvarying float vPhase;\n\nvoid main() {\n  vC = aCorner;\n  vKind = aKind;\n  vTint = aTint;\n  vPhase = aPhase;\n  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n  mv.xy += aCorner * aSize;\n  gl_Position = projectionMatrix * mv;\n}", SE = "precision highp float;\n\nuniform float uTime;\nuniform float uTwinkle;    \nuniform float uIntensity;\n\nvarying vec2  vC;\nvarying float vKind;\nvarying vec3  vTint;\nvarying float vPhase;\n\nvoid main() {\n  vec2 c = vC * 2.0;               \n  float r = length(c);\n  vec3 col = vec3(0.0);\n\n  if (vKind < 0.5) {\n    \n    float disc = 1.0 - smoothstep(0.50, 0.53, r);\n    float cr = exp(-dot(c - vec2(-0.13, 0.09), c - vec2(-0.13, 0.09)) * 55.0)\n             + exp(-dot(c - vec2(0.17, -0.04), c - vec2(0.17, -0.04)) * 85.0)\n             + exp(-dot(c - vec2(0.01, -0.24), c - vec2(0.01, -0.24)) * 110.0);\n    float shade = clamp(0.60 + 0.55 * dot(vec2(-0.55, 0.835), c) - cr * 0.45, 0.0, 1.0);\n    vec3 discCol = mix(vec3(0.188, 0.376, 0.510), vTint, shade);           \n    \n    vec2 q = vec2(c.x * 0.883 - c.y * 0.469, c.x * 0.469 + c.y * 0.883);\n    float er = length(vec2(q.x / 0.94, q.y / 0.28));\n    float ring = 1.0 - smoothstep(0.06, 0.13, abs(er - 1.0));\n    float ringVis = ring * (q.y > 0.0 ? 1.0 : step(0.53, r));              \n    \n    \n    float aura = exp(-max(r - 0.53, 0.0) * 22.0) * 0.14 * step(0.5, r) * (1.0 - smoothstep(0.72, 0.85, r));\n    col = discCol * disc + vec3(0.796, 0.859, 0.988) * ringVis * 0.8 + vTint * aura;\n  } else if (vKind < 1.5) {\n    \n    float disc = 1.0 - smoothstep(0.44, 0.50, r);\n    float shade = clamp(0.55 + 0.5 * dot(vec2(-0.55, 0.835), c), 0.0, 1.0);\n    col = mix(vec3(0.416, 0.416, 0.416), vTint, shade) * disc;             \n  } else if (vKind < 2.5) {\n    \n    vec2 a = abs(c);\n    float arm = max(step(a.x, 0.11) * (1.0 - smoothstep(0.45, 0.95, a.y)),\n                    step(a.y, 0.11) * (1.0 - smoothstep(0.45, 0.95, a.x)));\n    float core = 1.0 - smoothstep(0.10, 0.22, r);\n    float w = uTime * (1.4 + vPhase * 1.3) + vPhase * 6.28318;\n    float tw = 1.0 + uTwinkle * 0.5 * (sin(w) + sin(w * 1.618 + vPhase * 4.0));\n    col = vTint * (arm * 0.85 + core) * clamp(tw, 0.15, 2.0);\n  } else {\n    \n    float e = length(vec2(c.x, c.y * 2.6));                                 \n    float body = exp(-e * e * 2.4);\n    float theta = atan(c.y * 2.6, c.x);\n    float arms = 0.5 + 0.5 * cos(theta * 2.0 - log(max(e, 0.05)) * 3.5 + vPhase * 6.28318);\n    float core = exp(-e * e * 28.0);\n    col = vTint * body * (0.35 + 0.65 * arms * smoothstep(0.10, 0.45, e)) * 0.7\n        + mix(vTint, vec3(1.0), 0.55) * core;\n  }\n\n  gl_FragColor = vec4(col * uIntensity, 1.0);   \n}";
 //#endregion
 //#region src/graph-atmosphere.js
-function bE(e) {
+function CE(e) {
 	let t = e >>> 0;
 	return () => (t = Math.imul(t, 1664525) + 1013904223 >>> 0, t / 4294967296);
 }
-function xE(e = {}) {
+function wE(e = {}) {
 	let { starCount: t = 340, starRadius: n = 17, depth: r = 5, intensity: i = .055, seed: a = 24301, aspect: o = 1.6, bandMul: s = 1, dustMul: c = 1, twinkle: l = 0, starShape: u = 0, skyStars: d = 0, extraSmudge: f = 0, starSize: p = 1.6, art: m = 0, clearing: h = 0, starVariety: g = null, skySprites: _ = null } = e, v = new mr(), y = new $c({
-		vertexShader: DS,
-		fragmentShader: OS,
+		vertexShader: AS,
+		fragmentShader: jS,
 		depthTest: !1,
 		depthWrite: !1,
 		uniforms: {
@@ -28923,14 +29028,14 @@ function xE(e = {}) {
 		}
 	}), b = new Z(new Mc(1, 1), y);
 	b.frustumCulled = !1, b.renderOrder = -10, v.add(b);
-	let x = bE(a), S = new Float32Array(t * 3);
+	let x = CE(a), S = new Float32Array(t * 3);
 	for (let e = 0; e < t; e++) {
 		let t = Math.sqrt(x()) * n, i = x() * Math.PI * 2;
 		S[e * 3] = Math.cos(i) * t, S[e * 3 + 1] = -r - x() * 3, S[e * 3 + 2] = Math.sin(i) * t;
 	}
-	let C = bE((a ^ 30487) >>> 0), w = new Float32Array(t);
+	let C = CE((a ^ 30487) >>> 0), w = new Float32Array(t);
 	for (let e = 0; e < t; e++) w[e] = C();
-	let T = bE((a ^ 20907) >>> 0), E = (e, t) => {
+	let T = CE((a ^ 20907) >>> 0), E = (e, t) => {
 		let n = 0;
 		for (let [, t] of e) n += t;
 		let r = 0;
@@ -28941,8 +29046,8 @@ function xE(e = {}) {
 	let j = new Di();
 	j.setAttribute("position", new Y(S, 3)), j.setAttribute("aPhase", new Y(w, 1)), j.setAttribute("aSize", new Y(D, 1)), j.setAttribute("aColor", new Y(O, 3));
 	let M = new $c({
-		vertexShader: gE,
-		fragmentShader: _E,
+		vertexShader: yE,
+		fragmentShader: bE,
 		transparent: !0,
 		depthWrite: !1,
 		blending: 2,
@@ -28971,8 +29076,8 @@ function xE(e = {}) {
 	let ee = new Di();
 	ee.setAttribute("position", new Y(F, 3)), ee.setAttribute("aCorner", new Y(I, 2)), ee.setAttribute("aSize", new Y(L, 1)), ee.setIndex(new Y(R, 1));
 	let te = new $c({
-		vertexShader: TS,
-		fragmentShader: ES,
+		vertexShader: OS,
+		fragmentShader: kS,
 		transparent: !0,
 		depthWrite: !1,
 		blending: 2,
@@ -29005,8 +29110,8 @@ function xE(e = {}) {
 			let v = l * 4, y = l * 6;
 			u[y] = v, u[y + 1] = v + 1, u[y + 2] = v + 2, u[y + 3] = v, u[y + 4] = v + 2, u[y + 5] = v + 3;
 		}), ie = new Di(), ie.setAttribute("position", new Y(n, 3)), ie.setAttribute("aCorner", new Y(i, 2)), ie.setAttribute("aSize", new Y(a, 1)), ie.setAttribute("aKind", new Y(o, 1)), ie.setAttribute("aTint", new Y(s, 3)), ie.setAttribute("aPhase", new Y(c, 1)), ie.setIndex(new Y(u, 1)), B = new $c({
-			vertexShader: vE,
-			fragmentShader: yE,
+			vertexShader: xE,
+			fragmentShader: SE,
 			transparent: !0,
 			depthWrite: !1,
 			blending: 2,
@@ -29081,12 +29186,12 @@ function xE(e = {}) {
 }
 //#endregion
 //#region src/graph-ambient-core.js
-function SE(e) {
+function TE(e) {
 	let t = e >>> 0;
 	return () => (t = Math.imul(t, 1664525) + 1013904223 >>> 0, t / 4294967296);
 }
-function CE({ seed: e = 171646535, events: t = [] } = {}) {
-	let n = SE(e), r = (e) => {
+function EE({ seed: e = 171646535, events: t = [] } = {}) {
+	let n = TE(e), r = (e) => {
 		let t = e.jitter ?? .5;
 		return e.meanInterval * (1 - t + n() * 2 * t);
 	}, i = /* @__PURE__ */ new Map();
@@ -29135,18 +29240,18 @@ function CE({ seed: e = 171646535, events: t = [] } = {}) {
 }
 //#endregion
 //#region src/shaders/graph-comet.vert
-var wE = "precision highp float;\n\nvarying vec2 vUv;\n\nvoid main() {\n  vUv = uv;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n}", TE = "precision highp float;\n\nuniform vec3  uColor;\nuniform float uIntensity;\nuniform float uFade;\n\nvarying vec2 vUv;\n\nvoid main() {\n  float u = vUv.x;                                     \n  float tail = pow(u, 2.2);\n  float head = exp(-(1.0 - u) * 26.0) * 1.7;\n  float d = (vUv.y - 0.5) * 2.0;                       \n  float across = exp(-d * d * 5.0);\n  \n  across *= mix(0.35, 1.0, u);\n  float g = (tail * 0.85 + head) * across * uIntensity * uFade;\n  gl_FragColor = vec4(uColor * g, 1.0);                \n}", EE = 24, DE = 16;
-function OE() {
+var DE = "precision highp float;\n\nvarying vec2 vUv;\n\nvoid main() {\n  vUv = uv;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n}", OE = "precision highp float;\n\nuniform vec3  uColor;\nuniform float uIntensity;\nuniform float uFade;\n\nvarying vec2 vUv;\n\nvoid main() {\n  float u = vUv.x;                                     \n  float tail = pow(u, 2.2);\n  float head = exp(-(1.0 - u) * 26.0) * 1.7;\n  float d = (vUv.y - 0.5) * 2.0;                       \n  float across = exp(-d * d * 5.0);\n  \n  across *= mix(0.35, 1.0, u);\n  float g = (tail * 0.85 + head) * across * uIntensity * uFade;\n  gl_FragColor = vec4(uColor * g, 1.0);                \n}", kE = 24, AE = 16;
+function jE() {
 	let e = document.createElement("canvas");
-	e.width = EE * 2, e.height = DE;
+	e.width = kE * 2, e.height = AE;
 	let t = e.getContext("2d"), n = (e, n, r, i, a, o) => {
-		t.fillStyle = o, t.fillRect(e * EE + n, r, i, a);
+		t.fillStyle = o, t.fillRect(e * kE + n, r, i, a);
 	};
 	for (let e = 0; e < 2; e++) n(e, 4, 8, 16, 3, "#847e87"), n(e, 6, 7, 12, 1, "#9badb7"), n(e, 6, 11, 12, 1, "#696a6a"), n(e, 2, 9, 2, 1, "#696a6a"), n(e, 20, 9, 2, 1, "#9badb7"), n(e, 10, 4, 5, 3, "#5fcde4"), n(e, 11, 4, 2, 1, "#cbdbfc"), n(e, 7, 12, 1, 1, "#fbf236"), n(e, 11, 12, 1, 1, "#fbf236"), n(e, 15, 12, 1, 1, "#fbf236"), e === 0 ? (n(e, 0, 9, 3, 1, "#df7126"), n(e, 1, 8, 1, 3, "#df7126")) : n(e, 1, 9, 2, 1, "#d95763");
 	let r = new Yo(e);
 	return r.magFilter = l, r.minFilter = l, r.generateMipmaps = !1, r.repeat.set(.5, 1), r.colorSpace = Qe, r;
 }
-function kE(e = {}) {
+function ME(e = {}) {
 	let { seed: t = 171646535, radius: n = 11, depth: r = 3.2, camera: i = null, comet: a = {}, ship: o = {} } = e, s = {
 		meanInterval: 75,
 		durationMin: 4.5,
@@ -29160,7 +29265,7 @@ function kE(e = {}) {
 		durationMin: 9,
 		durationMax: 13,
 		...o
-	}, l = CE({
+	}, l = EE({
 		seed: t,
 		events: [{
 			kind: "comet",
@@ -29178,8 +29283,8 @@ function kE(e = {}) {
 	}), u = new mr(), d = new Mc(2.8 * s.length, .22 * s.width);
 	d.rotateX(-Math.PI / 2);
 	let f = new $c({
-		vertexShader: wE,
-		fragmentShader: TE,
+		vertexShader: DE,
+		fragmentShader: OE,
 		transparent: !0,
 		depthTest: !1,
 		depthWrite: !1,
@@ -29191,12 +29296,12 @@ function kE(e = {}) {
 		}
 	}), p = new Z(d, f);
 	p.visible = !1, p.frustumCulled = !1, p.renderOrder = -8, u.add(p);
-	let m = 1.5, h = OE(), g = new oa({
+	let m = 1.5, h = jE(), g = new oa({
 		map: h,
 		transparent: !0,
 		depthTest: !1,
 		depthWrite: !1
-	}), _ = new Z(new Mc(m, DE / EE * m), g);
+	}), _ = new Z(new Mc(m, AE / kE * m), g);
 	_.visible = !1, _.frustumCulled = !1, _.renderOrder = -8, u.add(_);
 	let v = !0, y = null, b = new K(), x = new K(), S = new K();
 	function C(e) {
@@ -29259,7 +29364,7 @@ function kE(e = {}) {
 }
 //#endregion
 //#region src/graph-sim.js
-var AE = Object.freeze({
+var NE = Object.freeze({
 	alphaInit: 1,
 	alphaTarget: 0,
 	alphaDecay: .028,
@@ -29273,10 +29378,10 @@ var AE = Object.freeze({
 	dragAlphaTarget: .3,
 	collideIterations: 2,
 	collideStrength: .7
-}), jE = (e, t) => e > -t && e < t ? 0 : e;
-function ME(e, t, n = {}) {
+}), PE = (e, t) => e > -t && e < t ? 0 : e;
+function FE(e, t, n = {}) {
 	let r = {
-		...AE,
+		...NE,
 		...n
 	}, i = (Array.isArray(e.nodes) ? e.nodes : []).filter((e) => t.has(e.id)), a = i.length, o = new Map(i.map((e, t) => [e.id, t])), s = Array.isArray(e.edges) ? e.edges : [], c = [];
 	for (let e of s) {
@@ -29358,7 +29463,7 @@ function ME(e, t, n = {}) {
 				l[e] = C[e], u[e] = w[e], d[e] = 0, f[e] = 0;
 				continue;
 			}
-			d[e] = jE(d[e] * t, r.velEpsilon), f[e] = jE(f[e] * t, r.velEpsilon), (d[e] !== 0 || f[e] !== 0) && (l[e] += d[e], u[e] += f[e], j = !0);
+			d[e] = PE(d[e] * t, r.velEpsilon), f[e] = PE(f[e] * t, r.velEpsilon), (d[e] !== 0 || f[e] !== 0) && (l[e] += d[e], u[e] += f[e], j = !0);
 		}
 		if (r.centerStrength > 0 && a > 0) {
 			let e = 0, t = 0;
@@ -29488,15 +29593,15 @@ function ME(e, t, n = {}) {
 }
 //#endregion
 //#region src/render-markdown.js
-var NE = (e) => e.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-function PE(e, t) {
+var IE = (e) => e.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function LE(e, t) {
 	let n = [];
 	return e = e.replace(/`([^`\n]+)`/g, (e, t) => (n.push(`<code>${t}</code>`), `\x01${n.length - 1}\x01`)), e = e.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (e, t, n) => /^[a-z][a-z0-9+.-]*:/i.test(n) ? `<a href="${n}" target="_blank" rel="noopener">🖼 ${t || n}</a>` : `<img src="${n}" alt="${t}" loading="lazy">`), e = e.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>"), e = e.replace(/\*([^*\n]+)\*/g, "<em>$1</em>"), e = e.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (e, n, r) => {
 		let i = n.trim(), a = (r || i).trim();
 		return t && t(i) ? `<span class="wikilink" data-wl="${i}" role="link" tabindex="0">${a}</span>` : `<span class="wikilink wl-dead" title="needs tending — not a node yet">${a}</span>`;
 	}), e = e.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "<a href=\"$2\" target=\"_blank\" rel=\"noopener\">$1</a>"), e = e.replace(/\x01(\d+)\x01/g, (e, t) => n[Number(t)]), e;
 }
-function FE(e) {
+function RE(e) {
 	if (typeof e != "string") return [];
 	let t = [], n = /* @__PURE__ */ new Set(), r = /(!?)\[([^\]]+)\]\(([^)\s]+)\)/g, i;
 	for (; (i = r.exec(e)) !== null;) {
@@ -29508,16 +29613,16 @@ function FE(e) {
 	}
 	return t;
 }
-function IE(e, { resolveWikilink: t } = {}) {
+function zE(e, { resolveWikilink: t } = {}) {
 	if (typeof e != "string" || !e.length) return "";
 	let n = e.replace(/^---\n[\s\S]*?\n---\n?/, "");
-	n = NE(n);
+	n = IE(n);
 	let r = [];
 	n = n.replace(/```[^\n]*\n([\s\S]*?)```/g, (e, t) => (r.push(`<pre><code>${t}</code></pre>`), `\x00${r.length - 1}\x00`));
 	let i = [], a = null, o = [], s = () => {
 		a &&= (i.push(`</${a}>`), null);
 	}, c = () => {
-		o.length && (i.push(`<p>${PE(o.join(" "), t)}</p>`), o = []);
+		o.length && (i.push(`<p>${LE(o.join(" "), t)}</p>`), o = []);
 	};
 	for (let e of n.split("\n")) {
 		let n = e.trimEnd(), l = /^\x00(\d+)\x00$/.exec(n.trim());
@@ -29527,14 +29632,14 @@ function IE(e, { resolveWikilink: t } = {}) {
 		}
 		let u = /^(#{1,3})\s+(.*)$/.exec(n);
 		if (u) {
-			s(), c(), i.push(`<h${u[1].length + 1}>${PE(u[2], t)}</h${u[1].length + 1}>`);
+			s(), c(), i.push(`<h${u[1].length + 1}>${LE(u[2], t)}</h${u[1].length + 1}>`);
 			continue;
 		}
 		let d = /^\s*[-*]\s+(.*)$/.exec(n), f = /^\s*\d+[.)]\s+(.*)$/.exec(n);
 		if (d || f) {
 			c();
 			let e = d ? "ul" : "ol";
-			a !== e && (s(), i.push(`<${e}>`), a = e), i.push(`<li>${PE((d || f)[1], t)}</li>`);
+			a !== e && (s(), i.push(`<${e}>`), a = e), i.push(`<li>${LE((d || f)[1], t)}</li>`);
 			continue;
 		}
 		if (s(), n.trim() === "") {
@@ -29547,7 +29652,7 @@ function IE(e, { resolveWikilink: t } = {}) {
 }
 //#endregion
 //#region src/algorithms.js
-function LE(e) {
+function BE(e) {
 	let t = {
 		compare: 0,
 		swap: 0,
@@ -29560,14 +29665,14 @@ function LE(e) {
 	for (let n of e || []) n && typeof n.type == "string" && (t[n.type] !== void 0 && t[n.type]++, t.total++);
 	return t.work = t.compare + t.get, t;
 }
-function RE(e, { n: t = e.getArray().length } = {}) {
+function VE(e, { n: t = e.getArray().length } = {}) {
 	for (let n = 0; n < t - 1; n++) {
 		for (let r = 0; r < t - 1 - n; r++) e.compare(r, r + 1) || e.swap(r, r + 1);
 		e.mark(t - 1 - n, "done");
 	}
 	return t > 0 && e.mark(0, "done"), { sorted: e.getArray() };
 }
-function zE(e, { target: t } = {}) {
+function HE(e, { target: t } = {}) {
 	let n = e.getArray().length, r = 0, i = n - 1, a = -1;
 	for (; r <= i;) {
 		let n = r + i >> 1;
@@ -29590,7 +29695,7 @@ function zE(e, { target: t } = {}) {
 		target: t
 	};
 }
-function BE(e, { n: t = e.getArray().length } = {}) {
+function UE(e, { n: t = e.getArray().length } = {}) {
 	let n = (t, r) => {
 		if (r - t < 1) return;
 		let i = t + r >> 1;
@@ -29609,7 +29714,7 @@ function BE(e, { n: t = e.getArray().length } = {}) {
 	};
 	return n(0, t - 1), { sorted: e.getArray() };
 }
-function VE(e, { n: t = e.getArray().length } = {}) {
+function WE(e, { n: t = e.getArray().length } = {}) {
 	let n = (t, n) => {
 		let r = t;
 		for (let i = t; i < n; i++) e.compare(i, n) && (r !== i && e.swap(r, i), r++);
@@ -29624,7 +29729,7 @@ function VE(e, { n: t = e.getArray().length } = {}) {
 	};
 	return r(0, t - 1), { sorted: e.getArray() };
 }
-function HE(e, { n: t = e.getArray().length } = {}) {
+function GE(e, { n: t = e.getArray().length } = {}) {
 	let n = (e) => e - 1 >> 1;
 	for (let r = 1; r < t; r++) {
 		let t = r;
@@ -29648,10 +29753,10 @@ function HE(e, { n: t = e.getArray().length } = {}) {
 	for (let n = 0; n < t; n++) r[n] !== i[n] && e.set(n, i[n]);
 	return { sorted: e.getArray() };
 }
-var UE = {
+var KE = {
 	"merge-sort": {
 		label: "Merge sort",
-		run: BE,
+		run: UE,
 		complexity: { worst: {
 			label: "O(n log n) — n·log₂n comparisons",
 			fn: (e) => e * Math.log2(Math.max(e, 1)),
@@ -29678,7 +29783,7 @@ var UE = {
 	},
 	"quick-sort": {
 		label: "Quick sort",
-		run: VE,
+		run: WE,
 		complexity: {
 			average: {
 				label: "O(n log n) — average case",
@@ -29712,7 +29817,7 @@ var UE = {
 	},
 	"heap-sort": {
 		label: "Heap sort",
-		run: HE,
+		run: GE,
 		complexity: { worst: {
 			label: "O(n log n) — worst case too (no bad days)",
 			fn: (e) => e * Math.log2(Math.max(e, 1)),
@@ -29739,7 +29844,7 @@ var UE = {
 	},
 	"bubble-sort": {
 		label: "Bubble sort",
-		run: RE,
+		run: VE,
 		complexity: { worst: {
 			label: "O(n²) — n(n−1)/2 comparisons",
 			fn: (e) => e * (e - 1) / 2,
@@ -29766,7 +29871,7 @@ var UE = {
 	},
 	"binary-search": {
 		label: "Binary search",
-		run: zE,
+		run: HE,
 		complexity: {
 			worst: {
 				label: "O(log n) — ⌊log₂ n⌋ + 1 reads",
@@ -29803,26 +29908,26 @@ var UE = {
 		]
 	}
 };
-function WE(e, t, n, r) {
-	let i = UE[e];
+function qE(e, t, n, r) {
+	let i = KE[e];
 	if (!i) throw Error(`measureComplexity: unknown algorithm "${e}"`);
 	let a = [];
 	for (let o of t) {
 		let t = n(o), s = r(t), c = e === "binary-search" ? { target: t[t.length - 1] } : {};
 		i.run(s, c), a.push({
 			n: o,
-			work: LE(s.getOps()).work
+			work: BE(s.getOps()).work
 		});
 	}
 	return a;
 }
-var GE = [
+var JE = [
 	"bubble-sort",
 	"merge-sort",
 	"quick-sort",
 	"heap-sort"
 ];
-function KE(e, t) {
+function YE(e, t) {
 	let n = t >>> 0, r = () => (n = Math.imul(n, 1664525) + 1013904223 >>> 0) / 4294967296, i = e.slice();
 	for (let e = i.length - 1; e > 0; e--) {
 		let t = Math.floor(r() * (e + 1)), n = i[e];
@@ -29830,11 +29935,11 @@ function KE(e, t) {
 	}
 	return i;
 }
-function qE(e, t = "random", n = 5361185) {
+function XE(e, t = "random", n = 5361185) {
 	let r = Array.from({ length: e }, (e, t) => t + 1);
-	return t === "sorted" ? r : t === "reversed" ? r.slice().reverse() : KE(r, n + e);
+	return t === "sorted" ? r : t === "reversed" ? r.slice().reverse() : YE(r, n + e);
 }
-function JE({ kinds: e = GE, sizes: t = [
+function ZE({ kinds: e = JE, sizes: t = [
 	8,
 	16,
 	32,
@@ -29844,13 +29949,13 @@ function JE({ kinds: e = GE, sizes: t = [
 ], case: n = "random", seed: r = 5361185, createTracerFn: i } = {}) {
 	return {
 		measured: e.map((e) => {
-			let a = UE[e];
+			let a = KE[e];
 			if (!a) throw Error(`raceAlgorithms: unknown algorithm "${e}"`);
 			let o = t.map((e) => {
-				let t = i(qE(e, n, r));
+				let t = i(XE(e, n, r));
 				return a.run(t, {}), {
 					x: e,
-					y: LE(t.getOps()).compare
+					y: BE(t.getOps()).compare
 				};
 			});
 			return {
@@ -29880,14 +29985,14 @@ function JE({ kinds: e = GE, sizes: t = [
 }
 //#endregion
 //#region src/chart.js
-var YE = "http://www.w3.org/2000/svg";
-function XE(e, t, n = 5) {
+var QE = "http://www.w3.org/2000/svg";
+function $E(e, t, n = 5) {
 	if (!Number.isFinite(e) || !Number.isFinite(t) || t <= e || n < 2) return [];
 	let r = (t - e) / (n - 1), i = 10 ** Math.floor(Math.log10(r)), a = r / i, o = (a >= Math.sqrt(50) ? 10 : a >= Math.sqrt(10) ? 5 : a >= Math.sqrt(2) ? 2 : 1) * i, s = Math.ceil(e / o) * o, c = [];
 	for (let e = s; e <= t + o * 1e-6; e += o) c.push(Number(e.toFixed(10)));
 	return c;
 }
-function ZE(e, t) {
+function eD(e, t) {
 	let n = Math.max(e, 1e-9), r = Math.max(t, n * 10), i = Math.log10(r) - Math.log10(n), a = [];
 	for (let e = Math.floor(Math.log10(n)); e <= Math.ceil(Math.log10(r)); e++) {
 		let t = 10 ** e, o = i <= 2.5 ? [
@@ -29902,7 +30007,7 @@ function ZE(e, t) {
 	}
 	return a;
 }
-function QE({ domain: e, range: t, type: n = "linear" }) {
+function tD({ domain: e, range: t, type: n = "linear" }) {
 	let [r, i] = e, [a, o] = t;
 	if (n === "log") {
 		let e = Math.log10(Math.max(r, 1e-9)), t = Math.log10(Math.max(i, 1e-9)) - e || 1;
@@ -29911,7 +30016,7 @@ function QE({ domain: e, range: t, type: n = "linear" }) {
 	let s = i - r || 1;
 	return (e) => a + (e - r) / s * (o - a);
 }
-function $E(e, t, n) {
+function nD(e, t, n) {
 	let r = [];
 	for (let i of e.data || []) {
 		let e = Number(i.x), a = Number(i.y);
@@ -29924,7 +30029,7 @@ function $E(e, t, n) {
 	}
 	return r;
 }
-function eD({ series: e = [], width: t = 460, height: n = 260, padding: r = {}, xScale: i = "linear", yScale: a = "linear", xDomain: o, yDomain: s, ticks: c = 5 } = {}) {
+function rD({ series: e = [], width: t = 460, height: n = 260, padding: r = {}, xScale: i = "linear", yScale: a = "linear", xDomain: o, yDomain: s, ticks: c = 5 } = {}) {
 	let l = {
 		top: 16,
 		right: 14,
@@ -29936,11 +30041,11 @@ function eD({ series: e = [], width: t = 460, height: n = 260, padding: r = {}, 
 		y0: n - l.bottom,
 		x1: t - l.right,
 		y1: l.top
-	}, d = e.flatMap((e) => (e.data || []).map((e) => Number(e.x))).filter(Number.isFinite), f = e.flatMap((e) => (e.data || []).map((e) => Number(e.y))).filter(Number.isFinite), p = o || [Math.min(...d), Math.max(...d)], m = s || (a === "log" ? [Math.max(Math.min(...f), 1), Math.max(...f)] : [0, Math.max(...f)]), h = QE({
+	}, d = e.flatMap((e) => (e.data || []).map((e) => Number(e.x))).filter(Number.isFinite), f = e.flatMap((e) => (e.data || []).map((e) => Number(e.y))).filter(Number.isFinite), p = o || [Math.min(...d), Math.max(...d)], m = s || (a === "log" ? [Math.max(Math.min(...f), 1), Math.max(...f)] : [0, Math.max(...f)]), h = tD({
 		domain: p,
 		range: [u.x0, u.x1],
 		type: i
-	}), g = QE({
+	}), g = tD({
 		domain: m,
 		range: [u.y0, u.y1],
 		type: a
@@ -29955,20 +30060,20 @@ function eD({ series: e = [], width: t = 460, height: n = 260, padding: r = {}, 
 		yScale: a,
 		sx: h,
 		sy: g,
-		xTicks: i === "log" ? ZE(p[0], p[1]) : XE(p[0], p[1], c),
-		yTicks: a === "log" ? ZE(m[0], m[1]) : XE(m[0], m[1], c),
+		xTicks: i === "log" ? eD(p[0], p[1]) : $E(p[0], p[1], c),
+		yTicks: a === "log" ? eD(m[0], m[1]) : $E(m[0], m[1], c),
 		points: e.map((e) => ({
 			series: e,
-			pts: $E(e, h, g)
+			pts: nD(e, h, g)
 		}))
 	};
 }
-var tD = (e, t = {}) => {
-	let n = document.createElementNS(YE, e);
+var iD = (e, t = {}) => {
+	let n = document.createElementNS(QE, e);
 	for (let [e, r] of Object.entries(t)) n.setAttribute(e, String(r));
 	return n;
 };
-function nD(e = {}) {
+function aD(e = {}) {
 	let { xLabel: t = "", yLabel: n = "", legend: r = !0 } = e, i = [
 		$.ACCENT.ihat,
 		$.ACCENT.jhat,
@@ -29978,12 +30083,12 @@ function nD(e = {}) {
 	a.className = "lgr-chart";
 	let o = e.series || [];
 	function s() {
-		let s = eD({
+		let s = rD({
 			...e,
 			series: o
 		});
 		a.replaceChildren();
-		let l = tD("svg", {
+		let l = iD("svg", {
 			viewBox: `0 0 ${s.width} ${s.height}`,
 			preserveAspectRatio: "xMidYMid meet",
 			role: "img",
@@ -29992,7 +30097,7 @@ function nD(e = {}) {
 		l.style.width = "100%", l.style.height = "auto", l.style.display = "block", l.style.fontFamily = $.TYPE.font;
 		for (let e of s.yTicks) {
 			let t = s.sy(e);
-			l.appendChild(tD("line", {
+			l.appendChild(iD("line", {
 				x1: s.plot.x0,
 				y1: t,
 				x2: s.plot.x1,
@@ -30001,7 +30106,7 @@ function nD(e = {}) {
 				"stroke-width": .5,
 				opacity: .5
 			}));
-			let n = tD("text", {
+			let n = iD("text", {
 				x: s.plot.x0 - 6,
 				y: t + 3,
 				"text-anchor": "end",
@@ -30012,7 +30117,7 @@ function nD(e = {}) {
 		}
 		for (let e of s.xTicks) {
 			let t = s.sx(e);
-			l.appendChild(tD("line", {
+			l.appendChild(iD("line", {
 				x1: t,
 				y1: s.plot.y0,
 				x2: t,
@@ -30020,7 +30125,7 @@ function nD(e = {}) {
 				stroke: $.NEUTRAL.border,
 				"stroke-width": .5
 			}));
-			let n = tD("text", {
+			let n = iD("text", {
 				x: t,
 				y: s.plot.y0 + 15,
 				"text-anchor": "middle",
@@ -30029,14 +30134,14 @@ function nD(e = {}) {
 			});
 			n.textContent = c(e), l.appendChild(n);
 		}
-		if (l.appendChild(tD("line", {
+		if (l.appendChild(iD("line", {
 			x1: s.plot.x0,
 			y1: s.plot.y0,
 			x2: s.plot.x1,
 			y2: s.plot.y0,
 			stroke: $.NEUTRAL.border,
 			"stroke-width": 1
-		})), l.appendChild(tD("line", {
+		})), l.appendChild(iD("line", {
 			x1: s.plot.x0,
 			y1: s.plot.y0,
 			x2: s.plot.x0,
@@ -30044,7 +30149,7 @@ function nD(e = {}) {
 			stroke: $.NEUTRAL.border,
 			"stroke-width": 1
 		})), t) {
-			let e = tD("text", {
+			let e = iD("text", {
 				x: (s.plot.x0 + s.plot.x1) / 2,
 				y: s.height - 4,
 				"text-anchor": "middle",
@@ -30055,7 +30160,7 @@ function nD(e = {}) {
 			e.textContent = t.toUpperCase(), l.appendChild(e);
 		}
 		if (n) {
-			let e = tD("text", {
+			let e = iD("text", {
 				x: 10,
 				y: (s.plot.y0 + s.plot.y1) / 2,
 				"text-anchor": "middle",
@@ -30068,7 +30173,7 @@ function nD(e = {}) {
 		}
 		if (s.points.forEach(({ series: e, pts: t }, n) => {
 			let r = e.color || i[n % i.length];
-			if (e.type === "scatter") for (let n of t) l.appendChild(tD("circle", {
+			if (e.type === "scatter") for (let n of t) l.appendChild(iD("circle", {
 				cx: n.x,
 				cy: n.y,
 				r: e.size || 3,
@@ -30078,7 +30183,7 @@ function nD(e = {}) {
 			}));
 			else {
 				let n = t.map((e, t) => `${t ? "L" : "M"}${e.x.toFixed(2)},${e.y.toFixed(2)}`).join(" ");
-				l.appendChild(tD("path", {
+				l.appendChild(iD("path", {
 					d: n,
 					fill: "none",
 					stroke: r,
@@ -30092,8 +30197,8 @@ function nD(e = {}) {
 			o.forEach((a, o) => {
 				let c = a.color || i[o % i.length], u = a.label || `series ${o + 1}`, d = 12 + u.length * 5 + 14;
 				e + d > r && e > s.plot.x0 && (e = s.plot.x0, t += 12, n++);
-				let f = tD("g", {});
-				f.appendChild(tD("rect", {
+				let f = iD("g", {});
+				f.appendChild(iD("rect", {
 					x: e,
 					y: t - 6,
 					width: 8,
@@ -30101,7 +30206,7 @@ function nD(e = {}) {
 					fill: c,
 					rx: 1
 				}));
-				let p = tD("text", {
+				let p = iD("text", {
 					x: e + 12,
 					y: t + 1,
 					fill: $.NEUTRAL.text,
@@ -30126,7 +30231,7 @@ function nD(e = {}) {
 		setSeries: l,
 		dispose: u,
 		get layout() {
-			return eD({
+			return rD({
 				...e,
 				series: o
 			});
@@ -30135,12 +30240,12 @@ function nD(e = {}) {
 }
 //#endregion
 //#region src/step-panel.js
-function rD({ kind: e, input: t, target: n, reducedMotion: r = !1, msPerStep: i = 650 } = {}) {
-	let a = UE[e];
-	if (!a) throw Error(`createStepPanel: unknown algorithm "${e}" (have: ${Object.keys(UE).join(", ")})`);
+function oD({ kind: e, input: t, target: n, reducedMotion: r = !1, msPerStep: i = 650 } = {}) {
+	let a = KE[e];
+	if (!a) throw Error(`createStepPanel: unknown algorithm "${e}" (have: ${Object.keys(KE).join(", ")})`);
 	let o = fx(Array.isArray(t) && t.length ? t.slice() : a.defaultInput.slice()), s = e === "binary-search" ? { target: n ?? a.defaultTarget } : {};
 	a.run(o, s);
-	let c = o.getOps(), l = o.getKeyframes(), u = LE(c), d = px(o, { msPerStep: i }), f = document.createElement("div");
+	let c = o.getOps(), l = o.getKeyframes(), u = BE(c), d = px(o, { msPerStep: i }), f = document.createElement("div");
 	f.className = "lgr-step-panel";
 	let p = document.createElement("div");
 	p.className = "lgr-step-cells";
@@ -30216,7 +30321,7 @@ function rD({ kind: e, input: t, target: n, reducedMotion: r = !1, msPerStep: i 
 		});
 		for (let [e, t] of [...b.children].entries()) t.dataset.on = i && x[i.type] === e ? "1" : "";
 		y.value = String(e);
-		let a = LE(c.slice(0, e));
+		let a = BE(c.slice(0, e));
 		g.textContent = `step ${e} / ${c.length} · ${a.compare} compares · ${a.swap} swaps · ${a.get} reads` + (u.set ? ` · ${a.set || 0} writes` : "") + (e >= c.length ? ` — done: ${u.work} operations of work` : "");
 	}
 	d.onUpdate((e) => w(e)), w(0);
@@ -30243,7 +30348,7 @@ function rD({ kind: e, input: t, target: n, reducedMotion: r = !1, msPerStep: i 
 }
 //#endregion
 //#region src/graph-clusters.js
-function iD(e, t = (e) => e.kind) {
+function sD(e, t = (e) => e.kind) {
 	let n = e && Array.isArray(e.nodes) ? e.nodes : [], r = /* @__PURE__ */ new Map(), i = [];
 	for (let e of n) {
 		if (!e || !e.id) continue;
@@ -30264,22 +30369,22 @@ function iD(e, t = (e) => e.kind) {
 		unclustered: i.slice().sort()
 	};
 }
-function aD(e) {
+function cD(e) {
 	let t = /* @__PURE__ */ new Map();
 	for (let n of e) for (let e of n.memberIds) t.set(e, n.key);
 	return t;
 }
-function oD(e, t) {
+function lD(e, t) {
 	for (let n of t) if (n.memberIds.includes(e)) return n;
 	return null;
 }
-function sD(e, t) {
+function uD(e, t) {
 	let n = t.find((t) => t.id === e);
 	if (n) return n.memberIds.slice();
-	let r = oD(e, t);
+	let r = lD(e, t);
 	return r ? r.memberIds.slice() : [];
 }
-function cD(e, t, { mode: n = "mean" } = {}) {
+function dD(e, t, { mode: n = "mean" } = {}) {
 	let r = /* @__PURE__ */ new Map();
 	for (let i of e) {
 		let e = 0, a = 0, o = 0, s = 0, c = 0, l = 0;
@@ -30323,7 +30428,7 @@ function cD(e, t, { mode: n = "mean" } = {}) {
 	}
 	return r;
 }
-function lD(e, t, { hubKey: n = "hub", gap: r = .6, order: i = null } = {}) {
+function fD(e, t, { hubKey: n = "hub", gap: r = .6, order: i = null } = {}) {
 	let a = e.find((e) => e.key === n) || null, o = e.filter((e) => e !== a), s = i ? o.slice().sort((e, t) => i.indexOf(e.key) - i.indexOf(t.key)) : o.slice().sort((e, t) => e.key < t.key ? -1 : 1), c = /* @__PURE__ */ new Map(), l = s.length;
 	if (a && c.set(a.id, {
 		x: 0,
@@ -30345,8 +30450,8 @@ function lD(e, t, { hubKey: n = "hub", gap: r = .6, order: i = null } = {}) {
 		});
 	}), c;
 }
-function uD(e, t) {
-	let n = aD(t), r = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Map();
+function pD(e, t) {
+	let n = cD(t), r = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Map();
 	for (let e of t) i.set(e.key, 0);
 	for (let t of e && Array.isArray(e.edges) ? e.edges : []) {
 		if (!t) continue;
@@ -30372,8 +30477,8 @@ function uD(e, t) {
 		internal: i
 	};
 }
-function dD(e, t, { hasMedia: n = () => !1, worstState: r = null } = {}) {
-	let i = new Map((e.nodes || []).map((e) => [e.id, e])), { edges: a } = uD(e, t);
+function mD(e, t, { hasMedia: n = () => !1, worstState: r = null } = {}) {
+	let i = new Map((e.nodes || []).map((e) => [e.id, e])), { edges: a } = pD(e, t);
 	return {
 		v: 1,
 		nodes: t.map((e) => {
@@ -30401,20 +30506,20 @@ function dD(e, t, { hasMedia: n = () => !1, worstState: r = null } = {}) {
 		edges: a
 	};
 }
-var fD = Object.freeze({
+var hD = Object.freeze({
 	detailIn: 10.5,
 	detailOut: 11.8,
 	overviewIn: 15,
 	overviewOut: 13.5
 });
-function pD(e, t = null, n = {}) {
+function gD(e, t = null, n = {}) {
 	let { detailIn: r, detailOut: i, overviewIn: a, overviewOut: o } = {
-		...fD,
+		...hD,
 		...n
 	};
 	return t === "detail" ? e > i ? e >= a ? "overview" : "focus" : "detail" : t === "overview" ? e < o ? e <= r ? "detail" : "focus" : "overview" : e <= r ? "detail" : e >= a ? "overview" : "focus";
 }
-function mD(e, t = {
+function _D(e, t = {
 	x: 0,
 	z: 0
 }) {
@@ -30425,7 +30530,7 @@ function mD(e, t = {
 	}
 	return n;
 }
-function hD({ state: e, clusters: t, centroids: n, target: r }) {
+function vD({ state: e, clusters: t, centroids: n, target: r }) {
 	let i = /* @__PURE__ */ new Set(), a = /* @__PURE__ */ new Set(), o = [];
 	if (e === "detail") {
 		for (let e of t) {
@@ -30446,7 +30551,7 @@ function hD({ state: e, clusters: t, centroids: n, target: r }) {
 			expanded: o
 		};
 	}
-	let s = mD(n, r);
+	let s = _D(n, r);
 	for (let e of t) if (e.id === s) {
 		o.push(e.key);
 		for (let t of e.memberIds) i.add(t);
@@ -30459,8 +30564,8 @@ function hD({ state: e, clusters: t, centroids: n, target: r }) {
 }
 //#endregion
 //#region src/tree-layout.js
-var gD = (e) => e ? Array.isArray(e.children) ? e.children.filter(Boolean) : [e.left, e.right].filter((e) => e != null) : [];
-function _D(e, { childrenOf: t = gD, gapX: n = 1, gapY: r = 1 } = {}) {
+var yD = (e) => e ? Array.isArray(e.children) ? e.children.filter(Boolean) : [e.left, e.right].filter((e) => e != null) : [];
+function bD(e, { childrenOf: t = yD, gapX: n = 1, gapY: r = 1 } = {}) {
 	let i = /* @__PURE__ */ new Map(), a = [];
 	if (!e) return {
 		positions: i,
@@ -30500,20 +30605,20 @@ function _D(e, { childrenOf: t = gD, gapX: n = 1, gapY: r = 1 } = {}) {
 		order: a
 	};
 }
-function vD(e, t = gD) {
+function xD(e, t = yD) {
 	let n = [], r = (e) => {
 		if (e) for (let i of t(e)) n.push([e, i]), r(i);
 	};
 	return r(e), n;
 }
-function yD(e, t = gD) {
+function SD(e, t = yD) {
 	if (!e) return -1;
 	let n = t(e);
-	return n.length ? 1 + Math.max(...n.map((e) => yD(e, t))) : 0;
+	return n.length ? 1 + Math.max(...n.map((e) => SD(e, t))) : 0;
 }
 //#endregion
 //#region src/data-structures.js
-function bD(e, t) {
+function CD(e, t) {
 	if (!e) return {
 		key: t,
 		left: null,
@@ -30531,12 +30636,12 @@ function bD(e, t) {
 		n = n[r];
 	}
 }
-function xD(e) {
+function wD(e) {
 	let t = null;
-	for (let n of e) t = bD(t, n);
+	for (let n of e) t = CD(t, n);
 	return t;
 }
-function SD(e, t) {
+function TD(e, t) {
 	let n = e;
 	for (; n;) {
 		if (t === n.key) return !0;
@@ -30544,13 +30649,13 @@ function SD(e, t) {
 	}
 	return !1;
 }
-function CD(e) {
+function ED(e) {
 	let t = [], n = (e) => {
 		e && (n(e.left), t.push(e.key), n(e.right));
 	};
 	return n(e), t;
 }
-function wD(e, { inserts: t = [], target: n = null } = {}) {
+function DD(e, { inserts: t = [], target: n = null } = {}) {
 	let r = null, i = 0, a = /* @__PURE__ */ new Map(), o = (e) => {
 		let t = {
 			id: i++,
@@ -30600,7 +30705,7 @@ function wD(e, { inserts: t = [], target: n = null } = {}) {
 		comparisons: e.getOps().filter((e) => e.type === "compare").length
 	};
 }
-function TD(e, t) {
+function OD(e, t) {
 	let n = e, r = 0;
 	for (; n;) {
 		if (r++, t === n.key) return r;
@@ -30608,7 +30713,7 @@ function TD(e, t) {
 	}
 	return r;
 }
-function ED(e) {
+function kD(e) {
 	let t = [], n = (e, r) => {
 		if (e > r) return;
 		let i = e + r >> 1;
@@ -30616,10 +30721,10 @@ function ED(e) {
 	};
 	return n(0, e - 1), t;
 }
-function DD(e) {
+function AD(e) {
 	return Array.from({ length: e }, (e, t) => t + 1);
 }
-function OD(e = [
+function jD(e = [
 	8,
 	16,
 	32,
@@ -30630,10 +30735,10 @@ function OD(e = [
 	let t = (e) => e, n = [], r = [], i = [];
 	for (let a of e) n.push({
 		x: a,
-		y: TD(xD(ED(a)), t(a))
+		y: OD(wD(kD(a)), t(a))
 	}), r.push({
 		x: a,
-		y: TD(xD(DD(a)), t(a))
+		y: OD(wD(AD(a)), t(a))
 	}), i.push({
 		x: a,
 		y: a
@@ -30645,39 +30750,39 @@ function OD(e = [
 		sizes: e
 	};
 }
-var kD = (e) => e - 1 >> 1, AD = (e) => 2 * e + 1, jD = (e) => 2 * e + 2;
-function MD(e, t = e.length) {
-	for (let n = 0; n < t; n++) for (let r of [AD(n), jD(n)]) if (r < t && e[r] < e[n]) return !1;
+var MD = (e) => e - 1 >> 1, ND = (e) => 2 * e + 1, PD = (e) => 2 * e + 2;
+function FD(e, t = e.length) {
+	for (let n = 0; n < t; n++) for (let r of [ND(n), PD(n)]) if (r < t && e[r] < e[n]) return !1;
 	return !0;
 }
-function ND(e, t) {
+function ID(e, t) {
 	e.push(t);
 	let n = e.length - 1;
-	for (; n > 0 && e[n] < e[kD(n)];) {
-		let t = kD(n);
+	for (; n > 0 && e[n] < e[MD(n)];) {
+		let t = MD(n);
 		[e[n], e[t]] = [e[t], e[n]], n = t;
 	}
 	return e;
 }
-function PD(e) {
+function LD(e) {
 	if (!e.length) return;
 	let t = e[0], n = e.pop();
 	if (e.length) {
 		e[0] = n;
 		let t = 0;
 		for (;;) {
-			let n = AD(t), r = jD(t), i = t;
+			let n = ND(t), r = PD(t), i = t;
 			if (n < e.length && e[n] < e[i] && (i = n), r < e.length && e[r] < e[i] && (i = r), i === t) break;
 			[e[t], e[i]] = [e[i], e[t]], t = i;
 		}
 	}
 	return t;
 }
-function FD(e, { inserts: t = [], extracts: n = 0 } = {}) {
+function RD(e, { inserts: t = [], extracts: n = 0 } = {}) {
 	let r = 0, i = (t) => {
 		let n = t;
 		for (; n > 0;) {
-			let t = kD(n);
+			let t = MD(n);
 			if (e.mark(n, "visit"), !e.compare(n, t)) {
 				e.mark(n, "settled");
 				break;
@@ -30688,7 +30793,7 @@ function FD(e, { inserts: t = [], extracts: n = 0 } = {}) {
 	}, a = () => {
 		let t = 0;
 		for (;;) {
-			let n = AD(t), i = jD(t), a = t;
+			let n = ND(t), i = PD(t), a = t;
 			if (e.mark(t, "visit"), n < r && e.compare(n, a) && (a = n), i < r && e.compare(i, a) && (a = i), a === t) {
 				e.mark(t, "settled");
 				break;
@@ -30704,13 +30809,13 @@ function FD(e, { inserts: t = [], extracts: n = 0 } = {}) {
 		size: r
 	};
 }
-function ID(e) {
+function zD(e) {
 	let t = 0, n = [];
 	for (let r of e) {
 		n.push(r);
 		let e = n.length - 1;
-		for (; e > 0 && (t++, n[e] < n[kD(e)]);) {
-			let t = kD(e);
+		for (; e > 0 && (t++, n[e] < n[MD(e)]);) {
+			let t = MD(e);
 			[n[e], n[t]] = [n[t], n[e]], e = t;
 		}
 	}
@@ -30722,7 +30827,7 @@ function ID(e) {
 		n[0] = e;
 		let i = 0;
 		for (;;) {
-			let e = AD(i), r = jD(i), a = i;
+			let e = ND(i), r = PD(i), a = i;
 			if (e < n.length && (t++, n[e] < n[a] && (a = e)), r < n.length && (t++, n[r] < n[a] && (a = r)), a === i) break;
 			[n[i], n[a]] = [n[a], n[i]], i = a;
 		}
@@ -30732,11 +30837,11 @@ function ID(e) {
 		comparisons: t
 	};
 }
-var LD = {
+var BD = {
 	"binary-heap": {
 		label: "Binary min-heap",
 		panel: "heap",
-		run: FD,
+		run: RD,
 		complexity: {
 			op: {
 				label: "O(log n) — insert / extract-min",
@@ -30773,7 +30878,7 @@ var LD = {
 	"binary-search-tree": {
 		label: "Binary search tree",
 		panel: "tree",
-		run: wD,
+		run: DD,
 		complexity: {
 			balanced: {
 				label: "O(log n) — balanced",
@@ -30807,12 +30912,12 @@ var LD = {
 			"  return NOT_FOUND;"
 		]
 	}
-}, RD = "http://www.w3.org/2000/svg", zD = (e, t = {}) => {
-	let n = document.createElementNS(RD, e);
+}, VD = "http://www.w3.org/2000/svg", HD = (e, t = {}) => {
+	let n = document.createElementNS(VD, e);
 	for (let [e, r] of Object.entries(t)) n.setAttribute(e, String(r));
 	return n;
 };
-function BD(e) {
+function UD(e) {
 	if (e <= 0) return null;
 	let t = Array.from({ length: e }, (e, t) => ({
 		id: t,
@@ -30826,24 +30931,24 @@ function BD(e) {
 	}
 	return t[0];
 }
-function VD({ kind: e = "binary-search-tree", inserts: t, target: n, extracts: r, reducedMotion: i = !1, msPerStep: a = 620 } = {}) {
-	let o = LD[e];
-	if (!o) throw Error(`createTreePanel: unknown structure "${e}" (have: ${Object.keys(LD).join(", ")})`);
+function WD({ kind: e = "binary-search-tree", inserts: t, target: n, extracts: r, reducedMotion: i = !1, msPerStep: a = 620 } = {}) {
+	let o = BD[e];
+	if (!o) throw Error(`createTreePanel: unknown structure "${e}" (have: ${Object.keys(BD).join(", ")})`);
 	let s = Array.isArray(t) && t.length ? t.slice() : o.defaultInserts.slice(), c = n ?? o.defaultTarget, l = o.panel === "heap", u = fx(l ? Array(s.length).fill(null) : []), d = l ? {
 		inserts: s,
 		extracts: r ?? o.defaultExtracts ?? 0
 	} : {
 		inserts: s,
 		target: c
-	}, f = o.run(u, d), p = l ? BD(s.length) : f.root, m = u.getOps(), h = u.getKeyframes(), g = px(u, { msPerStep: a }), _ = _D(p, {
+	}, f = o.run(u, d), p = l ? UD(s.length) : f.root, m = u.getOps(), h = u.getKeyframes(), g = px(u, { msPerStep: a }), _ = bD(p, {
 		gapX: 1,
 		gapY: 1
-	}), v = vD(p), y = yD(p), b = {
+	}), v = xD(p), y = SD(p), b = {
 		x: 26,
 		y: 24
 	}, x = _.width * 44 + b.x * 2, S = _.height * 56 + b.y * 2, C = document.createElement("div");
 	C.className = "lgr-tree-panel";
-	let w = zD("svg", {
+	let w = HD("svg", {
 		viewBox: `0 0 ${x} ${S}`,
 		role: "img",
 		"aria-label": "binary search tree"
@@ -30857,7 +30962,7 @@ function VD({ kind: e = "binary-search-tree", inserts: t, target: n, extracts: r
 		};
 	}, E = /* @__PURE__ */ new Map();
 	for (let [e, t] of v) {
-		let n = T(e), r = T(t), i = zD("line", {
+		let n = T(e), r = T(t), i = HD("line", {
 			x1: n.x,
 			y1: n.y,
 			x2: r.x,
@@ -30870,14 +30975,14 @@ function VD({ kind: e = "binary-search-tree", inserts: t, target: n, extracts: r
 	}
 	let D = /* @__PURE__ */ new Map(), O = /* @__PURE__ */ new Map();
 	for (let [e] of _.positions) {
-		let t = T(e), n = zD("g", {}), r = zD("circle", {
+		let t = T(e), n = HD("g", {}), r = HD("circle", {
 			cx: t.x,
 			cy: t.y,
 			r: 15,
 			fill: $.NEUTRAL.surface,
 			stroke: $.NEUTRAL.border,
 			"stroke-width": 1.5
-		}), i = zD("text", {
+		}), i = HD("text", {
 			x: t.x,
 			y: t.y + 4,
 			"text-anchor": "middle",
@@ -30983,7 +31088,7 @@ function VD({ kind: e = "binary-search-tree", inserts: t, target: n, extracts: r
 		F.value = String(e);
 		let u = m.slice(0, e).filter((e) => e.type === "compare").length, d = t.size;
 		if (l) {
-			let t = m.slice(0, e).filter((e) => e.type === "get").map((e) => e.value), n = h[Math.min(e, h.length - 1)].arr, r = n[0], i = MD(n.filter((e) => e != null));
+			let t = m.slice(0, e).filter((e) => e.type === "get").map((e) => e.value), n = h[Math.min(e, h.length - 1)].arr, r = n[0], i = FD(n.filter((e) => e != null));
 			A.textContent = `step ${e} / ${m.length} · ${d} in the heap · ${u} comparisons` + (r == null ? "" : i ? ` · root = ${r} — the minimum, read in O(1)` : ` · root = ${r} — mid-sift: the invariant is BROKEN right now, and the sift is what repairs it`) + (t.length ? ` · pulled: ${t.join(" → ")}` : "");
 		} else A.textContent = `step ${e} / ${m.length} · ${d}/${s.length} nodes · ${u} comparisons` + (r ? ` — ${c} is NOT in the tree (the walk fell off the bottom)` : "") + (e >= m.length && !r ? ` — found ${c} · depth ${y} · a balanced tree of ${s.length} would need ~${Math.floor(Math.log2(s.length)) + 1}` : "");
 	}
@@ -31011,4 +31116,4 @@ function VD({ kind: e = "binary-search-tree", inserts: t, target: n, extracts: r
 	};
 }
 //#endregion
-export { UE as ALGORITHMS, oT as ALGORITHM_KINDS, Tb as ATV_PROFILE, Tv as BIOMES, eg as CAM, mx as CELL_COLORS, Db as CRAFT_PROFILE, hT as DEEP_CHARS, ST as DEFAULT_RINGS, Lg as ERA_ORDER, Ig as ERA_PRESETS, $w as GRAPH_SPEC_VERSION, pT as HEAT_TAU_DAYS, eT as KINDS, zg as LGR_PALETTES, _T as MEDIA_GLYPHS, kv as PRESET_KEYS, tT as RELS, Rg as SCENE_ERA_ORDER, zv as SCENE_SPEC_VERSION, nT as SLOW_MS, GE as SORT_KINDS, cT as STATES, LD as STRUCTURES, Ov as TERRAIN_PRESETS, $ as THEME, X_ as THEMES, Af as THREE, $g as VEC_FRAG_PARS, Qg as VEC_VERT_MAIN, Zg as VEC_VERT_PARS, fD as ZOOM_DEFAULTS, uD as aggregateEdges, Xh as angleDelta, Zv as applySceneSpec, Z_ as applyThemeToRoot, e_ as attachVectorUniforms, ED as balancedKeys, zE as binarySearch, SD as bstContains, xD as bstFromKeys, CD as bstInOrder, bD as bstInsert, TD as bstSearchCost, RE as bubbleSort, AT as buildGraphSpec, jw as buildLakeGroup, xw as buildScatterGroup, Lv as buildTerrainMesh, eD as chartLayout, Yh as clamp, rT as classifyHealth, gT as classifyMedia, iD as clusterBy, cD as clusterCentroids, aD as clusterIndex, sD as clusterMembersOf, oD as clusterOfNode, LE as countOps, Jw as createAmbientBed, CE as createAmbientScheduler, V_ as createAppShell, qw as createAudioBus, vS as createAurora, Px as createBeautyPresenter, rw as createBeforeAfter, qx as createBuildIn, Wx as createCameraDirector, vg as createCameraRig, D_ as createCapture, Hw as createCatalog, BC as createCathedralLight, kC as createCaustics, hx as createCellField, nD as createChart, Ib as createCockpit, dS as createConstellation, cb as createDevMode, $x as createDuskSilk, sS as createEdgeField, cx as createEditor, T_ as createEngineCore, Ng as createEngineProfiler, YC as createFirstLight, kE as createGraphAmbient, xE as createGraphAtmosphere, hE as createGraphLabels, wT as createGraphLayout, ME as createGraphSim, dE as createGraphView, Eb as createGroundModel, dx as createGyroLook, Fx as createHeroDirector, Vx as createHeroWipe, rx as createHiddenProp, I_ as createHints, hb as createInspector, dC as createLattice, FC as createLetterpress, _C as createLiquidMetal, wC as createLivingInk, aw as createLookReel, aC as createMaterialStudy, vv as createMatrixGrid, $_ as createMorphTimeline, FS as createObservatory, Fb as createPilotController, qS as createPixelMorph, Zb as createPlacedLife, Xw as createPositionalField, SS as createProductMoment, rb as createProductStage, ex as createProximityLatch, Fg as createQualityGovernor, Qw as createRotor, kw as createScatter, pb as createSceneTransition, gx as createScrollDirector, bb as createSeatedLook, Kw as createSkyAtmosphere, Ax as createSmoothScroll, jb as createSpacecraftModel, lb as createSpriteAnim, rD as createStepPanel, Ag as createSunRig, px as createTracePlayer, fx as createTracer, VD as createTreePanel, M_ as createViewerUI, Vw as createWaterFlow, Mw as createWorldLakes, Jh as damp, DD as degenerateKeys, Aw as detectLakes, Q_ as easeInOutCubic, kT as extractExcerpt, ET as extractLinks, DT as extractMarkdownLinks, Yg as fogCharm, Yv as fromURLParams, d_ as fullscreenVert, sw as generateScatter, Av as generateTerrain, BT as getKindColors, bT as hasMedia, MD as heapIsValid, PD as heapPop, ND as heapPush, HE as heapSort, ID as heapSortCost, mT as heatFromAgeDays, xT as indexNodes, SE as lcg, db as loadSpriteSheet, ZE as logTicks, qE as makeCaseInput, yb as makeContactShadow, Bg as makePaletteTexture, QE as makeScale, Cb as makeVignette, lx as mapGyroToLook, OD as measureBST, WE as measureComplexity, vT as mediaGlyph, yT as mediaGlyphCode, Vg as medianCut, BE as mergeSort, mD as nearestCluster, XE as niceTicks, OT as noteToRecords, TT as parseFrontmatter, $b as pickStreetIntersection, fb as postDiveFrag, y_ as postPixelkitFrag, VE as quickSort, JE as raceAlgorithms, B_ as readAppFlags, Rv as rebuildTerrainChunks, IE as renderNoteHtml, Ow as reprojectScatter, FE as scanFileRefs, Tw as scatterAdd, Ew as scatterErase, Uw as seedWorldEditorCatalog, $E as seriesToPoints, w_ as showWebGLUnsupported, n_ as spliceVectorVertex, lD as summaryLayout, dD as summarySpec, ub as toLuminanceTexture, Xv as toURLParams, wD as traceBST, FD as traceHeap, yD as treeDepth, vD as treeEdges, _D as treeLayout, fT as validateGraphSpec, Jv as validateSceneSpec, kg as validateSunKeyframes, Hg as vectorOn, Gg as vectorShadow, Wg as vectorTint, o_ as vectorize, a_ as vectorizeTower, hD as visibleSet, qg as weatherCloud, Jg as weatherCloudOff, Xg as weatherSeason, Kg as weatherSnow, aT as worstState, pD as zoomState };
+export { KE as ALGORITHMS, lT as ALGORITHM_KINDS, Tb as ATV_PROFILE, Tv as BIOMES, eg as CAM, mx as CELL_COLORS, Db as CRAFT_PROFILE, vT as DEEP_CHARS, TT as DEFAULT_RINGS, Lg as ERA_ORDER, Ig as ERA_PRESETS, nT as GRAPH_SPEC_VERSION, gT as HEAT_TAU_DAYS, rT as KINDS, zg as LGR_PALETTES, bT as MEDIA_GLYPHS, kv as PRESET_KEYS, iT as RELS, Rg as SCENE_ERA_ORDER, zv as SCENE_SPEC_VERSION, aT as SLOW_MS, JE as SORT_KINDS, dT as STATES, BD as STRUCTURES, Ov as TERRAIN_PRESETS, $ as THEME, X_ as THEMES, Af as THREE, $g as VEC_FRAG_PARS, Qg as VEC_VERT_MAIN, Zg as VEC_VERT_PARS, hD as ZOOM_DEFAULTS, pD as aggregateEdges, Xh as angleDelta, Zv as applySceneSpec, Z_ as applyThemeToRoot, e_ as attachVectorUniforms, kD as balancedKeys, HE as binarySearch, TD as bstContains, wD as bstFromKeys, ED as bstInOrder, CD as bstInsert, OD as bstSearchCost, VE as bubbleSort, NT as buildGraphSpec, Pw as buildLakeGroup, ww as buildScatterGroup, Lv as buildTerrainMesh, rD as chartLayout, Yh as clamp, oT as classifyHealth, yT as classifyMedia, sD as clusterBy, dD as clusterCentroids, cD as clusterIndex, uD as clusterMembersOf, lD as clusterOfNode, BE as countOps, Zw as createAmbientBed, EE as createAmbientScheduler, V_ as createAppShell, Xw as createAudioBus, xS as createAurora, Px as createBeautyPresenter, ow as createBeforeAfter, qx as createBuildIn, Wx as createCameraDirector, vg as createCameraRig, D_ as createCapture, Gw as createCatalog, UC as createCathedralLight, MC as createCaustics, hx as createCellField, aD as createChart, Ib as createCockpit, mS as createConstellation, cb as createDevMode, nS as createDuskSilk, uS as createEdgeField, cx as createEditor, T_ as createEngineCore, Ng as createEngineProfiler, QC as createFirstLight, ME as createGraphAmbient, wE as createGraphAtmosphere, vE as createGraphLabels, DT as createGraphLayout, FE as createGraphSim, mE as createGraphView, Eb as createGroundModel, dx as createGyroLook, Fx as createHeroDirector, Vx as createHeroWipe, rx as createHiddenProp, I_ as createHints, hb as createInspector, mC as createLattice, RC as createLetterpress, bC as createLiquidMetal, DC as createLivingInk, cw as createLookReel, cC as createMaterialStudy, vv as createMatrixGrid, $_ as createMorphTimeline, RS as createObservatory, Fb as createPilotController, XS as createPixelMorph, Zb as createPlacedLife, $w as createPositionalField, TS as createProductMoment, rb as createProductStage, ex as createProximityLatch, Fg as createQualityGovernor, tT as createRotor, Mw as createScatter, pb as createSceneTransition, gx as createScrollDirector, bb as createSeatedLook, Jx as createShadowRig, Yw as createSkyAtmosphere, Ax as createSmoothScroll, jb as createSpacecraftModel, lb as createSpriteAnim, oD as createStepPanel, Ag as createSunRig, px as createTracePlayer, fx as createTracer, WD as createTreePanel, M_ as createViewerUI, Ww as createWaterFlow, Fw as createWorldLakes, Jh as damp, AD as degenerateKeys, Nw as detectLakes, Q_ as easeInOutCubic, MT as extractExcerpt, kT as extractLinks, AT as extractMarkdownLinks, Yg as fogCharm, Yv as fromURLParams, d_ as fullscreenVert, uw as generateScatter, Av as generateTerrain, UT as getKindColors, CT as hasMedia, FD as heapIsValid, LD as heapPop, ID as heapPush, GE as heapSort, zD as heapSortCost, _T as heatFromAgeDays, wT as indexNodes, TE as lcg, db as loadSpriteSheet, eD as logTicks, XE as makeCaseInput, yb as makeContactShadow, Bg as makePaletteTexture, tD as makeScale, Cb as makeVignette, lx as mapGyroToLook, jD as measureBST, qE as measureComplexity, xT as mediaGlyph, ST as mediaGlyphCode, Vg as medianCut, UE as mergeSort, _D as nearestCluster, $E as niceTicks, jT as noteToRecords, OT as parseFrontmatter, $b as pickStreetIntersection, fb as postDiveFrag, y_ as postPixelkitFrag, WE as quickSort, ZE as raceAlgorithms, B_ as readAppFlags, Rv as rebuildTerrainChunks, zE as renderNoteHtml, jw as reprojectScatter, RE as scanFileRefs, Ow as scatterAdd, kw as scatterErase, Kw as seedWorldEditorCatalog, nD as seriesToPoints, w_ as showWebGLUnsupported, n_ as spliceVectorVertex, fD as summaryLayout, mD as summarySpec, ub as toLuminanceTexture, Xv as toURLParams, DD as traceBST, RD as traceHeap, SD as treeDepth, xD as treeEdges, bD as treeLayout, hT as validateGraphSpec, Jv as validateSceneSpec, kg as validateSunKeyframes, Hg as vectorOn, Gg as vectorShadow, Wg as vectorTint, o_ as vectorize, a_ as vectorizeTower, vD as visibleSet, qg as weatherCloud, Jg as weatherCloudOff, Xg as weatherSeason, Kg as weatherSnow, cT as worstState, gD as zoomState };

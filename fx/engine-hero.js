@@ -28,6 +28,15 @@
    from lab commit b608159, shipped in a1d8f89 — see fx/vendor-engine-url.js
    for full provenance).
 
+   Re-vendored again 2026-07-22 (the shadows app pass) at the lab's post-hoard-
+   merge provenance anchor (sha256 970d34fed61636c4868755d26a9102a7524f433ad4ab
+   7925a4332af901eab751 — full provenance in fx/vendor-engine-url.js). Dusk Silk
+   and Product Moment now self-shadow/contact-shadow (createShadowRig, wired in
+   the lab pack itself, defaults on) — no call-site change needed here, both
+   scenes are called bare (`lib.createDuskSilk(core)`, no options), so they pick
+   up the new `shadows:true` default automatically. The other 5 scenes are
+   byte-unaffected: none of them reference createShadowRig.
+
    Cold-load build-in (2026-07-22): on a genuine first visit this session
    (sessionStorage-gated), the hero opens on Letterpress and plays the brand
    ampersand stamping into paper — the "press" choreography — then continues
