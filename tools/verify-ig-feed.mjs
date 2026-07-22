@@ -25,8 +25,13 @@ try {
     await page.locator('#ig-feed-grid').scrollIntoViewIfNeeded();
     await page.waitForFunction(() => document.querySelectorAll('#ig-feed-grid .ig-tile').length > 0, null, { timeout: 10000 });
 
+    // 1-9: the committed sample is always a fixed 9, but a real live feed
+    // can legitimately have anywhere from 1 up to MAX_TILES (fx/ig-feed.js)
+    // real posts -- an empty feed never reaches this state at all (the
+    // client's own fetchFeed() treats 0 items as a failure and falls back
+    // to sample), so 1 is the true floor, not an arbitrary loosening.
     const tileCount = await page.locator('#ig-feed-grid .ig-tile').count();
-    ok(tileCount >= 6 && tileCount <= 9, `[${label}] renders 6-9 tiles (found ${tileCount})`);
+    ok(tileCount >= 1 && tileCount <= 9, `[${label}] renders 1-9 tiles (found ${tileCount})`);
 
     // The feed is expected to be LIVE once Task 3's Worker is deployed (this
     // script also runs pre-deploy, where sample is the correct/expected
