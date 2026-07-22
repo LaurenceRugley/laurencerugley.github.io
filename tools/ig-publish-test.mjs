@@ -10,9 +10,20 @@
    flag). This script must never be run with --live by an agent or in CI —
    only the owner, deliberately, against his own account.
 
+   HOST: graph.instagram.com, not graph.facebook.com — the account uses
+   Instagram Business Login ("API setup with Instagram login"), whose
+   tokens are scoped to graph.instagram.com. Matches the fix applied to
+   src/worker.js's own Graph API calls (2026-07-22).
+
    Usage:
      node tools/ig-publish-test.mjs --image-url=<url> [--caption="..."]                 (dry run — default)
+     node tools/ig-publish-test.mjs --video-url=<url> [--caption="..."]                  (dry run, video post)
      node tools/ig-publish-test.mjs --image-url=<url> --live --confirm=PUBLISH          (real publish)
+
+   --image-url and --video-url are mutually exclusive; exactly one is
+   required. A video post uses media_type=VIDEO (regular feed video, not
+   Reels — Instagram's Reels media_type is a separate, distinct flow this
+   script does not implement).
 
    Reads IG_TOKEN and IG_USER_ID from the environment — never hardcode a
    token here, never pass one as a CLI arg (shell history would leak it).
@@ -31,8 +42,12 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv);
-  if (!args.imageUrl) {
-    console.error('Usage: node tools/ig-publish-test.mjs --image-url=<url> [--caption="..."] [--live --confirm=PUBLISH]');
+  if (!args.imageUrl && !args.videoUrl) {
+    console.error('Usage: node tools/ig-publish-test.mjs (--image-url=<url> | --video-url=<url>) [--caption="..."] [--live --confirm=PUBLISH]');
+    process.exit(1);
+  }
+  if (args.imageUrl && args.videoUrl) {
+    console.error('Pass exactly one of --image-url or --video-url, not both.');
     process.exit(1);
   }
 
@@ -43,9 +58,11 @@ async function main() {
     process.exit(1);
   }
 
-  const containerUrl = `https://graph.facebook.com/${IG_GRAPH_VERSION}/${igUserId || '<IG_USER_ID>'}/media`;
-  const containerParams = { image_url: args.imageUrl, ...(args.caption ? { caption: args.caption } : {}) };
-  const publishUrl = `https://graph.facebook.com/${IG_GRAPH_VERSION}/${igUserId || '<IG_USER_ID>'}/media_publish`;
+  const containerUrl = `https://graph.instagram.com/${IG_GRAPH_VERSION}/${igUserId || '<IG_USER_ID>'}/media`;
+  const containerParams = args.videoUrl
+    ? { media_type: 'VIDEO', video_url: args.videoUrl, ...(args.caption ? { caption: args.caption } : {}) }
+    : { image_url: args.imageUrl, ...(args.caption ? { caption: args.caption } : {}) };
+  const publishUrl = `https://graph.instagram.com/${IG_GRAPH_VERSION}/${igUserId || '<IG_USER_ID>'}/media_publish`;
 
   if (!args.live || args.confirm !== 'PUBLISH') {
     console.log('DRY RUN — no network calls made. To publish for real: --live --confirm=PUBLISH\n');
@@ -75,7 +92,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, 60_000));
     let statusBody;
     try {
-      const statusRes = await fetch(`https://graph.facebook.com/${IG_GRAPH_VERSION}/${creationId}?fields=status_code&access_token=${token}`);
+      const statusRes = await fetch(`https://graph.instagram.com/${IG_GRAPH_VERSION}/${creationId}?fields=status_code&access_token=${token}`);
       if (!statusRes.ok) throw new Error(`HTTP ${statusRes.status}`);
       statusBody = await statusRes.json();
     } catch (err) {
