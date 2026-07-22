@@ -1,0 +1,15 @@
+{
+  "live": false,
+  "updatedAt": "2026-07-21T00:00:00Z",
+  "items": [
+    { "id": "sample-1", "media_type": "IMAGE", "media_url": "../work/lgrwebstudio.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Behind the scenes: a new build taking shape.", "timestamp": "2026-07-18T18:32:00+0000" },
+    { "id": "sample-2", "media_type": "IMAGE", "media_url": "../work/alsoknownas.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Also Known As, live and selling.", "timestamp": "2026-07-15T21:10:00+0000" },
+    { "id": "sample-3", "media_type": "IMAGE", "media_url": "../work/savycolours.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Savy Colours — booking without the middleman.", "timestamp": "2026-07-12T16:45:00+0000" },
+    { "id": "sample-4", "media_type": "IMAGE", "media_url": "../work/reel/alsoknownas.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Drop-day details, up close.", "timestamp": "2026-07-09T14:20:00+0000" },
+    { "id": "sample-5", "media_type": "IMAGE", "media_url": "../work/reel/savycolours.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "A booking flow built for one stylist, not a franchise.", "timestamp": "2026-07-06T19:05:00+0000" },
+    { "id": "sample-6", "media_type": "IMAGE", "media_url": "../work/lgrwebstudio.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "One engineer, every line by hand.", "timestamp": "2026-07-03T15:50:00+0000" },
+    { "id": "sample-7", "media_type": "IMAGE", "media_url": "../work/alsoknownas.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Shipped: streetwear, sized for launch day traffic.", "timestamp": "2026-06-29T20:15:00+0000" },
+    { "id": "sample-8", "media_type": "IMAGE", "media_url": "../work/savycolours.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Zero monthly tool fees, every request routes straight to her.", "timestamp": "2026-06-25T17:30:00+0000" },
+    { "id": "sample-9", "media_type": "IMAGE", "media_url": "../work/lgrwebstudio.jpg", "permalink": "https://www.instagram.com/lgrwebstudios/", "caption": "Care plan, in practice: same-day answers.", "timestamp": "2026-06-20T13:00:00+0000" }
+  ]
+}
