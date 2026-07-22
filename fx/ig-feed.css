@@ -15,6 +15,11 @@
      both axes makes a MAX_TILES=9 grid come out ~square: measured 920x920
      at 1280px viewport width. */
   aspect-ratio: 1 / 1;
+  /* Fewer than 9 real posts (or the fallback link, see .ig-grid-fallback)
+     shouldn't be stretched/centered into the reserved footprint above —
+     pack rows to the top so any leftover reserved space collects at the
+     bottom instead of surrounding the content. */
+  align-content: start;
 }
 
 .ig-tile {
@@ -31,6 +36,11 @@
 
 .ig-grid-fallback {
   grid-column: 1 / -1;
+  /* Without this the fallback link stretches to fill the whole reserved
+     aspect-ratio box (e.g. 920x920 on desktop) instead of sitting as a
+     compact strip — this is the permanent visible state if both the live
+     and sample fetches fail, so it must not look like a broken blank box. */
+  align-self: start;
   text-align: center;
   padding: 24px;
   color: var(--muted);
