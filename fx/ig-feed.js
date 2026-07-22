@@ -25,7 +25,11 @@ function renderTiles(grid, items) {
     a.target = '_blank';
     a.rel = 'noopener';
     const img = document.createElement('img');
-    img.src = item.media_url;
+    // VIDEO/REELS items' media_url points at the raw video file, which an
+    // <img> tag can't render -- thumbnail_url is the still image Instagram
+    // generates for this. IMAGE items have no thumbnail_url; media_url is
+    // already a displayable image for those.
+    img.src = item.thumbnail_url || item.media_url;
     img.alt = item.caption || 'Instagram post from @lgrwebstudios';
     img.loading = 'lazy';
     img.decoding = 'async';
